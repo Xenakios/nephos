@@ -72,5 +72,14 @@ add_executable(NephosCLI
     src/grainfx.cpp
 )
 target_compile_definitions(NephosCLI PUBLIC _USE_MATH_DEFINES=1)
-target_compile_options(NephosCLI PRIVATE -mavx2 -mfma -Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Werror=return-type "$<$<COMPILE_LANGUAGE:CXX>:-fno-char8_t>")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
+    target_compile_options(NephosCLI PRIVATE -mavx2 -mfma -Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Werror=return-type "$<$<COMPILE_LANGUAGE:CXX>:-fno-char8_t>")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|ARM64|arm64")
+    target_compile_options(NephosCLI PRIVATE -stdlib=libc++)
+    target_link_options(NephosCLI PRIVATE -stdlib=libc++ -fuse-ld=lld-20)
+    message("ARM64")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
+    message("ARM 32-bit")
+endif()
+
 target_link_libraries(NephosCLI PRIVATE AWLIMITED)
