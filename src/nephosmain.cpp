@@ -13,7 +13,7 @@ int main()
     double sr = 44100.0;
     g->prepare(sr, {}, 0, 0.002, 0.002);
 
-    unsigned int amborder = 3;
+    unsigned int amborder = 7;
     unsigned int numambchans = ambisonicOrderNumChannels(amborder);
     g->set_ambisonics_order(amborder);
     choc::audio::AudioFileProperties props;
