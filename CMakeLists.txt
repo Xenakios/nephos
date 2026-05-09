@@ -75,16 +75,64 @@ add_executable(NephosCLI
 )
 target_compile_definitions(NephosCLI PUBLIC _USE_MATH_DEFINES=1)
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
-    target_compile_options(NephosCLI PRIVATE -mavx2 -mfma -Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Werror=return-type "$<$<COMPILE_LANGUAGE:CXX>:-fno-char8_t>")
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|ARM64|arm64")
-    target_compile_options(NephosCLI PRIVATE -stdlib=libc++)
-    target_compile_options(AWLIMITED PRIVATE -stdlib=libc++)
-    target_link_options(NephosCLI PRIVATE -stdlib=libc++ -fuse-ld=lld-20)
-    target_link_options(AWLIMITED PRIVATE -stdlib=libc++ -fuse-ld=lld-20)
-    message("ARM64")
-    message(STATUS "Compile options: ${CMAKE_CXX_FLAGS}")
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
-    message("ARM 32-bit, should not be getting this message")
-endif()
+    set(X86_COMPILE_OPTIONS
+        -mavx2
+        -mfma
+        -Werror=return-type
+        $<$<COMPILE_LANGUAGE:CXX>:-fno-char8_t>
+    )
 
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
+        list(APPEND X86_COMPILE_OPTIONS
+            -Rpass=loop-vectorize
+            -Rpass-missed=loop-vectorize
+        )
+    endif()
+
+    target_compile_options(NephosCLI PRIVATE ${X86_COMPILE_OPTIONS})
+    target_compile_options(AWLIMITED PRIVATE ${X86_COMPILE_OPTIONS})
+
+    if(WIN32)
+        # Clang on Windows — links against MSVC runtime, not libc++
+        target_link_options(NephosCLI PRIVATE -fuse-ld=lld)
+        target_link_options(AWLIMITED PRIVATE -fuse-ld=lld)
+    elseif(APPLE)
+        # Intel Mac — libc++ and clang already defaults, nothing extra needed
+        message(STATUS "x86_64 macOS (Intel Mac) build")
+    else()
+        # Linux x86_64 — add any Linux-specific flags here if needed
+    endif()
+
+    message(STATUS "x86_64 build (${CMAKE_SYSTEM_NAME})")
+
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|ARM64")
+    set(ARM64_COMPILE_OPTIONS
+        -march=armv8-a+simd
+        -Werror=return-type
+        $<$<COMPILE_LANGUAGE:CXX>:-fno-char8_t>
+    )
+    set(ARM64_LINK_OPTIONS)
+
+    if(APPLE)
+        # Apple Silicon — libc++ and clang are already defaults
+        list(APPEND ARM64_COMPILE_OPTIONS -mcpu=apple-m1)
+        message(STATUS "ARM64 macOS (Apple Silicon) build")
+    elseif(UNIX)
+        # Linux ARM64 (e.g. Raspberry Pi)
+        list(APPEND ARM64_COMPILE_OPTIONS -stdlib=libc++)
+        list(APPEND ARM64_LINK_OPTIONS -stdlib=libc++ -fuse-ld=lld-20)
+        message(STATUS "ARM64 Linux build")
+    endif()
+
+    target_compile_options(NephosCLI PRIVATE ${ARM64_COMPILE_OPTIONS})
+    target_compile_options(AWLIMITED PRIVATE ${ARM64_COMPILE_OPTIONS})
+    target_link_options(NephosCLI    PRIVATE ${ARM64_LINK_OPTIONS})
+    target_link_options(AWLIMITED    PRIVATE ${ARM64_LINK_OPTIONS})
+
+    message(STATUS "ARM64 build (${CMAKE_SYSTEM_NAME})")
+
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
+    message(WARNING "ARM 32-bit detected — this is not a supported configuration")
+
+endif()
 target_link_libraries(NephosCLI PRIVATE AWLIMITED fmt)
