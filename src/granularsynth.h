@@ -17,7 +17,9 @@
 #include "sst/basic-blocks/params/ParamMetadata.h"
 #include "containers/choc_SingleReaderSingleWriterFIFO.h"
 #include "easing.h"
-#include <immintrin.h>
+#define SIMDE_ENABLE_NATIVE_ALIASES  // lets you skip the simde_ prefix
+#include <simde/x86/avx2.h>
+#include <simde/x86/fma.h>
 
 using namespace sst::basic_blocks::mod_matrix;
 

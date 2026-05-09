@@ -30,6 +30,8 @@ include_directories(
     libs/airwindows_limited/plugins
 )
 
+add_subdirectory(libs/fmt)
+
 add_library(AWLIMITED
     libs/airwindows_limited/airwin_consolidated_base.cpp
     libs/airwindows_limited/plugins/BezEQ.cpp
@@ -76,10 +78,13 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
     target_compile_options(NephosCLI PRIVATE -mavx2 -mfma -Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Werror=return-type "$<$<COMPILE_LANGUAGE:CXX>:-fno-char8_t>")
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|ARM64|arm64")
     target_compile_options(NephosCLI PRIVATE -stdlib=libc++)
+    target_compile_options(AWLIMITED PRIVATE -stdlib=libc++)
     target_link_options(NephosCLI PRIVATE -stdlib=libc++ -fuse-ld=lld-20)
+    target_link_options(AWLIMITED PRIVATE -stdlib=libc++ -fuse-ld=lld-20)
     message("ARM64")
+    message(STATUS "Compile options: ${CMAKE_CXX_FLAGS}")
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
-    message("ARM 32-bit")
+    message("ARM 32-bit, should not be getting this message")
 endif()
 
-target_link_libraries(NephosCLI PRIVATE AWLIMITED)
+target_link_libraries(NephosCLI PRIVATE AWLIMITED fmt)

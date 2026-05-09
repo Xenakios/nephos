@@ -601,7 +601,7 @@ inline clap_param_info makeParamInfo(clap_id paramId, std::string name, double m
     result.id = paramId;
     result.flags = flags;
     auto ptr = name.c_str();
-    strcpy_s(result.name, ptr);
+    strcpy(result.name, ptr);
     result.module[0] = 0;
     return result;
 }

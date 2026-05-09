@@ -7,6 +7,7 @@
 
 int main()
 {
+    
     auto g = std::make_unique<ToneGranulator>();
     double sr = 44100.0;
     g->prepare(sr, {}, 0, 0.002, 0.002);
@@ -19,7 +20,7 @@ int main()
     props.sampleRate = sr;
     props.numChannels = numambchans;
     choc::audio::WAVAudioFileFormat<true> wavformat;
-    auto writer = wavformat.createWriter(R"(C:\MusicAudio\Dome\nephos01.wav)", props);
+    auto writer = wavformat.createWriter(R"(nephos01.wav)", props);
     if (!writer)
         return 1;
     alignas(32) float outbuffer[64 * granul_block_size];
