@@ -4,10 +4,11 @@
 #include <print>
 #include "audio/choc_AudioFileFormat_WAV.h"
 #include "../Common/xap_breakpoint_envelope.h"
+#include <chrono>
 
 int main()
 {
-    
+
     auto g = std::make_unique<ToneGranulator>();
     double sr = 44100.0;
     g->prepare(sr, {}, 0, 0.002, 0.002);
@@ -25,12 +26,15 @@ int main()
         return 1;
     alignas(32) float outbuffer[64 * granul_block_size];
     choc::buffer::ChannelArrayBuffer<float> diskbuffer{numambchans, granul_block_size};
-    int outlen = sr * 5.0;
+    int outlen = sr * 10.0;
     int outcount = 0;
     xenakios::Envelope pitchenv;
     pitchenv.addPoint({0.0, 0.0});
     pitchenv.addPoint({5.0, 12.0});
     pitchenv.sortPoints();
+    *g->idtoparvalptr[ToneGranulator::PAR_DENSITY] = 6.0;
+    *g->idtoparvalptr[ToneGranulator::PAR_DURATION] = 0.6;
+    auto start = std::chrono::high_resolution_clock::now();
     while (outcount < outlen)
     {
         double tpos = outcount / sr;
@@ -48,6 +52,8 @@ int main()
         writer->appendFrames(diskbuffer.getView());
         outcount += granul_block_size;
     }
-
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    std::cout << "Time: " << duration.count() << " ms\n";
     return 0;
 }
