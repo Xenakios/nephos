@@ -72,4 +72,5 @@ add_executable(NephosCLI
     src/grainfx.cpp
 )
 target_compile_definitions(NephosCLI PUBLIC _USE_MATH_DEFINES=1)
+target_compile_options(NephosCLI PRIVATE -mavx2 -mfma -Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Werror=return-type "$<$<COMPILE_LANGUAGE:CXX>:-fno-char8_t>")
 target_link_libraries(NephosCLI PRIVATE AWLIMITED)
