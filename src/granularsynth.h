@@ -3,7 +3,7 @@
   #include <fmt/format.h>
   namespace std { using fmt::format; }
 #else
-  #includea <format>
+  #include <format>
 #endif
 
 #include <vector>

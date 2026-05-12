@@ -5,7 +5,14 @@
 #include "audio/choc_AudioFileFormat_WAV.h"
 #include "../Common/xap_breakpoint_envelope.h"
 #include <chrono>
-
+#define MACOSTESTNEPHOSCLI
+#ifdef MACOSTESTNEPHOSCLI
+int main()
+{
+    auto g = std::make_unique<ToneGranulator>();
+    return 0;
+}
+#else
 int main()
 {
 
@@ -57,3 +64,4 @@ int main()
     std::cout << "Time: " << duration.count() << " ms\n";
     return 0;
 }
+#endif
