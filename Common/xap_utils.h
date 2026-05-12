@@ -27,6 +27,7 @@ template <std::unsigned_integral T> inline clap_id to_clap_id(T x)
 
 namespace xenakios
 {
+#ifdef HEXDUMPSUPPORTED
 // This will obviously blow up if pointer to invalid memory or a too large
 // size is passed in, so beware...
 inline std::string getHexDump(const void *data, size_t size)
@@ -67,6 +68,7 @@ inline std::string getHexDump(const void *data, size_t size)
     }
     return output;
 }
+#endif
 
 inline std::unique_ptr<choc::audio::AudioFileWriter>
 createWavWriter(std::string path, size_t num_channels, double samplerate,
