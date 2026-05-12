@@ -1,5 +1,6 @@
 #include "grainfx.h"
-#include <print>
+#include <fmt/format.h>
+// #include <print>
 #include "plugins/BezEQ.h"
 #include "plugins/HipCrush.h"
 #include "plugins/kWoodRoom.h"
@@ -132,7 +133,7 @@ void GrainInsertFX::setMode(ModeInfo m)
         sstfilter.provideAllDelayLines(delaylinememory.data());
         if (!sstfilter.prepareInstance())
         {
-            std::print("could not prepare filter {}\n", m.displayname);
+            // std::print("could not prepare filter {}\n", m.displayname);
         }
     }
     if (m.mainmode == GFXAIRWINDOWS)
