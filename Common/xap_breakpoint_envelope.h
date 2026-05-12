@@ -117,7 +117,7 @@ class Envelope
     void removeEnvelopePointAtIndex(int index)
     {
         if (index < 0 || index >= m_points.size())
-            throw std::runtime_error(std::format("Index {} out of range", index));
+            throw std::runtime_error(fmt::format("Index {} out of range", index));
         m_points.erase(m_points.begin() + index);
     }
     void removeEnvelopePoints(std::function<bool(const EnvelopePoint &)> func)
@@ -178,7 +178,7 @@ class Envelope
     {
         if (index < -1 || index >= (int)m_points.size())
             throw std::runtime_error(
-                std::format("Index {} out of range -1..{}", index, m_points.size() - 1));
+                fmt::format("Index {} out of range -1..{}", index, m_points.size() - 1));
         if (index == -1)
             return m_points.back();
         return m_points[index];
@@ -186,7 +186,7 @@ class Envelope
     void setPoint(int index, EnvelopePoint pt)
     {
         if (index < 0 || index >= m_points.size())
-            throw std::runtime_error(std::format("Index {} out of range", index));
+            throw std::runtime_error(fmt::format("Index {} out of range", index));
         m_points[index] = pt;
         m_sorted = false;
     }

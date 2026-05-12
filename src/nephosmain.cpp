@@ -14,7 +14,7 @@ int main()
 }
 #else
 #include "audio/choc_AudioFileFormat.h"
-// #include "../Common/xap_breakpoint_envelope.h"
+#include "../Common/xap_breakpoint_envelope.h"
 // #include <print>
 int main()
 {
@@ -38,18 +38,18 @@ int main()
     choc::buffer::ChannelArrayBuffer<float> diskbuffer{numambchans, granul_block_size};
     int outlen = sr * 10.0;
     int outcount = 0;
-    //xenakios::Envelope pitchenv;
-    //pitchenv.addPoint({0.0, 0.0});
-    //pitchenv.addPoint({5.0, 12.0});
-    //pitchenv.sortPoints();
+    xenakios::Envelope pitchenv;
+    pitchenv.addPoint({0.0, 0.0});
+    pitchenv.addPoint({5.0, 12.0});
+    pitchenv.sortPoints();
     *g->idtoparvalptr[ToneGranulator::PAR_DENSITY] = 6.0;
     *g->idtoparvalptr[ToneGranulator::PAR_DURATION] = 0.6;
     auto start = std::chrono::high_resolution_clock::now();
     while (outcount < outlen)
     {
         double tpos = outcount / sr;
-        //auto pitch = pitchenv.getValueAtPosition(tpos);
-        //*g->idtoparvalptr[ToneGranulator::PAR_PITCH] = pitch;
+        auto pitch = pitchenv.getValueAtPosition(tpos);
+        *g->idtoparvalptr[ToneGranulator::PAR_PITCH] = pitch;
         g->process_block(std::span<float>{outbuffer, granul_block_size * 64});
         int nchs = g->num_out_chans;
         for (int i = 0; i < nchs; ++i)
