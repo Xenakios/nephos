@@ -3,7 +3,7 @@
   #include <fmt/format.h>
   namespace std { using fmt::format; }
 #else
-  #include <format>
+  #include <fmt/format.h>
 #endif
 
 #include <vector>
@@ -1841,8 +1841,8 @@ class ToneGranulator
             parmetadatas.push_back(pmd()
                                        .asOnOffBool()
                                        .withID(PAR_LFOUNIPOLARS + i)
-                                       .withName(std::format("LFO {} UNIPOLAR", i + 1))
-                                       .withGroupName(std::format("LFO {}", i + 1)));
+                                       .withName(fmt::format("LFO {} UNIPOLAR", i + 1))
+                                       .withGroupName(fmt::format("LFO {}", i + 1)));
             parmetadatas.push_back(pmd()
                                        .withUnorderedMapFormatting({{0, "SIN"},
                                                                     {1, "SIN🡄🡆SQR🡄🡆TRI"},
@@ -1921,17 +1921,17 @@ class ToneGranulator
         modSources.emplace_back("Off", "", GranulatorModConfig::SourceIdentifier{0});
         for (uint32_t i = 0; i < GranulatorModMatrix::numLfos; ++i)
         {
-            modSources.emplace_back(std::format("LFO {}", i + 1), "LFO",
+            modSources.emplace_back(fmt::format("LFO {}", i + 1), "LFO",
                                     GranulatorModConfig::SourceIdentifier{i + 1});
         }
         for (uint32_t i = 0; i < 8; ++i)
         {
-            modSources.emplace_back(std::format("StepSeq {}", i + 1), "Step Sequencer",
+            modSources.emplace_back(fmt::format("StepSeq {}", i + 1), "Step Sequencer",
                                     GranulatorModConfig::SourceIdentifier{STEPS0 + i});
         }
         for (uint32_t i = 0; i < 16; ++i)
         {
-            modSources.emplace_back(std::format("Macro {}", i + 1), "Macro Parameter",
+            modSources.emplace_back(fmt::format("Macro {}", i + 1), "Macro Parameter",
                                     GranulatorModConfig::SourceIdentifier{MACROSTART + i});
         }
         modSources.emplace_back("MIDI KEY", "MIDI NOTES",
@@ -1942,7 +1942,7 @@ class ToneGranulator
                                 GranulatorModConfig::SourceIdentifier{MIDIAT});
         for (uint32_t i = 1; i < 128; ++i)
         {
-            modSources.emplace_back(std::format("MIDI CC {}", i), "MIDI CC",
+            modSources.emplace_back(fmt::format("MIDI CC {}", i), "MIDI CC",
                                     GranulatorModConfig::SourceIdentifier{i + MIDICCSTART});
         }
 
