@@ -996,8 +996,8 @@ class MidiNoteModSource
         if (current_messages.empty())
             return "NO MESSAGES";
         std::string result;
-        for (auto &e : current_messages)
-            result += std::format("{} {} {} ", e.note, e.velo, e.aftertouch);
+        //for (auto &e : current_messages)
+        //    result += std::format("{} {} {} ", e.note, e.velo, e.aftertouch);
         return result;
     }
     void set_sustain(bool newsustain)
