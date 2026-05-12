@@ -1664,7 +1664,7 @@ class ToneGranulator
                                        .withRange(0.0, 1.0)
                                        .withDefault(1.0)
                                        .withLinearScaleFormatting("%", 100.0f)
-                                       .withName(std::format("Pitch Gain {}", i + 1))
+                                       .withName(fmt::format("Pitch Gain {}", i + 1))
                                        .withGroupName("Volume")
                                        .withID(PAR_PITCHBANDGAIN0 + i * 10)
                                        .withFlags(CLAP_PARAM_IS_MODULATABLE));
@@ -1756,13 +1756,13 @@ class ToneGranulator
                 .withID(PAR_NOISEMODE));
         for (size_t i = 0; i < GranulatorVoice::numInsertSlots; ++i)
         {
-            auto groupname = std::format("Insert {}", char('A' + i));
+            auto groupname = fmt::format("Insert {}", char('A' + i));
             for (size_t j = 0; j < GranulatorVoice::maxParamsPerInsert; ++j)
             {
                 size_t insparid = PAR_INSERTAFIRST + 32 * i + j;
                 if (i == 3 && j == 0)
                     assert(insparid == PAR_INSERTDFIRST);
-                auto insparname = std::format("Ins {} Par {}", char('A' + i), j);
+                auto insparname = fmt::format("Ins {} Par {}", char('A' + i), j);
                 parmetadatas.push_back(pmd()
                                            .withRange(0.0, 1.0)
                                            .withDefault(0.0)
@@ -1850,40 +1850,40 @@ class ToneGranulator
                                                                     {3, "SMOOTH NOISE"},
                                                                     {4, "S&H NOISE"}},
                                                                    true)
-                                       .withName(std::format("LFO {} SHAPE", i + 1))
-                                       .withGroupName(std::format("LFO {}", i + 1))
+                                       .withName(fmt::format("LFO {} SHAPE", i + 1))
+                                       .withGroupName(fmt::format("LFO {}", i + 1))
                                        .withID(PAR_LFOSHAPES + i));
             parmetadatas.push_back(pmd()
                                        .withRange(-6.0, 5.0)
                                        .withDefault(0.0)
                                        .withDecimalPlaces(3)
                                        .withATwoToTheBFormatting(1.0f, 1.0f, "Hz")
-                                       .withName(std::format("LFO {} RATE", i + 1))
-                                       .withGroupName(std::format("LFO {}", i + 1))
+                                       .withName(fmt::format("LFO {} RATE", i + 1))
+                                       .withGroupName(fmt::format("LFO {}", i + 1))
                                        .withID(PAR_LFORATES + i)
                                        .withFlags(CLAP_PARAM_IS_MODULATABLE));
             parmetadatas.push_back(pmd()
                                        .withRange(-1.0, 1.0)
                                        .withDefault(0.0)
                                        .withLinearScaleFormatting("%", 100.0f)
-                                       .withName(std::format("LFO {} DEFORM", i + 1))
-                                       .withGroupName(std::format("LFO {}", i + 1))
+                                       .withName(fmt::format("LFO {} DEFORM", i + 1))
+                                       .withGroupName(fmt::format("LFO {}", i + 1))
                                        .withID(PAR_LFODEFORMS + i)
                                        .withFlags(CLAP_PARAM_IS_MODULATABLE));
             parmetadatas.push_back(pmd()
                                        .withRange(-1.0, 1.0)
                                        .withDefault(0.0)
                                        .withLinearScaleFormatting("%", 100.0f)
-                                       .withName(std::format("LFO {} SHIFT", i + 1))
-                                       .withGroupName(std::format("LFO {}", i + 1))
+                                       .withName(fmt::format("LFO {} SHIFT", i + 1))
+                                       .withGroupName(fmt::format("LFO {}", i + 1))
                                        .withID(PAR_LFOSHIFTS + i)
                                        .withFlags(CLAP_PARAM_IS_MODULATABLE));
             parmetadatas.push_back(pmd()
                                        .withRange(-1.0, 1.0)
                                        .withDefault(0.0)
                                        .withLinearScaleFormatting("%", 100.0f)
-                                       .withName(std::format("LFO {} WARP", i + 1))
-                                       .withGroupName(std::format("LFO {}", i + 1))
+                                       .withName(fmt::format("LFO {} WARP", i + 1))
+                                       .withGroupName(fmt::format("LFO {}", i + 1))
                                        .withID(PAR_LFOWARPS + i)
                                        .withFlags(CLAP_PARAM_IS_MODULATABLE));
         }
