@@ -1,4 +1,11 @@
 #pragma once
+#ifdef __APPLE__
+  #include <fmt/format.h>
+  namespace std { using fmt::format; }
+#else
+  #include <format>
+#endif
+
 #include <vector>
 #include <span>
 // #include "sst/basic-blocks/dsp/CorrelatedNoise.h"
@@ -21,12 +28,6 @@
 #include <simde/x86/avx2.h>
 #include <simde/x86/fma.h>
 
-#ifdef __APPLE__
-  #include <fmt/format.h>
-  namespace std { using fmt::format; }
-#else
-  #include <format>
-#endif
 
 using namespace sst::basic_blocks::mod_matrix;
 
