@@ -3,7 +3,7 @@
 #include <span>
 // #include "sst/basic-blocks/dsp/CorrelatedNoise.h"
 #include "sst/basic-blocks/dsp/EllipticBlepOscillators.h"
-#include <print>
+// #include <print>
 // #include "sst/basic-blocks/dsp/SmoothingStrategies.h"
 #include "text/choc_StringUtilities.h"
 #include "text/choc_Files.h"
@@ -20,6 +20,13 @@
 #define SIMDE_ENABLE_NATIVE_ALIASES  // lets you skip the simde_ prefix
 #include <simde/x86/avx2.h>
 #include <simde/x86/fma.h>
+
+#ifdef __APPLE__
+  #include <fmt/format.h>
+  namespace std { using fmt::format; }
+#else
+  #include <format>
+#endif
 
 using namespace sst::basic_blocks::mod_matrix;
 
@@ -2001,7 +2008,7 @@ class ToneGranulator
     {
         if (thread_op == 1)
         {
-            std::print("prepare called while audio thread should do state switch!\n");
+            // std::print("prepare called while audio thread should do state switch!\n");
         }
         missedgrains = 0;
         if (evlist.size() > 0)
@@ -2181,10 +2188,12 @@ class ToneGranulator
                 const bool printschedulesevents = false;
                 if (printschedulesevents)
                 {
+                    /*
                     std::print("{:.2f} : ", playposframes / m_sr);
                     for (auto &scgrain : scheduledGrains)
                         std::print("{:.2f} ", scgrain.time_position);
                     std::print("\n");
+                    */
                 }
 
                 for (size_t sm = 0; sm < stepModSources.size(); ++sm)
