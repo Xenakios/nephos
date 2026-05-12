@@ -3,7 +3,7 @@
 #include "granularsynth.h"
 
 #include "audio/choc_AudioFileFormat_WAV.h"
-#include "../Common/xap_breakpoint_envelope.h"
+
 #include <chrono>
 #define MACOSTESTNEPHOSCLI
 #ifdef MACOSTESTNEPHOSCLI
@@ -14,6 +14,7 @@ int main()
 }
 #else
 #include "audio/choc_AudioFileFormat.h"
+#include "../Common/xap_breakpoint_envelope.h"
 // #include <print>
 int main()
 {
