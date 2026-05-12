@@ -1,7 +1,7 @@
-#include "audio/choc_AudioFileFormat.h"
+
 #include "audio/choc_SampleBuffers.h"
 #include "granularsynth.h"
-#include <print>
+
 #include "audio/choc_AudioFileFormat_WAV.h"
 #include "../Common/xap_breakpoint_envelope.h"
 #include <chrono>
@@ -13,6 +13,8 @@ int main()
     return 0;
 }
 #else
+#include "audio/choc_AudioFileFormat.h"
+// #include <print>
 int main()
 {
 
