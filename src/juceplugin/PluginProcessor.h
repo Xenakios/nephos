@@ -50,6 +50,7 @@ struct MacroKnobBinding
 {
     int dest_type = -1;
     int dest = 0;
+    std::optional<std::pair<float, float>> par_range;
 };
 
 namespace StateIgnoreStrings
@@ -123,6 +124,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     void handleMacroKnob(int knobindex, float value);
     void loadMacroKnobs(std::string filename);
     std::string presetsPath;
+
   private:
     alignas(32) std::vector<float> workBuffer;
     alignas(32) choc::fifo::SingleReaderSingleWriterFIFO<

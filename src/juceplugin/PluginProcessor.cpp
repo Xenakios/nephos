@@ -21,6 +21,11 @@ void AudioPluginAudioProcessor::loadMacroKnobs(std::string filename)
                 continue;
             macroBindings[index].dest_type = binding["desttype"].getWithDefault(-1);
             macroBindings[index].dest = binding["dest"].getWithDefault(0);
+            if (binding.hasObjectMember("min") && binding.hasObjectMember("max"))
+            {
+                macroBindings[index].par_range = {binding["min"].getWithDefault(-1.0f),
+                                                  binding["max"].getWithDefault(1.0f)};
+            }
         }
     }
     catch (std::exception &excep)
@@ -33,15 +38,23 @@ void AudioPluginAudioProcessor::handleMacroKnob(int knobindex, float value)
 {
     if (knobindex >= 0 && knobindex < macroBindings.size())
     {
-        if (macroBindings[knobindex].dest_type == 0)
+        auto &mb = macroBindings[knobindex];
+        if (mb.dest_type == 0)
         {
             ParameterMessage msg;
-            msg.id = macroBindings[knobindex].dest;
+            msg.id = mb.dest;
             auto pmdit = granulator.idtoparmetadata.find(msg.id);
             if (pmdit != granulator.idtoparmetadata.end())
             {
-                float val = juce::jmap<float>(value, -1.0f, 1.0f, pmdit->second->minVal,
-                                              pmdit->second->maxVal);
+                float val = pmdit->second->defaultVal;
+                float minval = pmdit->second->minVal;
+                float maxval = pmdit->second->maxVal;
+                if (mb.par_range)
+                {
+                    minval = mb.par_range->first;
+                    maxval = mb.par_range->second;
+                }
+                val = juce::jmap<float>(value, -1.0f, 1.0f, minval, maxval);
                 msg.value = val;
                 params_from_gui_fifo.push(msg);
             }
