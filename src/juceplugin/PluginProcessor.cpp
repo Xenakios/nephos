@@ -1,8 +1,33 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include "text/choc_Files.h"
+#include "text/choc_JSON.h"
+#include <exception>
+#include <float.h>
 
 // .withInput("Input", juce::AudioChannelSet::stereo(), true)
+
+void AudioPluginAudioProcessor::loadMacroKnobs(std::string filename)
+{
+    try
+    {
+        auto jsontxt = choc::file::loadFileAsString(filename);
+        auto bindings = choc::json::parseValue(jsontxt);
+        for (int i = 0; i < bindings.size(); ++i)
+        {
+            auto binding = bindings[i];
+            auto index = binding["knob"].getWithDefault(-1);
+            if (index < 0 || index >= macroBindings.size())
+                continue;
+            macroBindings[index].dest_type = binding["desttype"].getWithDefault(-1);
+            macroBindings[index].dest = binding["dest"].getWithDefault(0);
+        }
+    }
+    catch (std::exception &excep)
+    {
+        DBG(excep.what());
+    }
+}
 
 void AudioPluginAudioProcessor::handleMacroKnob(int knobindex, float value)
 {
@@ -24,6 +49,8 @@ void AudioPluginAudioProcessor::handleMacroKnob(int knobindex, float value)
         if (macroBindings[knobindex].dest_type == 1)
         {
             auto dest = macroBindings[knobindex].dest;
+            if (dest < 0 || dest >= GranulatorModConfig::FixedMatrixSize)
+                return;
             auto targetid = granulator.modmatrix.rt.routes[dest].target->baz;
             ThreadMessage tmsg;
             tmsg.opcode = ThreadMessage::OP_MODPARAM;
@@ -41,19 +68,14 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                          .withOutput("Output", juce::AudioChannelSet::ambisonic(3), true))
 {
     macroBindings.resize(16);
-    macroBindings[0] = {0, ToneGranulator::PAR_PITCH};
-    macroBindings[1] = {0, ToneGranulator::PAR_DENSITY};
-    macroBindings[2] = {0, ToneGranulator::PAR_AZIMUTH};
-    macroBindings[3] = {0, ToneGranulator::PAR_DURATION};
-    macroBindings[8] = {1, 0};
-    macroBindings[9] = {1, 1};
+    loadMacroKnobs(R"(C:\develop\nephos\src\macroknobs.json)");
     snapshots.resize(64);
+    presetsPath = R"(C:\develop\nephos\granulatorpresets\)";
     for (int i = 0; i < 64; ++i)
     {
         try
         {
-            auto fname = std::format(
-                R"(C:\develop\AudioPluginHost_mk2\audio\granulatorpresets\{}.json)", i + 1);
+            auto fname = std::format("{}{}.json)", presetsPath, i + 1);
             if (std::filesystem::exists(fname))
             {
                 auto jsontxt = choc::file::loadFileAsString(fname);

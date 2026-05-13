@@ -913,8 +913,7 @@ class DashPage : public juce::Component
     void saveSnapShot(int index)
     {
         auto state = processorRef.getState();
-        std::ofstream ostream(std::format(
-            R"(C:\develop\AudioPluginHost_mk2\audio\granulatorpresets\{}.json)", index + 1));
+        std::ofstream ostream(fmt::format("{}{}.json", processorRef.presetsPath, index + 1));
         choc::json::writeAsJSON(ostream, state, true);
         processorRef.saveSnapShot(index, state);
     }
