@@ -46,6 +46,12 @@ struct ThreadMessage
     sfpp::ModelConfig filterconfig;
 };
 
+struct MacroKnobBinding
+{
+    int dest_type = -1;
+    int dest = 0;
+};
+
 namespace StateIgnoreStrings
 {
 using namespace std::literals;
@@ -113,6 +119,8 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
 
     void loadSnapShot(int index);
     void saveSnapShot(int index, choc::value::ValueView state);
+    std::vector<MacroKnobBinding> macroBindings;
+    void handleMacroKnob(int knobindex, float value);
 
   private:
     alignas(32) std::vector<float> workBuffer;

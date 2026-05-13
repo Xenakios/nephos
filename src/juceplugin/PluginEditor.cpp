@@ -1,5 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "text/choc_Files.h"
+
 void init_step_sequencer_js();
 void deinit_step_sequencer_js();
 void cancel_js();

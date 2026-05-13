@@ -1,14 +1,52 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-// #include "Tunings.h"
+#include "text/choc_Files.h"
 
 // .withInput("Input", juce::AudioChannelSet::stereo(), true)
+
+void AudioPluginAudioProcessor::handleMacroKnob(int knobindex, float value)
+{
+    if (knobindex >= 0 && knobindex < macroBindings.size())
+    {
+        if (macroBindings[knobindex].dest_type == 0)
+        {
+            ParameterMessage msg;
+            msg.id = macroBindings[knobindex].dest;
+            auto pmdit = granulator.idtoparmetadata.find(msg.id);
+            if (pmdit != granulator.idtoparmetadata.end())
+            {
+                float val = juce::jmap<float>(value, -1.0f, 1.0f, pmdit->second->minVal,
+                                              pmdit->second->maxVal);
+                msg.value = val;
+                params_from_gui_fifo.push(msg);
+            }
+        }
+        if (macroBindings[knobindex].dest_type == 1)
+        {
+            auto dest = macroBindings[knobindex].dest;
+            auto targetid = granulator.modmatrix.rt.routes[dest].target->baz;
+            ThreadMessage tmsg;
+            tmsg.opcode = ThreadMessage::OP_MODPARAM;
+            tmsg.modslot = dest;
+            auto range = granulator.modRanges[targetid];
+            tmsg.depth = value * range * 0.5;
+            from_gui_fifo.push(tmsg);
+        }
+    }
+}
 
 AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     : AudioProcessor(BusesProperties()
                          .withInput("Input", juce::AudioChannelSet::stereo(), true)
                          .withOutput("Output", juce::AudioChannelSet::ambisonic(3), true))
 {
+    macroBindings.resize(16);
+    macroBindings[0] = {0, ToneGranulator::PAR_PITCH};
+    macroBindings[1] = {0, ToneGranulator::PAR_DENSITY};
+    macroBindings[2] = {0, ToneGranulator::PAR_AZIMUTH};
+    macroBindings[3] = {0, ToneGranulator::PAR_DURATION};
+    macroBindings[8] = {1, 0};
+    macroBindings[9] = {1, 1};
     snapshots.resize(64);
     for (int i = 0; i < 64; ++i)
     {

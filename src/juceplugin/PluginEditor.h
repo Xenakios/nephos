@@ -903,38 +903,7 @@ class DashPage : public juce::Component
                                 .withLinearScaleFormatting("");
             auto knob = std::make_unique<XapSlider>(XapSlider::SS_Knob, pmd);
             knob->OnValueChanged = [this, i, knobptr = knob.get()]() {
-                ParameterMessage msg;
-                if (i == 0)
-                    msg.id = ToneGranulator::PAR_PITCH;
-                else if (i == 1)
-                    msg.id = ToneGranulator::PAR_AZIMUTH;
-                else if (i == 2)
-                    msg.id = ToneGranulator::PAR_DENSITY;
-                else if (i == 3)
-                    msg.id = ToneGranulator::PAR_DURATION;
-                else if (i == 4)
-                    msg.id = ToneGranulator::PAR_OSC_SYNC;
-                else if (i == 5 || i == 6 || i == 7)
-                {
-                    auto targetid = processorRef.granulator.modmatrix.rt.routes[i - 5].target->baz;
-                    ThreadMessage tmsg;
-                    tmsg.opcode = ThreadMessage::OP_MODPARAM;
-                    tmsg.modslot = i - 5;
-                    auto range = processorRef.granulator.modRanges[targetid];
-                    tmsg.depth = knobptr->getValue() * range * 0.5;
-                    processorRef.from_gui_fifo.push(tmsg);
-                    return;
-                }
-                else
-                {
-                    return;
-                }
-
-                auto &pmd = processorRef.granulator.idtoparmetadata[msg.id];
-                float val =
-                    juce::jmap<float>(knobptr->getValue(), -1.0f, 1.0f, pmd->minVal, pmd->maxVal);
-                msg.value = val;
-                processorRef.params_from_gui_fifo.push(msg);
+                processorRef.handleMacroKnob(i, knobptr->getValue());
             };
             addAndMakeVisible(knob.get());
             perfSliders.push_back(std::move(knob));

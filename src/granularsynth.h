@@ -1,11 +1,4 @@
 #pragma once
-#ifdef __APPLE__
-  #include <fmt/format.h>
-  namespace std { using fmt::format; }
-#else
-  #include <fmt/format.h>
-#endif
-
 #include <vector>
 #include <span>
 // #include "sst/basic-blocks/dsp/CorrelatedNoise.h"
