@@ -1,0 +1,24 @@
+[
+    {
+        "knob": 0,
+        "desttype": 0,
+        "dest": 500,
+        "min": 12.0,
+        "max": -12.0
+    },
+    {
+        "knob": 1,
+        "desttype": 0,
+        "dest": 400
+    },
+    {
+        "knob": 2,
+        "desttype": 1,
+        "dest": 0
+    },
+    {
+        "knob": 3,
+        "desttype": 1,
+        "dest": 1
+    }
+]
