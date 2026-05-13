@@ -88,7 +88,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     {
         try
         {
-            auto fname = std::format("{}{}.json)", presetsPath, i + 1);
+            auto fname = fmt::format("{}{}.json)", presetsPath, i + 1);
             if (std::filesystem::exists(fname))
             {
                 auto jsontxt = choc::file::loadFileAsString(fname);

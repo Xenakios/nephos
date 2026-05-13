@@ -443,14 +443,14 @@ struct ModulationRowComponent : public juce::Component
         for (int i = 0; i < 4; ++i)
         {
             peakingnode.children.push_back(
-                Node{std::format("PEAKING {}", i + 1), GranulatorModConfig::CURVE_PEAKING1 + i});
+                Node{fmt::format("PEAKING {}", i + 1), GranulatorModConfig::CURVE_PEAKING1 + i});
         }
         curveDrop.rootNode.children.emplace_back(peakingnode);
         Node xornode{"XOR"};
         for (int i = 0; i < 4; ++i)
         {
             xornode.children.push_back(
-                Node{std::format("XOR {}", i + 1), GranulatorModConfig::CURVE_XOR1 + i});
+                Node{fmt::format("XOR {}", i + 1), GranulatorModConfig::CURVE_XOR1 + i});
         }
         curveDrop.rootNode.children.emplace_back(xornode);
         Node stepnode{"STEPS"};
@@ -458,7 +458,7 @@ struct ModulationRowComponent : public juce::Component
         {
             int actnumsteps = i + 2;
             stepnode.children.push_back(
-                Node{std::format("{} STEPS", actnumsteps), GranulatorModConfig::CURVE_STEPS1 + i});
+                Node{fmt::format("{} STEPS", actnumsteps), GranulatorModConfig::CURVE_STEPS1 + i});
         }
         curveDrop.rootNode.children.emplace_back(stepnode);
         curveDrop.rootNode.children.push_back(
@@ -825,13 +825,13 @@ class PerformanceComponent : public juce::Component, public juce::Timer
             g.setColour(juce::Colours::yellow);
             g.fillRect(juce::Rectangle<float>(0.0f, 0.0f, w, 20.0f));
             g.setColour(juce::Colours::white);
-            g.drawText(std::format("VOICES {:2}/{:2}", usedvoices, maxvoices), 0, 0,
+            g.drawText(fmt::format("VOICES {:2}/{:2}", usedvoices, maxvoices), 0, 0,
                        getWidth() / 2 - 2, 20, juce::Justification::centredRight);
             w = cpu_use * (getWidth() - 2) * 0.5;
             g.setColour(juce::Colours::green);
             g.fillRect(juce::Rectangle<float>(getWidth() / 2.0, 0.0f, w, 20.0f));
             g.setColour(juce::Colours::white);
-            g.drawText(std::format("CPU {}%", (int)(cpu_use * 100.0)), getWidth() / 2 - 2, 0,
+            g.drawText(fmt::format("CPU {}%", (int)(cpu_use * 100.0)), getWidth() / 2 - 2, 0,
                        getWidth() / 2, 20, juce::Justification::centredRight);
         }
     }
@@ -899,7 +899,7 @@ class DashPage : public juce::Component
             ParamDesc pmd = ParamDesc()
                                 .asFloat()
                                 .withRange(-1.0, 1.0)
-                                .withName(std::format("M{}", i + 1))
+                                .withName(fmt::format("M{}", i + 1))
                                 .withLinearScaleFormatting("");
             auto knob = std::make_unique<XapSlider>(XapSlider::SS_Knob, pmd);
             knob->OnValueChanged = [this, i, knobptr = knob.get()]() {
