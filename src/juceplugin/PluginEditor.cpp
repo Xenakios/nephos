@@ -761,7 +761,7 @@ void StepSeqComponent::runExternalProgram()
     threadPool->addJob([this]() {
         juce::ChildProcess cp;
         double t0 = juce::Time::getMillisecondCounterHiRes();
-        cp.start(std::format(
+        cp.start(fmt::format(
             R"(python C:\develop\AudioPluginHost_mk2\Source\granularsynth\stepseq.py {} {} {})",
             sindex, editRange.getStart(), editRange.getLength()));
         auto data = cp.readAllProcessOutput();
