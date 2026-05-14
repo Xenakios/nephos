@@ -1258,7 +1258,6 @@ class ToneGranulator
     {
         PAR_MAINVOLUME = 100,
         PAR_AMBORDER = 200,
-        PAR_AMBUSENORMALIZATION = 250,
         PAR_OSCTYPE = 300,
         PAR_DENSITY = 400,
         PAR_PITCH = 500,
@@ -1570,12 +1569,6 @@ class ToneGranulator
                                    .withName("Spatialization mode")
                                    .withGroupName("Spatialization")
                                    .withID(PAR_AMBORDER));
-        parmetadatas.push_back(pmd()
-                                   .asOnOffBool()
-                                   .withDefault(1)
-                                   .withName("Spatialization coeffs normalization")
-                                   .withGroupName("Spatialization")
-                                   .withID(PAR_AMBUSENORMALIZATION));
         parmetadatas.push_back(pmd()
                                    .withUnorderedMapFormatting({{0, "SINE"},
                                                                 {1, "SEMISINE"},
@@ -2273,7 +2266,7 @@ class ToneGranulator
         bool self_generate = false;
         if (events.size() == 0)
             self_generate = true;
-        bool doambcoeffsnormalization = *idtoparvalptr[PAR_AMBUSENORMALIZATION];
+        // bool doambcoeffsnormalization = *idtoparvalptr[PAR_AMBUSENORMALIZATION];
         int bufframecount = 0;
 
         for (uint32_t i = 0; i < modmatrix.numLfos; ++i)
@@ -2358,7 +2351,7 @@ class ToneGranulator
                         else
                             voices[j]->polarity_gain = -1.0f;
                         voices[j]->grainid = graincount;
-                        voices[j]->doambnormalization = doambcoeffsnormalization;
+                        voices[j]->doambnormalization = true;
                         voices[j]->tail_len = taillen;
                         voices[j]->tail_fade_len = std::clamp(taillen * 0.5, 0.002, 1.0);
                         voices[j]->start(*ev);

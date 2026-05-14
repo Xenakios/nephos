@@ -13,11 +13,21 @@
     },
     {
         "knob": 2,
+        "desttype": 0,
+        "dest": 600
+    },
+    {
+        "knob": 3,
+        "desttype": 0,
+        "dest": 700
+    },
+    {
+        "knob": 8,
         "desttype": 1,
         "dest": 0
     },
     {
-        "knob": 3,
+        "knob": 9,
         "desttype": 1,
         "dest": 1
     }
