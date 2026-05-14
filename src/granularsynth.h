@@ -17,10 +17,9 @@
 #include "sst/basic-blocks/params/ParamMetadata.h"
 #include "containers/choc_SingleReaderSingleWriterFIFO.h"
 #include "easing.h"
-#define SIMDE_ENABLE_NATIVE_ALIASES  // lets you skip the simde_ prefix
+#define SIMDE_ENABLE_NATIVE_ALIASES // lets you skip the simde_ prefix
 #include <simde/x86/avx2.h>
 #include <simde/x86/fma.h>
-
 
 using namespace sst::basic_blocks::mod_matrix;
 
@@ -657,7 +656,6 @@ class GranulatorVoice
         float azispread = std::clamp(evpars.azimuth_spread, -180.0f, 180.0f);
         // float azi0 = std::clamp(-evpars.azimuth - azispread, -360.0f, 360.0f);
 
-        float azi1 = wrap_value(-180.0f, -evpars.azimuth + azispread, 180.0f);
         // float azi0 = wrap_value(-180.0f, -evpars.azimuth - azispread, 180.0f);
         // float azi0 = wrap_value(-180.0f, -evpars.azimuth, 180.0f);
         // float ele = evpars.elevation;
@@ -682,8 +680,12 @@ class GranulatorVoice
         }
         assert(ele >= -90.0f && ele <= 90.0f);
         // Rotate azimuth 180° if we flipped over a pole
-        float azi0 = wrap_value(-180.0f, -evpars.azimuth + (flipped ? 180.0f : 0.0f), 180.0f);
+        float azi0 =
+            wrap_value(-180.0f, -evpars.azimuth + azispread + (flipped ? 180.0f : 0.0f), 180.0f);
+        float azi1 =
+            wrap_value(-180.0f, -evpars.azimuth - azispread + (flipped ? 180.0f : 0.0f), 180.0f);
         assert(azi0 >= -180.0f && azi0 <= 180.0f);
+        assert(azi1 >= -180.0f && azi1 <= 180.0f);
         used_azi0 = azi0;
         used_azi1 = azi1;
         used_ele = ele;
@@ -990,8 +992,8 @@ class MidiNoteModSource
         if (current_messages.empty())
             return "NO MESSAGES";
         std::string result;
-        //for (auto &e : current_messages)
-        //    result += std::format("{} {} {} ", e.note, e.velo, e.aftertouch);
+        // for (auto &e : current_messages)
+        //     result += std::format("{} {} {} ", e.note, e.velo, e.aftertouch);
         return result;
     }
     void set_sustain(bool newsustain)
