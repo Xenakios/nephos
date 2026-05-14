@@ -48,7 +48,7 @@ void test_interrupt_support()
                 ctx.cancel();
                 break;
             }
-            Sleep(10);
+            //Sleep(10);
         }
         jsthread.join();
     }
