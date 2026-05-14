@@ -35,10 +35,10 @@ class DashBoardComponent : public juce::Component
         pitchGradient.addColour(0.50, juce::Colours::yellow);
         pitchGradient.addColour(0.75, juce::Colours::cyan);
         pitchGradient.addColour(1.00, juce::Colours::white);
-        //if (!is_debug())
-            visualfadecoefficient = 0.93;
-        //else
-        //    visualfadecoefficient = std::pow(0.93, 4);
+        // if (!is_debug())
+        visualfadecoefficient = 0.93;
+        // else
+        //     visualfadecoefficient = std::pow(0.93, 4);
         persisted_events.reserve(4096);
         paramValuesHistory.reserve(1024);
         vblankAttachment = std::make_unique<juce::VBlankAttachment>(this, [this]() {
@@ -55,6 +55,7 @@ class DashBoardComponent : public juce::Component
             }
         });
     }
+
     void paint(juce::Graphics &g) override;
     void paintAmbisonicFieldPolar(juce::Graphics &g);
     void paintAmbisonicFieldHammerProjection(juce::Graphics &g);
@@ -99,6 +100,7 @@ class DashBoardComponent : public juce::Component
     void drawCPUGraph(juce::Graphics &g, double enginetime, juce::Rectangle<float> area);
     void updateGrainData()
     {
+        gr->gatherGrainVisData = isShowing();
         timespantoshow = gr->gvsettings.timespantoshow;
         ToneGranulator::GrainVisualizerMessage msg;
         while (gr->visualizer_fifo.pop(msg))
@@ -122,6 +124,6 @@ class DashBoardComponent : public juce::Component
     {
         float h = getHeight();
         haGrid.setBounds(0.0, h / 2 - 150.0f, 499, 300);
-        //haGrid.toArea = haGrid.toArea.translated(0.0f, h / 2 - 150.0f);
+        // haGrid.toArea = haGrid.toArea.translated(0.0f, h / 2 - 150.0f);
     }
 };

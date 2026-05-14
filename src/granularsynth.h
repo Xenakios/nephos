@@ -1252,6 +1252,7 @@ class ToneGranulator
         double timespantoshow = 8.0;
     };
     GrainVisualizerSettings gvsettings;
+    std::atomic<bool> gatherGrainVisData{false};
     choc::fifo::SingleReaderSingleWriterFIFO<GrainVisualizerMessage> visualizer_fifo;
 
     enum PARAMS
@@ -2356,15 +2357,18 @@ class ToneGranulator
                         voices[j]->tail_fade_len = std::clamp(taillen * 0.5, 0.002, 1.0);
                         voices[j]->start(*ev);
                         voicewasfound = true;
-                        GrainVisualizerMessage vmsg;
-                        vmsg.timepos = ev->time_position;
-                        vmsg.pitch = voices[j]->pitch_base;
-                        vmsg.duration = voices[j]->grain_end_phase / m_sr;
-                        vmsg.gain = voices[j]->graingain;
-                        vmsg.azimuth0degrees = voices[j]->used_azi0;
-                        vmsg.azimuth1degrees = voices[j]->used_azi1;
-                        vmsg.elevationdegrees = ev->elevation;
-                        visualizer_fifo.push(vmsg);
+                        if (gatherGrainVisData)
+                        {
+                            GrainVisualizerMessage vmsg;
+                            vmsg.timepos = ev->time_position;
+                            vmsg.pitch = voices[j]->pitch_base;
+                            vmsg.duration = voices[j]->grain_end_phase / m_sr;
+                            vmsg.gain = voices[j]->graingain;
+                            vmsg.azimuth0degrees = voices[j]->used_azi0;
+                            vmsg.azimuth1degrees = voices[j]->used_azi1;
+                            vmsg.elevationdegrees = ev->elevation;
+                            visualizer_fifo.push(vmsg);
+                        }
                         ++graincount;
                         break;
                     }
