@@ -2,9 +2,9 @@
 #include <string>
 #include "javascript/choc_javascript_QuickJS.h"
 #include "javascript/choc_javascript.h"
-#include <print>
 #include <algorithm>
 #include <thread>
+#include <iostream>
 
 void test_interrupt_support()
 {
@@ -27,13 +27,13 @@ void test_interrupt_support()
                 auto r = ctx.invoke("foo", 666.0);
                 auto t1 = std::chrono::high_resolution_clock::now();
                 auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
-                std::print("script took {} ms to run\n", diff);
-                std::print("{}\n", r.getWithDefault(0.0f));
+                // std::print("script took {} ms to run\n", diff);
+                // std::print("{}\n", r.getWithDefault(0.0f));
                 finished.store(true);
             }
             catch (std::exception &ex)
             {
-                std::print("{}\n", ex.what());
+                std::cout << ex.what() << "\n";
             }
         });
         while (true)
@@ -44,7 +44,7 @@ void test_interrupt_support()
             auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
             if (diff > 5000)
             {
-                std::print("js took too long, cancelling...\n");
+                std::cout << "js took too long, cancelling...\n";
                 ctx.cancel();
                 break;
             }
@@ -54,7 +54,7 @@ void test_interrupt_support()
     }
     catch (std::exception &ex)
     {
-        std::print("exception running js code : {}\n", ex.what());
+        std::cout << "exception running js code : " << ex.what() << "\n";
     }
 }
 
