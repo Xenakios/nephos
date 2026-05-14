@@ -32,7 +32,9 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
     mainTabs.addTab("MAIN", juce::Colours::grey, &mainPage, false);
     mainTabs.addTab("MODULATION", juce::Colours::grey, &modulationPage, false);
     mainTabs.addTab("DASHBOARD", juce::Colours::grey, &dashPage, false);
-
+    dashPage.dashBoardComponent.OnMacroKnobsLoadRequested = [this]() {
+        processorRef.loadMacroKnobs(processorRef.macroKnobsPath);
+    };
     mainTabs.setCurrentTabIndex(0);
     addAndMakeVisible(mainTabs);
     for (int i = 0; i < 8; ++i)
@@ -49,6 +51,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
     {
         idToSlider[e->getParameterMetaData().id] = e;
     }
+    // setScaleFactor(0.75);
     setSize(1500, 830);
     startTimer(50);
 }
@@ -60,16 +63,6 @@ void AudioPluginAudioProcessorEditor::timerCallback()
     mainPage.envcomp.updateIfNeeded();
     mainPage.auxenvcomp.updateIfNeeded();
 
-    mainPage.infoLabel.setText(
-        std::format("[CPU Load {:3.0f}%] [{}/{} voices {}/{} scheduled] [{} in {} out] ",
-                    processorRef.perfMeasurer.getLoadAsPercentage(),
-                    processorRef.granulator.numVoicesUsed.load(), processorRef.granulator.numvoices,
-                    processorRef.granulator.scheduledGrains.size(),
-                    processorRef.granulator.scheduledGrains.capacity(),
-                    processorRef.getTotalNumInputChannels(),
-                    processorRef.getTotalNumOutputChannels()),
-
-        juce::dontSendNotification);
     for (auto &c : mainPage.stepcomps)
     {
         c->updateGUI();
@@ -167,7 +160,6 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
     };
     mainParamsComponent.addHeaderComponent(recordButton.get());
     mainParamsComponent.addHeaderComponent(perfcomp.get());
-    addAndMakeVisible(infoLabel);
 
     filter1Drop = std::make_unique<DropDownComponent>();
     fillDropWithFilters(0, *filter1Drop, "Filter 1");
@@ -517,7 +509,6 @@ void MainPageComponent::resized()
             juce::FlexItem(*modRowComps[i]).withFlex(1).withMinHeight(25).withMargin(1));
     }
     modrowflex.performLayout(juce::Rectangle<int>{0, yoffs, getWidth(), 220});
-    infoLabel.setBounds(0, getHeight() - 25, getWidth() - 71, 24);
 }
 
 void StepSeqComponent::paint(juce::Graphics &g)

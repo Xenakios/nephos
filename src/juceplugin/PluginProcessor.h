@@ -124,7 +124,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     void handleMacroKnob(int knobindex, float value);
     void loadMacroKnobs(std::string filename);
     std::string presetsPath;
-
+    std::string macroKnobsPath;
   private:
     alignas(32) std::vector<float> workBuffer;
     alignas(32) choc::fifo::SingleReaderSingleWriterFIFO<

@@ -872,7 +872,7 @@ class MainPageComponent final : public juce::Component
     juce::TabbedComponent lfoTabs;
 
     std::vector<std::unique_ptr<StepSeqComponent>> stepcomps;
-    juce::Label infoLabel;
+    
 
     std::unique_ptr<PerformanceComponent> perfcomp;
     std::unique_ptr<juce::TextButton> recordButton;

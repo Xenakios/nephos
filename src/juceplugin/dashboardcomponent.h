@@ -24,6 +24,7 @@ class DashBoardComponent : public juce::Component
     juce::ColourGradient pitchGradient;
     std::unique_ptr<juce::VBlankAttachment> vblankAttachment;
     std::function<double()> GetCPULoad;
+    std::function<void(void)> OnMacroKnobsLoadRequested;
     DashBoardComponent(ToneGranulator *g) : gr(g)
     {
         // addAndMakeVisible(haGrid);
@@ -72,9 +73,9 @@ class DashBoardComponent : public juce::Component
         menu.addItem("8 seconds", [this]() { gr->gvsettings.timespantoshow = 8.0; });
         menu.addItem("16 seconds", [this]() { gr->gvsettings.timespantoshow = 16.0; });
         menu.addSectionHeader("Options");
-        menu.addItem("Toggle size", [this]() {
-            is_extended_size = !is_extended_size;
-            getParentComponent()->resized();
+        menu.addItem("Load macro knobs settings", [this]() {
+            if (OnMacroKnobsLoadRequested)
+                OnMacroKnobsLoadRequested();
         });
         menu.addItem("Show modulator values", true, showModulatorValues,
                      [this]() { showModulatorValues = !showModulatorValues; });

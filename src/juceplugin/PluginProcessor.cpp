@@ -81,7 +81,8 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                          .withOutput("Output", juce::AudioChannelSet::ambisonic(3), true))
 {
     macroBindings.resize(16);
-    loadMacroKnobs(R"(C:\develop\nephos\src\macroknobs.json)");
+    macroKnobsPath = R"(C:\develop\nephos\src\macroknobs.json)"; 
+    loadMacroKnobs(macroKnobsPath);
     snapshots.resize(64);
     presetsPath = R"(C:\develop\nephos\granulatorpresets\)";
     for (int i = 0; i < 64; ++i)
