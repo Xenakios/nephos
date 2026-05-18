@@ -51,7 +51,12 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
     {
         idToSlider[e->getParameterMetaData().id] = e;
     }
-    // setScaleFactor(0.75);
+#if JUCE_MAC
+    setScaleFactor(0.75);
+#else
+    setScaleFactor(0.90);
+#endif
+
     setSize(1500, 830);
     startTimer(50);
 }
@@ -485,10 +490,10 @@ void MainPageComponent::paint(juce::Graphics &g) { g.fillAll(juce::Colours::dark
 void MainPageComponent::resized()
 {
     oscillatorComponent.setBounds(0, 0, 500, 175);
-    volumeParamsComponent.setBounds(0, oscillatorComponent.getBottom() + 1, 500, 125);
+    volumeParamsComponent.setBounds(0, oscillatorComponent.getBottom() + 1, 520, 125);
     timeParamsComponent.setBounds(502, 0, 300, 125);
 
-    envcomp.setBounds(502, timeParamsComponent.getBottom() + 1, 175, 175);
+    envcomp.setBounds(522, timeParamsComponent.getBottom() + 1, 175, 175);
     auxenvcomp.setBounds(envcomp.getRight() + 2, timeParamsComponent.getBottom() + 1, 175, 175);
 
     spatParamsComponent.setBounds(0, 302, 500, 125);
