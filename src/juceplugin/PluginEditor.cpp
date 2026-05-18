@@ -468,7 +468,7 @@ void MainPageComponent::resized()
                                      100);
     insert2ParamsComponent.setBounds(insert2ParamsComponent.getRight() + 1,
                                      spatParamsComponent.getBottom() + 2, getWidth() / 2 - 4, 100);
-    stackParamsComponent.setBounds(1004, 302, 500, 125);
+    stackParamsComponent.setBounds(timeParamsComponent.getRight()+2, 0, 500, 125);
 }
 
 void StepSeqComponent::paint(juce::Graphics &g)
