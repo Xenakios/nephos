@@ -867,12 +867,11 @@ class MainPageComponent final : public juce::Component
     std::unique_ptr<DropDownComponent> filter2Drop;
     void handleFilterSelection(int filterindex);
     void fillDropWithFilters(int filterIndex, DropDownComponent &drop, std::string rootText);
-    std::vector<std::unique_ptr<ModulationRowComponent>> modRowComps;
+
     std::vector<XapSlider *> xapsliders;
     juce::TabbedComponent lfoTabs;
 
     std::vector<std::unique_ptr<StepSeqComponent>> stepcomps;
-    
 
     std::unique_ptr<PerformanceComponent> perfcomp;
     std::unique_ptr<juce::TextButton> recordButton;
@@ -973,6 +972,33 @@ class ModulationPage : public juce::Component
             stepcomps.push_back(std::move(stepcomp));
         }
         */
+        for (int i = 0; i < 16; ++i)
+        {
+            auto modcomp = std::make_unique<ModulationRowComponent>(&processorRef.granulator);
+            modcomp->modslotindex = i;
+            modcomp->stateChangedCallback = [this](ModulationRowComponent::CallbackParams args) {
+                if (args.slot >= 0 && args.source >= 0 && args.target >= 0)
+                {
+                    processorRef.updateHostDisplay(
+                        juce::AudioProcessor::ChangeDetails().withNonParameterStateChanged(true));
+                    ThreadMessage msg;
+                    msg.modslot = args.slot;
+                    msg.depth = args.depth;
+                    msg.modsource = args.source;
+                    msg.modvia = args.via;
+                    msg.moddest = args.target;
+                    msg.modcurve = args.curve;
+                    msg.opcode = ThreadMessage::OP_MODROUTING;
+                    if (args.onlydepth)
+                    {
+                        msg.opcode = ThreadMessage::OP_MODPARAM;
+                    }
+                    processorRef.from_gui_fifo.push(msg);
+                }
+            };
+            addAndMakeVisible(*modcomp);
+            modRowComps.push_back(std::move(modcomp));
+        }
     }
     void resized() override
     {
@@ -985,6 +1011,16 @@ class ModulationPage : public juce::Component
                 juce::FlexItem(*lfocomps[i]).withFlex(1.0).withMargin(2.0).withMinHeight(80.0));
         }
         flex.performLayout(juce::Rectangle<int>(0, 0, getWidth(), 175));
+        juce::FlexBox modrowflex;
+        modrowflex.flexDirection = juce::FlexBox::Direction::column;
+        modrowflex.flexWrap = juce::FlexBox::Wrap::wrap;
+        for (int i = 0; i < modRowComps.size(); ++i)
+        {
+            modrowflex.items.add(
+                juce::FlexItem(*modRowComps[i]).withFlex(1).withMinHeight(25).withMargin(1));
+        }
+        int yoffs = lfocomps.back()->getBottom() + 1;
+        modrowflex.performLayout(juce::Rectangle<int>{0, yoffs, getWidth(), 220});
     }
     AudioPluginAudioProcessor &processorRef;
     std::vector<std::unique_ptr<LFOComponent>> lfocomps;

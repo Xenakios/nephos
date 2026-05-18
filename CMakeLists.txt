@@ -147,6 +147,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
             -Rpass-missed=loop-vectorize
         )
     endif()
+    
 
     target_compile_options(NephosCLI PRIVATE ${X86_COMPILE_OPTIONS})
     target_compile_options(AWLIMITED PRIVATE ${X86_COMPILE_OPTIONS})
@@ -154,9 +155,9 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
     
     if(WIN32)
         # Clang on Windows — links against MSVC runtime, not libc++
-        target_link_options(NephosCLI PRIVATE -fuse-ld=lld)
-        target_link_options(AWLIMITED PRIVATE -fuse-ld=lld)
-        target_link_options(NephosPlugin PRIVATE -fuse-ld=lld)
+        # target_link_options(NephosCLI PRIVATE -fuse-ld=lld)
+        # target_link_options(AWLIMITED PRIVATE -fuse-ld=lld)
+        # target_link_options(NephosPlugin PRIVATE -fuse-ld=lld)
     elseif(APPLE)
         # Intel Mac — libc++ and clang already defaults, nothing extra needed
         message(STATUS "x86_64 macOS (Intel Mac) build")

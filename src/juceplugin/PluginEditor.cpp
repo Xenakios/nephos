@@ -105,18 +105,18 @@ void AudioPluginAudioProcessorEditor::timerCallback()
             }
             mainPage.updateInsertParameterMetaDatas();
         }
-        if (msg.opcode == ThreadMessage::OP_MODROUTING && msg.modslot < mainPage.modRowComps.size())
+        if (msg.opcode == ThreadMessage::OP_MODROUTING &&
+            msg.modslot < modulationPage.modRowComps.size())
         {
-            mainPage.modRowComps[msg.modslot]->sourceDrop.setSelectedId(msg.modsource);
+            modulationPage.modRowComps[msg.modslot]->sourceDrop.setSelectedId(msg.modsource);
 
-            mainPage.modRowComps[msg.modslot]->viaDrop.setSelectedId(msg.modvia);
+            modulationPage.modRowComps[msg.modslot]->viaDrop.setSelectedId(msg.modvia);
 
-            mainPage.modRowComps[msg.modslot]->depthSlider.setValue(msg.depth,
-                                                                    juce::dontSendNotification);
-            mainPage.modRowComps[msg.modslot]->destDrop.setSelectedId(msg.moddest);
+            modulationPage.modRowComps[msg.modslot]->depthSlider.setValue(msg.depth, false);
+            modulationPage.modRowComps[msg.modslot]->destDrop.setSelectedId(msg.moddest);
 
-            mainPage.modRowComps[msg.modslot]->setTarget(msg.moddest);
-            mainPage.modRowComps[msg.modslot]->curveDrop.setSelectedId(msg.modcurve);
+            modulationPage.modRowComps[msg.modslot]->setTarget(msg.moddest);
+            modulationPage.modRowComps[msg.modslot]->curveDrop.setSelectedId(msg.modcurve);
         }
     }
 }
@@ -234,33 +234,6 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
         }
     }
 
-    for (int i = 0; i < 16; ++i)
-    {
-        auto modcomp = std::make_unique<ModulationRowComponent>(&processorRef.granulator);
-        modcomp->modslotindex = i;
-        modcomp->stateChangedCallback = [this](ModulationRowComponent::CallbackParams args) {
-            if (args.slot >= 0 && args.source >= 0 && args.target >= 0)
-            {
-                processorRef.updateHostDisplay(
-                    juce::AudioProcessor::ChangeDetails().withNonParameterStateChanged(true));
-                ThreadMessage msg;
-                msg.modslot = args.slot;
-                msg.depth = args.depth;
-                msg.modsource = args.source;
-                msg.modvia = args.via;
-                msg.moddest = args.target;
-                msg.modcurve = args.curve;
-                msg.opcode = ThreadMessage::OP_MODROUTING;
-                if (args.onlydepth)
-                {
-                    msg.opcode = ThreadMessage::OP_MODPARAM;
-                }
-                processorRef.from_gui_fifo.push(msg);
-            }
-        };
-        addAndMakeVisible(*modcomp);
-        modRowComps.push_back(std::move(modcomp));
-    }
     auto &idtomd = processorRef.granulator.idtoparmetadata;
     for (int i = 0; i < 8; ++i)
     {
@@ -319,10 +292,17 @@ void MainPageComponent::updateInsertParameterMetaDatas()
     };
     f(&insert1ParamsComponent);
     f(&insert2ParamsComponent);
-    for (auto &c : modRowComps)
+    // should do this in a cleaner way...
+    if (auto parent = dynamic_cast<AudioPluginAudioProcessorEditor *>(
+            getParentComponent()->getParentComponent()))
     {
-        c->initDestinationDrop();
+        for (auto &c : parent->modulationPage.modRowComps)
+        {
+            c->initDestinationDrop();
+        }
     }
+    else
+        jassert(false);
 }
 
 void MainPageComponent::handleFilterSelection(int filterindex)
@@ -505,15 +485,6 @@ void MainPageComponent::resized()
     lfoTabs.setBounds(0, mainParamsComponent.getBottom() + 1, getWidth(), 110);
 
     int yoffs = lfoTabs.getBottom() + 1;
-    juce::FlexBox modrowflex;
-    modrowflex.flexDirection = juce::FlexBox::Direction::column;
-    modrowflex.flexWrap = juce::FlexBox::Wrap::wrap;
-    for (int i = 0; i < modRowComps.size(); ++i)
-    {
-        modrowflex.items.add(
-            juce::FlexItem(*modRowComps[i]).withFlex(1).withMinHeight(25).withMargin(1));
-    }
-    modrowflex.performLayout(juce::Rectangle<int>{0, yoffs, getWidth(), 220});
 }
 
 void StepSeqComponent::paint(juce::Graphics &g)
