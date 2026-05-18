@@ -774,11 +774,13 @@ class ParameterGroupComponent : public juce::GroupComponent
         layout.flexDirection = juce::FlexBox::Direction::column;
         float minh = 25.0;
         float maxh = 40.0f;
+        float headercompflex = 1.0;
         if (m_horizlayout)
         {
             layout.flexDirection = juce::FlexBox::Direction::row;
             minh = 50.0;
             maxh = 80.0;
+            headercompflex = 2.0;
         }
 
         layout.flexWrap = juce::FlexBox::Wrap::wrap;
@@ -786,7 +788,7 @@ class ParameterGroupComponent : public juce::GroupComponent
         for (int i = 0; i < headerComponents.size(); ++i)
         {
             layout.items.add(juce::FlexItem(*headerComponents[i])
-                                 .withFlex(1.0)
+                                 .withFlex(headercompflex)
                                  .withMargin(2.0)
                                  .withMinHeight(minh)
                                  .withMinWidth(50)

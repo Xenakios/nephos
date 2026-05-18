@@ -464,8 +464,10 @@ void MainPageComponent::resized()
 
     spatParamsComponent.setBounds(0, 302, 500, 125);
     mainParamsComponent.setBounds(502, 302, 500, 125);
-    insert1ParamsComponent.setBounds(880, 0, 620, 100);
-    insert2ParamsComponent.setBounds(880, 151, 620, 100);
+    insert1ParamsComponent.setBounds(0, spatParamsComponent.getBottom() + 2, getWidth() / 2 - 4,
+                                     100);
+    insert2ParamsComponent.setBounds(insert2ParamsComponent.getRight() + 1,
+                                     spatParamsComponent.getBottom() + 2, getWidth() / 2 - 4, 100);
     stackParamsComponent.setBounds(1004, 302, 500, 125);
 }
 
