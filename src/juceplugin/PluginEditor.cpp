@@ -54,10 +54,10 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
 #if JUCE_MAC
     setScaleFactor(0.75);
 #else
-    setScaleFactor(0.90);
+    // setScaleFactor(0.90);
 #endif
 
-    setSize(1500, 830);
+    setSize(1500, 780);
     startTimer(50);
 }
 
@@ -68,7 +68,7 @@ void AudioPluginAudioProcessorEditor::timerCallback()
     mainPage.envcomp.updateIfNeeded();
     mainPage.auxenvcomp.updateIfNeeded();
 
-    for (auto &c : mainPage.stepcomps)
+    for (auto &c : modulationPage.stepcomps)
     {
         c->updateGUI();
     }
@@ -127,8 +127,7 @@ void AudioPluginAudioProcessorEditor::resized()
 }
 
 MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
-    : processorRef(p), envcomp(&p.granulator, false), auxenvcomp(&p.granulator, true),
-      lfoTabs(juce::TabbedButtonBar::Orientation::TabsAtTop)
+    : processorRef(p), envcomp(&p.granulator, false), auxenvcomp(&p.granulator, true)
 {
 
     perfcomp = std::make_unique<PerformanceComponent>();
@@ -250,19 +249,6 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
         // lfoTabs.addTab("LFO " + juce::String(i + 1), juce::Colours::darkgrey, lfoc.get(), false);
         // lfocomps.push_back(std::move(lfoc));
     }
-    for (int i = 0; i < 8; ++i)
-    {
-        auto stepcomp =
-            std::make_unique<StepSeqComponent>(i, &processorRef.granulator, &processorRef.tpool);
-        lfoTabs.addTab("STEP SEQ " + juce::String(i + 1), juce::Colours::darkgrey, stepcomp.get(),
-                       false);
-        stepcomps.push_back(std::move(stepcomp));
-    }
-    addAndMakeVisible(lfoTabs);
-    // lfoTabs.getTabbedButtonBar().setColour(juce::TabbedButtonBar::ColourIds::tabOutlineColourId,
-    //                                        juce::Colours::yellowgreen);
-    lfoTabs.setCurrentTabIndex(0);
-
     // addAndMakeVisible(insertsTabs);
 
     // setLookAndFeel(&lnf);
@@ -481,10 +467,6 @@ void MainPageComponent::resized()
     insert1ParamsComponent.setBounds(880, 0, 620, 100);
     insert2ParamsComponent.setBounds(880, 151, 620, 100);
     stackParamsComponent.setBounds(1004, 302, 500, 125);
-
-    lfoTabs.setBounds(0, mainParamsComponent.getBottom() + 1, getWidth(), 110);
-
-    int yoffs = lfoTabs.getBottom() + 1;
 }
 
 void StepSeqComponent::paint(juce::Graphics &g)

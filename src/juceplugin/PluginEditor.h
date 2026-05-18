@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PluginProcessor.h"
+#include "juce_gui_basics/juce_gui_basics.h"
 #include "xap_slider.h"
 #include "dashboardcomponent.h"
 
@@ -869,10 +870,6 @@ class MainPageComponent final : public juce::Component
     void fillDropWithFilters(int filterIndex, DropDownComponent &drop, std::string rootText);
 
     std::vector<XapSlider *> xapsliders;
-    juce::TabbedComponent lfoTabs;
-
-    std::vector<std::unique_ptr<StepSeqComponent>> stepcomps;
-
     std::unique_ptr<PerformanceComponent> perfcomp;
     std::unique_ptr<juce::TextButton> recordButton;
 
@@ -938,7 +935,8 @@ class DashPage : public juce::Component
 class ModulationPage : public juce::Component
 {
   public:
-    ModulationPage(AudioPluginAudioProcessor &p) : processorRef(p)
+    ModulationPage(AudioPluginAudioProcessor &p)
+        : processorRef(p), stepSeqTabs(juce::TabbedButtonBar::Orientation::TabsAtTop)
     {
         for (int i = 0; i < 8; ++i)
         {
@@ -962,16 +960,15 @@ class ModulationPage : public juce::Component
             addAndMakeVisible(*lfoc);
             lfocomps.push_back(std::move(lfoc));
         }
-        /*
         for (int i = 0; i < 8; ++i)
         {
             auto stepcomp = std::make_unique<StepSeqComponent>(i, &processorRef.granulator,
                                                                &processorRef.tpool);
-            lfoTabs.addTab("STEP SEQ " + juce::String(i + 1), juce::Colours::darkgrey,
-                           stepcomp.get(), false);
+            stepSeqTabs.addTab("STEP SEQ " + juce::String(i + 1), juce::Colours::darkgrey,
+                               stepcomp.get(), false);
             stepcomps.push_back(std::move(stepcomp));
         }
-        */
+        addAndMakeVisible(stepSeqTabs);
         for (int i = 0; i < 16; ++i)
         {
             auto modcomp = std::make_unique<ModulationRowComponent>(&processorRef.granulator);
@@ -1011,6 +1008,7 @@ class ModulationPage : public juce::Component
                 juce::FlexItem(*lfocomps[i]).withFlex(1.0).withMargin(2.0).withMinHeight(80.0));
         }
         flex.performLayout(juce::Rectangle<int>(0, 0, getWidth(), 175));
+        stepSeqTabs.setBounds(0, lfocomps.back()->getBottom() + 2, getWidth(), 120);
         juce::FlexBox modrowflex;
         modrowflex.flexDirection = juce::FlexBox::Direction::column;
         modrowflex.flexWrap = juce::FlexBox::Wrap::wrap;
@@ -1019,10 +1017,11 @@ class ModulationPage : public juce::Component
             modrowflex.items.add(
                 juce::FlexItem(*modRowComps[i]).withFlex(1).withMinHeight(25).withMargin(1));
         }
-        int yoffs = lfocomps.back()->getBottom() + 1;
+        int yoffs = stepSeqTabs.getBottom() + 1;
         modrowflex.performLayout(juce::Rectangle<int>{0, yoffs, getWidth(), 220});
     }
     AudioPluginAudioProcessor &processorRef;
+    juce::TabbedComponent stepSeqTabs;
     std::vector<std::unique_ptr<LFOComponent>> lfocomps;
     std::vector<std::unique_ptr<StepSeqComponent>> stepcomps;
     std::vector<std::unique_ptr<ModulationRowComponent>> modRowComps;
