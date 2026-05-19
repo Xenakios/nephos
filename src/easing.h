@@ -108,6 +108,8 @@ inline AHFloat Linear25ThenHold(AHFloat p)
     return 1.0;
 }
 
+inline AHFloat NoEasing(AHFloat p) { return 1.0f; }
+
 typedef struct
 {
     const char *name;
@@ -158,13 +160,14 @@ const EasingMapping easing_table[] = {
     {"Bounce Ease In", BounceEaseIn},
     {"Bounce Ease Out", BounceEaseOut},
     {"Bounce Ease InOut", BounceEaseInOut},
+    {"No envelope", NoEasing},
     {0, 0} // Sentinel to mark end of table
 };
 
 struct EasingLUTS
 {
     static const size_t LUTSize = 1024;
-    static const size_t numFunctions = 33;
+    static const size_t numFunctions = 34;
     float data[numFunctions][LUTSize + 1];
     EasingLUTS()
     {

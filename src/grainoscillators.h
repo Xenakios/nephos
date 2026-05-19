@@ -5,6 +5,7 @@
 #include "sst/basic-blocks/dsp/SmoothingStrategies.h"
 #include "sst/basic-blocks/dsp/CorrelatedNoise.h"
 #include "easing.h"
+#include "sst/basic-blocks/dsp/SpecialFunctions.h"
 
 struct FMOsc
 {
@@ -119,6 +120,18 @@ class NoiseGen
     void setFrequencySmoothingRateMS(float ms) { phaseinc.setRateInMilliseconds(ms, sr, 1.0); }
     float step()
     {
+        // sinc pulse
+        if (imode == 5)
+        {
+            const int sincsize = 128;
+            if (phase > sincsize)
+                return 0.0f;
+            float osample =
+                sst::basic_blocks::dsp::sincf(1.0 / sincsize * (phase - (sincsize / 2.0)));
+            osample *= sst::basic_blocks::dsp::blackman(phase, sincsize);
+            phase += 1.0;
+            return osample;
+        }
         phase += phaseinc.getValue();
         if (phase >= 1.0)
         {

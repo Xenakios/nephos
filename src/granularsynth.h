@@ -1737,7 +1737,9 @@ class ToneGranulator
                                              {1, "Correlated noise Linear interpolation"},
                                              {2, "Correlated noise Corrupted output"},
                                              {3, "Correlated noise BounceIn interpolation"},
-                                             {4, "Logistic Chaos Linear interpolation"}},
+                                             {4, "Logistic Chaos Linear interpolation"},
+                                             {5, "Sinc/Pulse"}
+                                            },
                                             true)
                 .withDefault(1)
                 .withName("Mode")
