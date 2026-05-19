@@ -1957,19 +1957,25 @@ class ToneGranulator
     {
         filtersModels[which] = mo;
         filtersConfigs[which] = conf;
+        int oldmainmode = insertsMainModes[which];
         insertsMainModes[which] = mainmode;
         insertsAWTypes[which] = awtype;
         for (int i = 0; i < numvoices; ++i)
         {
             auto &v = voices[i];
             // v->set_samplerate(sr);
+
             v->set_insert_type(which, mainmode, awtype, mo, conf);
             if (i == 0)
             {
                 for (size_t j = 0; j < GranulatorVoice::maxParamsPerInsert; ++j)
                 {
                     int parid = PAR_INSERTAFIRST + 32 * which + j;
-                    *idtoparvalptr[parid] = v->insert_fx[which].paramvalues[j];
+                    // if old mode was already sst filter, don't set the parameter
+                    if (oldmainmode == GrainInsertFX::GFXNONE ||
+                        oldmainmode == GrainInsertFX::GFXAIRWINDOWS ||
+                        oldmainmode == GrainInsertFX::GFXXENAKIOS)
+                        *idtoparvalptr[parid] = v->insert_fx[which].paramvalues[j];
                     idtoparmetadata[parid]->name = v->insert_fx[which].getParameterName(j);
                     idtoparmetadata[parid]->defaultVal = v->insert_fx[which].paramvalues[j];
                 }
