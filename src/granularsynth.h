@@ -825,7 +825,7 @@ class GranulatorVoice
         for (int i = 0; i < nframes; ++i)
         {
             float outsample = 0.0f;
-            if (phase < grain_end_phase)
+            if (phase >= 0 && phase < grain_end_phase)
             {
                 outsample = std::visit([](auto &q) { return q.step(); }, theoscillator);
                 float envgain = 0.0f;
@@ -1738,8 +1738,7 @@ class ToneGranulator
                                              {2, "Correlated noise Corrupted output"},
                                              {3, "Correlated noise BounceIn interpolation"},
                                              {4, "Logistic Chaos Linear interpolation"},
-                                             {5, "Sinc/Pulse"}
-                                            },
+                                             {5, "Sinc/Pulse"}},
                                             true)
                 .withDefault(1)
                 .withName("Mode")

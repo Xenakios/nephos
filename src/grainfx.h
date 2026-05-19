@@ -137,22 +137,7 @@ class GrainInsertFX
         sr = sampleRate;
         blockSize = ablockSize;
     }
-    void setParameter(uint32_t index, float v)
-    {
-        assert(index < numParams);
-        paramvalues[index] = v;
-        if (mainmode == GFXSSTFILTER)
-        {
-            sstfilter.makeCoefficients(0, paramvalues[0], paramvalues[1], paramvalues[2]);
-        }
-        else if (mainmode == GFXAIRWINDOWS)
-        {
-            assert(awplugin);
-            // we might be clamped properly before this but adding this for safety now
-            v = std::clamp(v, 0.0f, 1.0f);
-            awplugin->setParameter(index, v);
-        }
-    }
+    
     void prepareBlock()
     {
         if (mainmode == GFXSSTFILTER)

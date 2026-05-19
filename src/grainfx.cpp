@@ -109,18 +109,25 @@ void GrainInsertFX::setMode(ModeInfo m)
     if (m.mainmode == GFXNONE)
     {
         std::fill(paramvalues.begin(), paramvalues.end(), 0.0f);
-        mainmode = 0;
+        mainmode = GFXNONE;
         numParams = 0;
     }
     if (m.mainmode == GFXSSTFILTER)
     {
-        mainmode = 1;
         numParams = 5;
-        paramvalues[0] = 1.0;
-        paramvalues[1] = 0.0;
-        paramvalues[2] = 0.0;
-        paramvalues[3] = 0.5;
-        paramvalues[4] = 1.0;
+        // reset sst parameters only if the prior mode wasn't sst filter
+        if (mainmode != GFXSSTFILTER)
+        {
+            paramvalues[0] = 1.0;
+            paramvalues[1] = 0.0;
+            paramvalues[2] = 0.0;
+            paramvalues[3] = 0.5;
+            paramvalues[4] = 1.0;
+        } else
+        {
+            mainmode = GFXSSTFILTER;    
+        }
+        mainmode = GFXSSTFILTER;
         auto reqdelaysize =
             sst::filtersplusplus::Filter::requiredDelayLinesSizes(m.sstmodel, m.sstconfig);
 
