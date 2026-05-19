@@ -6,6 +6,7 @@
 #include "sst/basic-blocks/dsp/CorrelatedNoise.h"
 #include "easing.h"
 #include "sst/basic-blocks/dsp/SpecialFunctions.h"
+#include "../Common/xap_utils.h"
 
 struct FMOsc
 {
@@ -123,8 +124,10 @@ class NoiseGen
         // sinc pulse
         if (imode == 5)
         {
+            //int sincsize =
+            //    xenakios::mapvalue<float>(correlation.getTargetValue(), -1.0f, 1.0f, 64, 1024);
             const int sincsize = 128;
-            if (phase > sincsize)
+            if (phase >= sincsize)
                 return 0.0f;
             float osample =
                 sst::basic_blocks::dsp::sincf(1.0 / sincsize * (phase - (sincsize / 2.0)));
