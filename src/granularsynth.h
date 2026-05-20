@@ -1817,7 +1817,7 @@ class ToneGranulator
                                        .withGroupName(fmt::format("LFO {}", i + 1))
                                        .withID(PAR_LFOSHAPES + i));
             parmetadatas.push_back(pmd()
-                                       .withRange(-6.0, 5.0)
+                                       .withRange(-6.0, 6.0)
                                        .withDefault(0.0)
                                        .withDecimalPlaces(3)
                                        .withATwoToTheBFormatting(1.0f, 1.0f, "Hz")
