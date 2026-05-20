@@ -1,4 +1,5 @@
 #include "dashboardcomponent.h"
+#include "juce_graphics/juce_graphics.h"
 
 void drawRotatedText(juce::Graphics &g, const juce::String &text, float x, float y,
                      float angleDegrees)
@@ -47,29 +48,16 @@ void DashBoardComponent::paintAmbisonicFieldPolar(juce::Graphics &g)
         if (e.visualfade > 0.01)
         {
             auto drawpointfunc = [&](int inchan, float az, float el) {
-                // auto pt = polar_project(az, el);
                 float x = 0.0;
                 float y = 0.0;
                 float z = 0.0;
                 sphericalToCartesian(degreesToRadians(az), degreesToRadians(el), x, y, z);
                 bool isup = z >= 0.0;
-                if (inchan == 0)
-                {
-                    // if (isup)
-                    //     g.setColour(juce::Colours::cyan.withAlpha(e.visualfade));
-                    // else
-                    g.setColour(juce::Colours::green.withAlpha(e.visualfade));
-                }
-                if (inchan == 1)
-                {
-                    // if (isup)
-                    //     g.setColour(juce::Colours::yellow.withAlpha(e.visualfade));
-                    // else
-                    g.setColour(juce::Colours::yellow.withAlpha(e.visualfade));
-                }
+                const juce::Colour chanColors[2] = {juce::Colours::green, juce::Colours::yellow};
+                assert(inchan >= 0 && inchan < 2);
+                g.setColour(chanColors[inchan].withAlpha(e.visualfade));
                 float xcor = area.getCentreX() - y * area.getWidth() / 2.0;
                 float ycor = area.getCentreY() - x * area.getHeight() / 2.0;
-                // float ptsize = juce::jmap(el, -90.0f, 90.0f, 5.0f, 15.0f);
                 const float ptsize = 15.0f + 4.0f * z;
                 if (isup)
                     g.fillEllipse(xcor - ptsize / 2.0, ycor - ptsize / 2.0, ptsize, ptsize);
