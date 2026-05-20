@@ -34,7 +34,7 @@ void AudioPluginAudioProcessor::loadMacroKnobs(std::string filename)
     }
 }
 
-void AudioPluginAudioProcessor::handleMacroKnob(int knobindex, float value)
+void AudioPluginAudioProcessor::handleMacroKnob(int knobindex, float value, bool is_audio_thread)
 {
     if (knobindex >= 0 && knobindex < macroBindings.size())
     {
@@ -56,7 +56,10 @@ void AudioPluginAudioProcessor::handleMacroKnob(int knobindex, float value)
                 }
                 val = juce::jmap<float>(value, -1.0f, 1.0f, minval, maxval);
                 msg.value = val;
-                params_from_gui_fifo.push(msg);
+                if (!is_audio_thread)
+                    params_from_gui_fifo.push(msg);
+                else
+                    *granulator.idtoparvalptr[msg.id] = msg.value;
             }
         }
         if (macroBindings[knobindex].dest_type == 1)
@@ -111,10 +114,12 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
             // DBG(i << " error loading state : " << ex.what());
         }
     }
-    directMidiMappings[21] = ToneGranulator::PAR_MAINVOLUME;
-    directMidiMappings[22] = ToneGranulator::PAR_DENSITY;
-    directMidiMappings[23] = ToneGranulator::PAR_PITCH;
-    directMidiMappings[24] = ToneGranulator::PAR_AZIMUTH;
+    for (int i = 0; i < 8; ++i)
+    {
+        macroMidiMappings[21 + i] = i;
+        macroMidiMappings[41 + i] = 8 + i;
+    }
+
     sliceThread.startThread();
     buffer_adapter.reset(1024);
     from_gui_fifo.reset(1024);
@@ -370,17 +375,18 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             }
             auto &mm = granulator.modmatrix;
             uint32_t ccnum = msg.getControllerNumber();
-            auto dmit = directMidiMappings.find(ccnum);
-            if (dmit != directMidiMappings.end())
+            auto dmit = macroMidiMappings.find(ccnum);
+            if (dmit != macroMidiMappings.end())
             {
+                float val = juce::jmap<float>(msg.getControllerValue(), 0, 127, -1.0f, 1.0f);
+                handleMacroKnob(dmit->second, val, true);
                 const auto &pmd = granulator.idtoparmetadata[dmit->second];
-                float val =
-                    juce::jmap<float>(msg.getControllerValue(), 0, 127, pmd->minVal, pmd->maxVal);
-                *granulator.idtoparvalptr[dmit->second] = val;
+
+                // *granulator.idtoparvalptr[dmit->second] = val;
                 ParameterMessage msg;
                 msg.id = dmit->second;
                 msg.value = val;
-                params_to_gui_fifo.push(msg);
+                // params_to_gui_fifo.push(msg);
             }
             auto it = granulator.midiCCMap.find(ccnum);
             if (it != granulator.midiCCMap.end())

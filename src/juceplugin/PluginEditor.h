@@ -901,7 +901,7 @@ class DashPage : public juce::Component
                                 .withLinearScaleFormatting("");
             auto knob = std::make_unique<XapSlider>(XapSlider::SS_Knob, pmd);
             knob->OnValueChanged = [this, i, knobptr = knob.get()]() {
-                processorRef.handleMacroKnob(i, knobptr->getValue());
+                processorRef.handleMacroKnob(i, knobptr->getValue(), false);
             };
             addAndMakeVisible(knob.get());
             perfSliders.push_back(std::move(knob));

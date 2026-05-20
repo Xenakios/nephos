@@ -652,7 +652,7 @@ class GranulatorVoice
                 }
             },
             theoscillator);
-
+#ifdef NOTSUREIFNEEDED
         float azispread = std::clamp(evpars.azimuth_spread, -180.0f, 180.0f);
         // float azi0 = std::clamp(-evpars.azimuth - azispread, -360.0f, 360.0f);
 
@@ -684,8 +684,16 @@ class GranulatorVoice
             wrap_value(-180.0f, -evpars.azimuth + azispread + (flipped ? 180.0f : 0.0f), 180.0f);
         float azi1 =
             wrap_value(-180.0f, -evpars.azimuth - azispread + (flipped ? 180.0f : 0.0f), 180.0f);
+#else
+        float azispread = std::clamp(evpars.azimuth_spread, -180.0f, 180.0f);
+        float azi0 = wrap_value(-180.0f, -evpars.azimuth - azispread, 180.0f);
+        float azi1 = wrap_value(-180.0f, -evpars.azimuth + azispread, 180.0f);
+        float ele = wrap_value(-180.0f, evpars.elevation, 180.0f);
+#endif
+
         assert(azi0 >= -180.0f && azi0 <= 180.0f);
         assert(azi1 >= -180.0f && azi1 <= 180.0f);
+        assert(ele >= -180.0f && ele <= 180.0f);
         used_azi0 = azi0;
         used_azi1 = azi1;
         used_ele = ele;

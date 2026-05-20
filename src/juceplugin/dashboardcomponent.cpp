@@ -47,28 +47,37 @@ void DashBoardComponent::paintAmbisonicFieldPolar(juce::Graphics &g)
         if (e.visualfade > 0.01)
         {
             auto drawpointfunc = [&](int inchan, float az, float el) {
-                auto pt = polar_project(az, el);
+                // auto pt = polar_project(az, el);
+                float x = 0.0;
+                float y = 0.0;
+                float z = 0.0;
+                sphericalToCartesian(degreesToRadians(az), degreesToRadians(el), x, y, z);
+                bool isup = z >= 0.0;
                 if (inchan == 0)
                 {
-                    if (pt.front_hemisphere)
-                        g.setColour(juce::Colours::cyan.withAlpha(e.visualfade));
-                    else
-                        g.setColour(juce::Colours::green.withAlpha(e.visualfade));
+                    // if (isup)
+                    //     g.setColour(juce::Colours::cyan.withAlpha(e.visualfade));
+                    // else
+                    g.setColour(juce::Colours::green.withAlpha(e.visualfade));
                 }
                 if (inchan == 1)
                 {
-                    if (pt.front_hemisphere)
-                        g.setColour(juce::Colours::yellow.withAlpha(e.visualfade));
-                    else
-                        g.setColour(juce::Colours::red.withAlpha(e.visualfade));
+                    // if (isup)
+                    //     g.setColour(juce::Colours::yellow.withAlpha(e.visualfade));
+                    // else
+                    g.setColour(juce::Colours::yellow.withAlpha(e.visualfade));
                 }
-                float xcor = area.getCentreX() + pt.x * area.getWidth() / 2.0;
-                float ycor = area.getCentreY() + pt.y * area.getHeight() / 2.0;
-                float ptsize = juce::jmap(el, -90.0f, 90.0f, 5.0f, 15.0f);
-                g.fillEllipse(xcor - ptsize / 2.0, ycor - ptsize / 2.0, ptsize, ptsize);
+                float xcor = area.getCentreX() - y * area.getWidth() / 2.0;
+                float ycor = area.getCentreY() - x * area.getHeight() / 2.0;
+                // float ptsize = juce::jmap(el, -90.0f, 90.0f, 5.0f, 15.0f);
+                const float ptsize = 15.0f + 4.0f * z;
+                if (isup)
+                    g.fillEllipse(xcor - ptsize / 2.0, ycor - ptsize / 2.0, ptsize, ptsize);
+                else
+                    g.drawEllipse(xcor - ptsize / 2.0, ycor - ptsize / 2.0, ptsize, ptsize, 1.0f);
             };
-            drawpointfunc(0, -e.azimuth0degrees, e.elevationdegrees);
-            drawpointfunc(1, -e.azimuth1degrees, e.elevationdegrees);
+            drawpointfunc(0, e.azimuth0degrees, e.elevationdegrees);
+            drawpointfunc(1, e.azimuth1degrees, e.elevationdegrees);
             e.visualfade *= visualfadecoefficient;
         }
     }

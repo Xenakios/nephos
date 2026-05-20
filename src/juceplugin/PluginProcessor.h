@@ -113,7 +113,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     void setState(choc::value::ValueView state);
     void changeStateImpl(choc::value::ValueView state);
     void sendExtraStatesToGUI();
-    std::unordered_map<uint32_t, uint32_t> directMidiMappings;
+    std::unordered_map<uint32_t, uint32_t> macroMidiMappings;
     choc::value::Value pendingState;
     choc::threading::SpinLock stateLock;
     std::vector<choc::value::Value> snapshots;
@@ -121,7 +121,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     void loadSnapShot(int index);
     void saveSnapShot(int index, choc::value::ValueView state);
     std::vector<MacroKnobBinding> macroBindings;
-    void handleMacroKnob(int knobindex, float value);
+    void handleMacroKnob(int knobindex, float value, bool is_audio_tread);
     void loadMacroKnobs(std::string filename);
     std::string presetsPath;
     std::string macroKnobsPath;
