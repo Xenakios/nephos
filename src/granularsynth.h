@@ -330,7 +330,8 @@ struct GrainEvent
     float envelope_shape = 0.5f;
     float auxenvtimewarp = 0.0f;
     float azimuth = 0.0f;
-    float azimuth_spread = 0.0f;
+    float ambi_spread = 0.0f;
+    float ambi_rotate = 0.0f;
     float elevation = 0.0f;
     float sync_ratio = 1.0f;
     float pulse_width = 0.5f;
@@ -518,7 +519,8 @@ class GranulatorVoice
     float graingain = 0.0;
     float used_azi0 = 0.0f;
     float used_azi1 = 0.0f;
-    float used_ele = 0.0f;
+    float used_ele0 = 0.0f;
+    float used_ele1 = 0.0f;
     float auxsend1 = 0.0;
     std::span<float> pitchBandAttens;
     uint8_t envstarttype = 0;
@@ -563,7 +565,7 @@ class GranulatorVoice
     {
         float azi0 = degreesToRadians(used_azi0);
         float azi1 = degreesToRadians(used_azi1);
-        float ele = degreesToRadians(used_ele);
+        float ele = degreesToRadians(used_ele0);
         /*
         calculate_ambisonic_coeffs(ambcoeffs.data(), azi0, ele);
         calculate_ambisonic_coeffs(ambcoeffs.data() + 64, azi1, ele);
@@ -653,19 +655,37 @@ class GranulatorVoice
             },
             theoscillator);
 
-        float azispread = std::clamp(evpars.azimuth_spread, -180.0f, 180.0f);
-        float azi0 = wrap_value(-180.0f, -evpars.azimuth - azispread, 180.0f);
-        float azi1 = wrap_value(-180.0f, -evpars.azimuth + azispread, 180.0f);
-        float ele = wrap_value(-180.0f, evpars.elevation, 180.0f);
+        float ambspread = std::clamp(evpars.ambi_spread, -180.0f, 180.0f);
+        float ambrotate = std::clamp(evpars.ambi_rotate, -180.0f, 180.0f);
+        float xa0 = -evpars.azimuth - ambspread;
+        float ya0 = 0.0f;
+        float xb0 = -evpars.azimuth + ambspread;
+        float yb0 = 0.0f;
+        float rotrads = degreesToRadians(ambrotate);
+        float xa1 = xa0 * std::cos(rotrads) - ya0 * std::sin(rotrads);
+        float ya1 = xa0 * std::sin(rotrads) + ya0 * std::cos(rotrads);
+        float xb1 = xb0 * std::cos(rotrads) - yb0 * std::sin(rotrads);
+        float yb1 = xb0 * std::sin(rotrads) + yb0 * std::cos(rotrads);
+        float azi0 = xa1;
+        float ele0 = ya1;
+        float azi1 = xb1;
+        float ele1 = yb1;
+        azi0 = wrap_value(-180.0f, azi0, 180.0f);
+        azi1 = wrap_value(-180.0f, azi1, 180.0f);
+        ele0 = wrap_value(-180.0f, ele0, 180.0f);
+        ele1 = wrap_value(-180.0f, ele1, 180.0f);
         assert(azi0 >= -180.0f && azi0 <= 180.0f);
         assert(azi1 >= -180.0f && azi1 <= 180.0f);
-        assert(ele >= -180.0f && ele <= 180.0f);
+        assert(ele0 >= -180.0f && ele0 <= 180.0f);
+        assert(ele1 >= -180.0f && ele1 <= 180.0f);
         used_azi0 = azi0;
         used_azi1 = azi1;
-        used_ele = ele;
+        used_ele0 = ele0;
+        used_ele1 = ele1;
         azi0 = degreesToRadians(azi0);
         azi1 = degreesToRadians(azi1);
-        ele = degreesToRadians(ele);
+        ele0 = degreesToRadians(ele0);
+        ele1 = degreesToRadians(ele1);
 
         auto calc_ambicoeffs = [this](int inchan, float azimuth, float elevation) {
             assert(inchan >= 0 && inchan < 2);
@@ -698,8 +718,8 @@ class GranulatorVoice
                     coeffdata[i] *= n3d2sn3d[i];
             }
         };
-        calc_ambicoeffs(0, azi0, ele);
-        calc_ambicoeffs(1, azi1, ele);
+        calc_ambicoeffs(0, azi0, ele0);
+        calc_ambicoeffs(1, azi1, ele1);
         phase = 0;
         float actdur = std::clamp(evpars.duration, 0.0f, 1.0f);
         actdur = actdur * actdur * actdur;
@@ -1217,7 +1237,8 @@ class ToneGranulator
         float gain = 0.0f;
         float azimuth0degrees = 0.0f;
         float azimuth1degrees = 0.0f;
-        float elevationdegrees = 0.0f;
+        float elevation0degrees = 0.0f;
+        float elevation1degrees = 0.0f;
         float visualfade = 1.0f;
     };
     struct GrainVisualizerSettings
@@ -1236,8 +1257,9 @@ class ToneGranulator
         PAR_DENSITY = 400,
         PAR_PITCH = 500,
         PAR_AZIMUTH = 600,
-        PAR_AZIMUTH_SPREAD = 650,
         PAR_ELEVATION = 700,
+        PAR_AMBSPREAD = 710,
+        PAR_AMBROTATE = 720,
         PAR_DURATION = 800,
         PAR_GRAINTAIL = 850,
         PAR_INSERTAFIRST = 900,
@@ -1452,6 +1474,7 @@ class ToneGranulator
     {
         std::fill(pitchBandAttensShared.begin(), pitchBandAttensShared.end(), 1.0f);
         // by default one to one mapping but for easier working with modulation
+        // another mapping can be used
         for (size_t i = 0; i < osctypemapping.size(); ++i)
         {
             osctypemapping[i] = i;
@@ -1749,17 +1772,25 @@ class ToneGranulator
                                    .withRange(-180.0f, 180.0f)
                                    .withDefault(0.0)
                                    .withLinearScaleFormatting("°")
-                                   .withName("Azimuth Spread")
+                                   .withName("Elevation")
                                    .withGroupName("Spatialization")
-                                   .withID(PAR_AZIMUTH_SPREAD)
+                                   .withID(PAR_ELEVATION)
                                    .withFlags(CLAP_PARAM_IS_MODULATABLE));
         parmetadatas.push_back(pmd()
                                    .withRange(-180.0f, 180.0f)
                                    .withDefault(0.0)
                                    .withLinearScaleFormatting("°")
-                                   .withName("Elevation")
+                                   .withName("Ambisonic Spread")
                                    .withGroupName("Spatialization")
-                                   .withID(PAR_ELEVATION)
+                                   .withID(PAR_AMBSPREAD)
+                                   .withFlags(CLAP_PARAM_IS_MODULATABLE));
+        parmetadatas.push_back(pmd()
+                                   .withRange(-180.0f, 180.0f)
+                                   .withDefault(0.0)
+                                   .withLinearScaleFormatting("°")
+                                   .withName("Ambisonic Rotation")
+                                   .withGroupName("Spatialization")
+                                   .withID(PAR_AMBROTATE)
                                    .withFlags(CLAP_PARAM_IS_MODULATABLE));
         parmetadatas.push_back(pmd()
                                    .asInt()
@@ -2070,8 +2101,10 @@ class ToneGranulator
                     modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_ENVMORPH});
                 float azimuth =
                     modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_AZIMUTH});
-                float azimuth_spread = modmatrix.m.getTargetValue(
-                    GranulatorModConfig::TargetIdentifier{PAR_AZIMUTH_SPREAD});
+                float amb_spread = modmatrix.m.getTargetValue(
+                    GranulatorModConfig::TargetIdentifier{PAR_AMBSPREAD});
+                float amb_rotate = modmatrix.m.getTargetValue(
+                    GranulatorModConfig::TargetIdentifier{PAR_AMBROTATE});
                 float elevation = modmatrix.m.getTargetValue(
                     GranulatorModConfig::TargetIdentifier{PAR_ELEVATION});
                 genev.generator_type =
@@ -2136,7 +2169,8 @@ class ToneGranulator
                     {
                         genev.pitch_semitones = pitch;
                         genev.azimuth = azimuth;
-                        genev.azimuth_spread = azimuth_spread;
+                        genev.ambi_spread = amb_spread;
+                        genev.ambi_rotate = amb_rotate;
                         genev.elevation = elevation;
                     }
                     else
@@ -2346,7 +2380,9 @@ class ToneGranulator
                             vmsg.gain = voices[j]->graingain;
                             vmsg.azimuth0degrees = voices[j]->used_azi0;
                             vmsg.azimuth1degrees = voices[j]->used_azi1;
-                            vmsg.elevationdegrees = ev->elevation;
+                            vmsg.elevation0degrees = voices[j]->used_ele0;
+                            vmsg.elevation1degrees = voices[j]->used_ele1;
+
                             visualizer_fifo.push(vmsg);
                         }
                         ++graincount;

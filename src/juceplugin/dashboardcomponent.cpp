@@ -64,8 +64,8 @@ void DashBoardComponent::paintAmbisonicFieldPolar(juce::Graphics &g)
                 else
                     g.drawEllipse(xcor - ptsize / 2.0, ycor - ptsize / 2.0, ptsize, ptsize, 1.0f);
             };
-            drawpointfunc(0, e.azimuth0degrees, e.elevationdegrees);
-            drawpointfunc(1, e.azimuth1degrees, e.elevationdegrees);
+            drawpointfunc(0, e.azimuth0degrees, e.elevation0degrees);
+            drawpointfunc(1, e.azimuth1degrees, e.elevation1degrees);
             e.visualfade *= visualfadecoefficient;
         }
     }
@@ -78,7 +78,7 @@ void DashBoardComponent::paintAmbisonicFieldHammerProjection(juce::Graphics &g)
     {
         if (e.visualfade > 0.01)
         {
-            auto ptcor = haGrid.anglesToPoint(e.azimuth0degrees, -e.elevationdegrees);
+            auto ptcor = haGrid.anglesToPoint(e.azimuth0degrees, -e.elevation0degrees);
             float x = ptcor.getX();
             float y = ptcor.getY();
             haGrid.toArea.transformPoint(x, y);
@@ -130,7 +130,7 @@ void DashBoardComponent::paintAmbisonicFieldHammerProjection(juce::Graphics &g)
                 float radAzi = juce::degreesToRadians(-e.azimuth0degrees);
                 if (chan == 1)
                     radAzi = juce::degreesToRadians(-e.azimuth1degrees);
-                float radElev = juce::degreesToRadians(e.elevationdegrees);
+                float radElev = juce::degreesToRadians(e.elevation0degrees);
                 float cosElev = std::cos(radElev);
                 float cosHalfAzi = std::cos(radAzi * 0.5f);
 
