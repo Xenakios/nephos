@@ -855,7 +855,7 @@ class MainPageComponent final : public juce::Component
     AudioPluginAudioProcessor &processorRef;
     ParameterGroupComponent oscillatorComponent{"Oscillator", false};
     ParameterGroupComponent mainParamsComponent{"Main", false};
-    ParameterGroupComponent spatParamsComponent{"Spatialization", false};
+    ParameterGroupComponent spatParamsComponent{"Spatialization", true};
     ParameterGroupComponent miscParamsComponent{"Misc parameters", false};
     ParameterGroupComponent volumeParamsComponent{"Volume", true};
     ParameterGroupComponent timeParamsComponent{"Time", true};

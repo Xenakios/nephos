@@ -183,7 +183,7 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
             XapSlider::Style style = XapSlider::SS_HorizontalSlider;
             if (pmd.groupName == "Time" || pmd.groupName == "Stacking" ||
                 pmd.groupName == "Insert A" || pmd.groupName == "Insert B" ||
-                pmd.groupName == "Volume")
+                pmd.groupName == "Volume" || pmd.groupName == "Spatialization")
                 style = XapSlider::SS_Knob;
             auto slid = std::make_unique<XapSlider>(style, pmd);
             slid->OnValueChanged = [this, pid = pmd.id, sli = slid.get()]() {
@@ -200,6 +200,8 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
             }
             else if (pmd.groupName == "Spatialization")
             {
+                if (pmd.name == "Spatialization mode")
+                    slid->m_style = XapSlider::SS_HorizontalSlider;
                 spatParamsComponent.addSlider(std::move(slid));
             }
             else if (pmd.groupName == "Main output")
@@ -462,13 +464,13 @@ void MainPageComponent::resized()
     envcomp.setBounds(522, timeParamsComponent.getBottom() + 1, 175, 175);
     auxenvcomp.setBounds(envcomp.getRight() + 2, timeParamsComponent.getBottom() + 1, 175, 175);
 
-    spatParamsComponent.setBounds(0, 302, 500, 125);
-    mainParamsComponent.setBounds(502, 302, 500, 125);
+    spatParamsComponent.setBounds(0, 302, 600, 125);
+    mainParamsComponent.setBounds(spatParamsComponent.getRight()+2, 302, 500, 125);
     insert1ParamsComponent.setBounds(0, spatParamsComponent.getBottom() + 2, getWidth() / 2 - 4,
                                      100);
     insert2ParamsComponent.setBounds(insert2ParamsComponent.getRight() + 1,
                                      spatParamsComponent.getBottom() + 2, getWidth() / 2 - 4, 100);
-    stackParamsComponent.setBounds(timeParamsComponent.getRight()+2, 0, 500, 125);
+    stackParamsComponent.setBounds(timeParamsComponent.getRight() + 2, 0, 500, 125);
 }
 
 void StepSeqComponent::paint(juce::Graphics &g)
