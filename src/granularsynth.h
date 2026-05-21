@@ -667,9 +667,9 @@ class GranulatorVoice
         float xb1 = xb0 * std::cos(rotrads) - yb0 * std::sin(rotrads);
         float yb1 = xb0 * std::sin(rotrads) + yb0 * std::cos(rotrads);
         float azi0 = xa1;
-        float ele0 = ya1;
+        float ele0 = ya1 + evpars.elevation;
         float azi1 = xb1;
-        float ele1 = yb1;
+        float ele1 = yb1 + evpars.elevation;
         azi0 = wrap_value(-180.0f, azi0, 180.0f);
         azi1 = wrap_value(-180.0f, azi1, 180.0f);
         ele0 = wrap_value(-180.0f, ele0, 180.0f);

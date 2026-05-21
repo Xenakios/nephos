@@ -749,6 +749,69 @@ class VolumeEnvelopeComponent : public juce::Component
     bool auxenvmode = false;
 };
 
+class SpatializationModuleComponent : public juce::GroupComponent
+{
+  public:
+    SpatializationModuleComponent(AudioPluginAudioProcessor &p)
+        : juce::GroupComponent("", "Spatialization"), processorRef(p),
+          ambOrderDrop(XapSlider::SS_HorizontalSlider,
+                       *p.granulator.idtoparmetadata[ToneGranulator::PAR_AMBORDER]),
+          azimuthKnob(XapSlider::SS_Knob,
+                      *p.granulator.idtoparmetadata[ToneGranulator::PAR_AZIMUTH]),
+          elevationKnob(XapSlider::SS_Knob,
+                        *p.granulator.idtoparmetadata[ToneGranulator::PAR_ELEVATION]),
+          spreadKnob(XapSlider::SS_Knob,
+                     *p.granulator.idtoparmetadata[ToneGranulator::PAR_AMBSPREAD]),
+          rotateKnob(XapSlider::SS_Knob,
+                     *p.granulator.idtoparmetadata[ToneGranulator::PAR_AMBROTATE])
+    {
+        addAndMakeVisible(ambOrderDrop);
+        ambOrderDrop.OnValueChanged = [this]() {
+            onParamChanged(ToneGranulator::PAR_AMBORDER, ambOrderDrop.getValue());
+        };
+        addAndMakeVisible(azimuthKnob);
+        azimuthKnob.OnValueChanged = [this]() {
+            onParamChanged(ToneGranulator::PAR_AZIMUTH, azimuthKnob.getValue());
+        };
+        addAndMakeVisible(elevationKnob);
+        elevationKnob.OnValueChanged = [this]() {
+            onParamChanged(ToneGranulator::PAR_ELEVATION, elevationKnob.getValue());
+        };
+        addAndMakeVisible(spreadKnob);
+        spreadKnob.OnValueChanged = [this]() {
+            onParamChanged(ToneGranulator::PAR_AMBSPREAD, spreadKnob.getValue());
+        };
+        addAndMakeVisible(rotateKnob);
+        rotateKnob.OnValueChanged = [this]() {
+            onParamChanged(ToneGranulator::PAR_AMBROTATE, rotateKnob.getValue());
+        };
+    }
+    void onParamChanged(uint32_t id, float val)
+    {
+        ParameterMessage msg;
+        msg.id = id;
+        msg.value = val;
+        processorRef.params_from_gui_fifo.push(msg);
+    }
+    void resized() override
+    {
+        ambOrderDrop.setBounds(7, 17, 300, 25);
+        juce::FlexBox flex;
+        flex.flexDirection = juce::FlexBox::Direction::row;
+        flex.items.add(juce::FlexItem(azimuthKnob).withFlex(1.0).withMargin(2));
+        flex.items.add(juce::FlexItem(elevationKnob).withFlex(1.0).withMargin(2));
+        flex.items.add(juce::FlexItem(spreadKnob).withFlex(1.0).withMargin(2));
+        flex.items.add(juce::FlexItem(rotateKnob).withFlex(1.0).withMargin(2));
+        flex.performLayout(juce::Rectangle<int>(7, 17 + 26, getWidth() - 16, getHeight() - 48));
+    }
+    AudioPluginAudioProcessor &processorRef;
+    XapSlider ambOrderDrop;
+    XapSlider azimuthKnob;
+    XapSlider elevationKnob;
+    XapSlider spreadKnob;
+    XapSlider rotateKnob;
+};
+
 class ParameterGroupComponent : public juce::GroupComponent
 {
   public:
@@ -855,7 +918,8 @@ class MainPageComponent final : public juce::Component
     AudioPluginAudioProcessor &processorRef;
     ParameterGroupComponent oscillatorComponent{"Oscillator", false};
     ParameterGroupComponent mainParamsComponent{"Main", false};
-    ParameterGroupComponent spatParamsComponent{"Spatialization", true};
+    SpatializationModuleComponent spatModuleComponent;
+    // ParameterGroupComponent spatParamsComponent{"Spatialization", true};
     ParameterGroupComponent miscParamsComponent{"Misc parameters", false};
     ParameterGroupComponent volumeParamsComponent{"Volume", true};
     ParameterGroupComponent timeParamsComponent{"Time", true};
