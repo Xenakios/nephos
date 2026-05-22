@@ -51,6 +51,13 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
     {
         idToSlider[e->getParameterMetaData().id] = e;
     }
+    for (auto &e : mainPage.insertComponents)
+    {
+        for (auto &c : e->knobs)
+        {
+            idToSlider[c->getParameterMetaData().id] = c.get();
+        }
+    }
     idToSlider[ToneGranulator::PAR_AMBORDER] = &mainPage.spatModuleComponent.ambOrderDrop;
     idToSlider[ToneGranulator::PAR_AZIMUTH] = &mainPage.spatModuleComponent.azimuthKnob;
     idToSlider[ToneGranulator::PAR_ELEVATION] = &mainPage.spatModuleComponent.elevationKnob;
@@ -61,7 +68,15 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
 #else
     // setScaleFactor(0.90);
 #endif
-
+    for (auto &c : mainPage.insertComponents)
+    {
+        c->OnInsertTypeChanged = [this]() {
+            for (auto &modrow : modulationPage.modRowComps)
+            {
+                modrow->initDestinationDrop();
+            }
+        };
+    }
     setSize(1500, 780);
     startTimer(50);
 }
@@ -200,12 +215,6 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
             if (pmd.groupName == "Oscillator")
             {
                 oscillatorComponent.addSlider(std::move(slid));
-            }
-            else if (pmd.groupName == "Spatialization")
-            {
-                // if (pmd.name == "Spatialization mode")
-                //     slid->m_style = XapSlider::SS_HorizontalSlider;
-                // spatParamsComponent.addSlider(std::move(slid));
             }
             else if (pmd.groupName == "Main output")
             {

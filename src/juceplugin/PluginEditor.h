@@ -833,7 +833,8 @@ class InsertModuleComponent : public juce::GroupComponent
                 s->setParameterMetaData(*pmd, false);
             }
         }
-        // we should also update the modulation matrix target names!
+        if (OnInsertTypeChanged)
+            OnInsertTypeChanged();
     }
     void resized() override
     {
@@ -848,6 +849,7 @@ class InsertModuleComponent : public juce::GroupComponent
     }
     AudioPluginAudioProcessor &processorRef;
     int insertsIndex = -1;
+    std::function<void(void)> OnInsertTypeChanged;
     std::map<int64_t, GrainInsertFX::ModeInfo> filterInfoMap;
     DropDownComponent insertDrop;
     std::vector<std::unique_ptr<XapSlider>> knobs;
@@ -1036,7 +1038,6 @@ class MainPageComponent final : public juce::Component
     std::unique_ptr<PerformanceComponent> perfcomp;
     std::unique_ptr<juce::TextButton> recordButton;
 
-    
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainPageComponent)
 };
 
