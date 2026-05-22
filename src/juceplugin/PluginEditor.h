@@ -749,6 +749,39 @@ class VolumeEnvelopeComponent : public juce::Component
     bool auxenvmode = false;
 };
 
+class InsertModuleComponent : public juce::GroupComponent
+{
+  public:
+    InsertModuleComponent(AudioPluginAudioProcessor &p, int insertIndex)
+        : juce::GroupComponent("", "Insert FX" + juce::String(insertIndex + 1))
+    {
+        addAndMakeVisible(insertDrop);
+        int parstartindex = ToneGranulator::PAR_INSERTAFIRST + 32 * insertIndex;
+        for (auto &pmd : p.granulator.parmetadatas)
+        {
+            if (pmd.id >= parstartindex && pmd.id < parstartindex + 32)
+            {
+                auto slid = std::make_unique<XapSlider>(XapSlider::SS_Knob, pmd);
+                addAndMakeVisible(*slid);
+                knobs.push_back(std::move(slid));
+            }
+        }
+    }
+    void resized() override
+    {
+        insertDrop.setBounds(7, 17, 150, 20);
+        juce::FlexBox flex;
+        flex.flexDirection = juce::FlexBox::Direction::row;
+        for (auto &c : knobs)
+        {
+            flex.items.add(juce::FlexItem(*c).withFlex(1.0).withMargin(2));
+        }
+        flex.performLayout(juce::Rectangle<int>(7, 21+17, getWidth() - 14, getHeight() - 40));
+    }
+    DropDownComponent insertDrop;
+    std::vector<std::unique_ptr<XapSlider>> knobs;
+};
+
 class SpatializationModuleComponent : public juce::GroupComponent
 {
   public:
@@ -919,11 +952,11 @@ class MainPageComponent final : public juce::Component
     ParameterGroupComponent oscillatorComponent{"Oscillator", false};
     ParameterGroupComponent mainParamsComponent{"Main", false};
     SpatializationModuleComponent spatModuleComponent;
-    // ParameterGroupComponent spatParamsComponent{"Spatialization", true};
     ParameterGroupComponent miscParamsComponent{"Misc parameters", false};
     ParameterGroupComponent volumeParamsComponent{"Volume", true};
     ParameterGroupComponent timeParamsComponent{"Time", true};
     ParameterGroupComponent stackParamsComponent{"Stacking", true};
+    InsertModuleComponent insert1Component;
     ParameterGroupComponent insert1ParamsComponent{"Insert FX A", true};
     ParameterGroupComponent insert2ParamsComponent{"Insert FX B", true};
     VolumeEnvelopeComponent envcomp;

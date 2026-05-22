@@ -132,8 +132,8 @@ void AudioPluginAudioProcessorEditor::resized()
 }
 
 MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
-    : processorRef(p), spatModuleComponent(p), envcomp(&p.granulator, false),
-      auxenvcomp(&p.granulator, true)
+    : processorRef(p), spatModuleComponent(p), insert1Component(p, 0),
+      envcomp(&p.granulator, false), auxenvcomp(&p.granulator, true)
 {
 
     perfcomp = std::make_unique<PerformanceComponent>();
@@ -153,6 +153,7 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
     addAndMakeVisible(volumeParamsComponent);
     addAndMakeVisible(insert1ParamsComponent);
     addAndMakeVisible(insert2ParamsComponent);
+    addAndMakeVisible(insert1Component);
     addAndMakeVisible(stackParamsComponent);
     addAndMakeVisible(timeParamsComponent);
 
@@ -464,10 +465,11 @@ void MainPageComponent::paint(juce::Graphics &g) { g.fillAll(juce::Colours::dark
 void MainPageComponent::resized()
 {
     oscillatorComponent.setBounds(0, 0, 500, 175);
-    volumeParamsComponent.setBounds(0, oscillatorComponent.getBottom() + 1, 520, 125);
+    volumeParamsComponent.setBounds(0, oscillatorComponent.getBottom() + 1, 700, 125);
     timeParamsComponent.setBounds(502, 0, 300, 125);
 
-    envcomp.setBounds(522, timeParamsComponent.getBottom() + 1, 175, 175);
+    envcomp.setBounds(volumeParamsComponent.getRight() + 2, timeParamsComponent.getBottom() + 1,
+                      175, 175);
     auxenvcomp.setBounds(envcomp.getRight() + 2, timeParamsComponent.getBottom() + 1, 175, 175);
 
     spatModuleComponent.setBounds(0, 302, 600, 125);
@@ -476,6 +478,7 @@ void MainPageComponent::resized()
                                      100);
     insert2ParamsComponent.setBounds(insert2ParamsComponent.getRight() + 1,
                                      spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 100);
+    insert1Component.setBounds(0, insert1ParamsComponent.getBottom(), getWidth() / 2 - 4, 100);
     stackParamsComponent.setBounds(timeParamsComponent.getRight() + 2, 0, 500, 125);
 }
 
