@@ -753,17 +753,84 @@ class InsertModuleComponent : public juce::GroupComponent
 {
   public:
     InsertModuleComponent(AudioPluginAudioProcessor &p, int insertIndex)
-        : juce::GroupComponent("", "Insert FX" + juce::String(insertIndex + 1))
+        : juce::GroupComponent("", "Insert FX" + juce::String(insertIndex + 1)), processorRef(p),
+          insertsIndex(insertIndex)
     {
+        fillInsertDrop();
         addAndMakeVisible(insertDrop);
+        insertDrop.OnItemSelected = [this]() { handleInsertSelection(); };
         int parstartindex = ToneGranulator::PAR_INSERTAFIRST + 32 * insertIndex;
         for (auto &pmd : p.granulator.parmetadatas)
         {
             if (pmd.id >= parstartindex && pmd.id < parstartindex + 32)
             {
                 auto slid = std::make_unique<XapSlider>(XapSlider::SS_Knob, pmd);
+                slid->OnValueChanged = [this, knobptr = slid.get()]() {
+                    ParameterMessage msg;
+                    msg.id = knobptr->getParameterMetaData().id;
+                    msg.value = knobptr->getValue();
+                    processorRef.params_from_gui_fifo.push(msg);
+                };
                 addAndMakeVisible(*slid);
                 knobs.push_back(std::move(slid));
+            }
+        }
+    }
+    void fillInsertDrop()
+    {
+        insertDrop.rootNode.text = "FOO";
+        std::map<std::string, DropDownComponent::Node *> nodemap;
+        insertDrop.rootNode.children.reserve(32);
+        auto inserttypes = GrainInsertFX::getAvailableModes();
+        int filterID = 0;
+        for (auto &mod : inserttypes)
+        {
+            if (!mod.groupname.empty() && !nodemap.contains(mod.groupname))
+            {
+                insertDrop.rootNode.children.push_back({mod.groupname, -1});
+                nodemap[mod.groupname] = &insertDrop.rootNode.children.back();
+            }
+            if (!mod.groupname.empty())
+            {
+                nodemap[mod.groupname]->children.push_back({mod.displayname, filterID});
+                filterInfoMap[filterID] = mod;
+                ++filterID;
+            }
+            else
+            {
+                insertDrop.rootNode.children.push_back({mod.displayname, filterID});
+                filterInfoMap[filterID] = mod;
+                ++filterID;
+            }
+        }
+        insertDrop.setSelectedId(0);
+    }
+    void handleInsertSelection()
+    {
+        auto it = filterInfoMap.find(insertDrop.getSelectedId());
+        if (it != filterInfoMap.end())
+        {
+            DBG(it->second.displayname);
+            ThreadMessage msg;
+            msg.opcode = ThreadMessage::OP_FILTERTYPE;
+            msg.filterindex = insertsIndex;
+            msg.insertmainmode = it->second.mainmode;
+            msg.awtype = it->second.awtype;
+            msg.filtermodel = it->second.sstmodel;
+            msg.filterconfig = it->second.sstconfig;
+            processorRef.from_gui_fifo.push(msg);
+        }
+        juce::Timer::callAfterDelay(250, [this]() { updateInsertMetadatas(); });
+    }
+    void updateInsertMetadatas()
+    {
+        for (auto &s : knobs)
+        {
+            auto id = s->getParameterMetaData().id;
+            auto pmd = processorRef.granulator.idtoparmetadata[id];
+            if (s->getParameterMetaData().name != pmd->name)
+            {
+                s->setParameterMetaData(*pmd, false);
             }
         }
     }
@@ -776,8 +843,11 @@ class InsertModuleComponent : public juce::GroupComponent
         {
             flex.items.add(juce::FlexItem(*c).withFlex(1.0).withMargin(2));
         }
-        flex.performLayout(juce::Rectangle<int>(7, 21+17, getWidth() - 14, getHeight() - 40));
+        flex.performLayout(juce::Rectangle<int>(7, 21 + 17, getWidth() - 14, getHeight() - 40));
     }
+    AudioPluginAudioProcessor &processorRef;
+    int insertsIndex = -1;
+    std::map<int64_t, GrainInsertFX::ModeInfo> filterInfoMap;
     DropDownComponent insertDrop;
     std::vector<std::unique_ptr<XapSlider>> knobs;
 };
@@ -972,7 +1042,6 @@ class MainPageComponent final : public juce::Component
     std::unique_ptr<PerformanceComponent> perfcomp;
     std::unique_ptr<juce::TextButton> recordButton;
 
-    void showFilterMenu(int whichfilter);
     void updateInsertParameterMetaDatas();
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainPageComponent)
 };

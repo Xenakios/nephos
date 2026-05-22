@@ -397,69 +397,6 @@ void MainPageComponent::fillDropWithFilters(int filterIndex, DropDownComponent &
 #endif
 }
 
-void MainPageComponent::showFilterMenu(int whichfilter)
-{
-    juce::PopupMenu menu;
-    auto models = sfpp::Filter::availableModels();
-    for (auto &mod : models)
-    {
-        juce::PopupMenu submenu;
-        auto subm = sfpp::Filter::availableModelConfigurations(mod, true);
-        if (subm.size() > 0)
-        {
-            for (auto s : subm)
-            {
-                std::string address;
-                auto [pt, st, dt, smt] = s;
-                if (pt != sfpp::Passband::UNSUPPORTED)
-                {
-                    address += " " + sfpp::toString(pt);
-                }
-                if (st != sfpp::Slope::UNSUPPORTED)
-                {
-                    address += " " + sfpp::toString(st);
-                }
-                if (dt != sfpp::DriveMode::UNSUPPORTED)
-                {
-                    address += " " + sfpp::toString(dt);
-                }
-                if (smt != sfpp::FilterSubModel::UNSUPPORTED)
-                {
-                    address += " " + sfpp::toString(smt);
-                }
-                submenu.addItem(address, [this, mod, s, address, whichfilter]() {
-                    ThreadMessage msg;
-                    msg.opcode = ThreadMessage::OP_FILTERTYPE;
-                    msg.filterindex = whichfilter;
-                    msg.filtermodel = mod;
-                    msg.filterconfig = s;
-                    processorRef.from_gui_fifo.push(msg);
-                    // if (whichfilter == 0)
-                    //     filter0But.setButtonText(sfpp::toString(mod) + " : " + address);
-                    // if (whichfilter == 1)
-                    //     filter1But.setButtonText(sfpp::toString(mod) + " : " + address);
-                });
-            }
-            menu.addSubMenu(sfpp::toString(mod), submenu);
-        }
-        else
-        {
-            menu.addItem(sfpp::toString(mod), [this, mod, whichfilter]() {
-                ThreadMessage msg;
-                msg.opcode = ThreadMessage::OP_FILTERTYPE;
-                msg.filterindex = whichfilter;
-                msg.filtermodel = mod;
-                processorRef.from_gui_fifo.push(msg);
-                // if (whichfilter == 0)
-                //     filter0But.setButtonText(sfpp::toString(mod));
-                // if (whichfilter == 1)
-                //     filter1But.setButtonText(sfpp::toString(mod));
-            });
-        }
-    }
-    menu.showMenuAsync(juce::PopupMenu::Options{});
-}
-
 void MainPageComponent::paint(juce::Graphics &g) { g.fillAll(juce::Colours::darkgrey); }
 
 void MainPageComponent::resized()
