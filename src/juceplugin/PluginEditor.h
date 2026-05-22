@@ -833,6 +833,7 @@ class InsertModuleComponent : public juce::GroupComponent
                 s->setParameterMetaData(*pmd, false);
             }
         }
+        // we should also update the modulation matrix target names!
     }
     void resized() override
     {
@@ -1026,23 +1027,16 @@ class MainPageComponent final : public juce::Component
     ParameterGroupComponent volumeParamsComponent{"Volume", true};
     ParameterGroupComponent timeParamsComponent{"Time", true};
     ParameterGroupComponent stackParamsComponent{"Stacking", true};
-    InsertModuleComponent insert1Component;
-    ParameterGroupComponent insert1ParamsComponent{"Insert FX A", true};
-    ParameterGroupComponent insert2ParamsComponent{"Insert FX B", true};
+    std::vector<std::unique_ptr<InsertModuleComponent>> insertComponents;
+
     VolumeEnvelopeComponent envcomp;
     VolumeEnvelopeComponent auxenvcomp;
-
-    std::map<int64_t, GrainInsertFX::ModeInfo> filterInfoMap;
-    std::unique_ptr<DropDownComponent> filter1Drop;
-    std::unique_ptr<DropDownComponent> filter2Drop;
-    void handleFilterSelection(int filterindex);
-    void fillDropWithFilters(int filterIndex, DropDownComponent &drop, std::string rootText);
 
     std::vector<XapSlider *> xapsliders;
     std::unique_ptr<PerformanceComponent> perfcomp;
     std::unique_ptr<juce::TextButton> recordButton;
 
-    void updateInsertParameterMetaDatas();
+    
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainPageComponent)
 };
 

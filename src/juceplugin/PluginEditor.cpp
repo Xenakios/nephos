@@ -96,19 +96,19 @@ void AudioPluginAudioProcessorEditor::timerCallback()
         }
         if (msg.opcode == ThreadMessage::OP_FILTERTYPE)
         {
-            for (auto &e : mainPage.filterInfoMap)
+            for (auto &e : mainPage.insertComponents.front()->filterInfoMap)
             {
                 if (e.second.mainmode == msg.insertmainmode && e.second.awtype == msg.awtype &&
                     e.second.sstmodel == msg.filtermodel && e.second.sstconfig == msg.filterconfig)
                 {
-                    if (msg.filterindex == 0)
-                        mainPage.filter1Drop->setSelectedId(e.first);
-                    if (msg.filterindex == 1)
-                        mainPage.filter2Drop->setSelectedId(e.first);
+                    mainPage.insertComponents[msg.filterindex]->insertDrop.setSelectedId(e.first);
                     break;
                 }
             }
-            mainPage.updateInsertParameterMetaDatas();
+            for (auto &e : mainPage.insertComponents)
+            {
+                e->updateInsertMetadatas();
+            }
         }
         if (msg.opcode == ThreadMessage::OP_MODROUTING &&
             msg.modslot < modulationPage.modRowComps.size())
@@ -132,8 +132,8 @@ void AudioPluginAudioProcessorEditor::resized()
 }
 
 MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
-    : processorRef(p), spatModuleComponent(p), insert1Component(p, 0),
-      envcomp(&p.granulator, false), auxenvcomp(&p.granulator, true)
+    : processorRef(p), spatModuleComponent(p), envcomp(&p.granulator, false),
+      auxenvcomp(&p.granulator, true)
 {
 
     perfcomp = std::make_unique<PerformanceComponent>();
@@ -151,9 +151,14 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
     addAndMakeVisible(miscParamsComponent);
     addAndMakeVisible(mainParamsComponent);
     addAndMakeVisible(volumeParamsComponent);
-    addAndMakeVisible(insert1ParamsComponent);
-    addAndMakeVisible(insert2ParamsComponent);
-    addAndMakeVisible(insert1Component);
+
+    for (int i = 0; i < 2; ++i)
+    {
+        auto insertComp = std::make_unique<InsertModuleComponent>(processorRef, i);
+        addAndMakeVisible(*insertComp);
+        insertComponents.push_back(std::move(insertComp));
+    }
+
     addAndMakeVisible(stackParamsComponent);
     addAndMakeVisible(timeParamsComponent);
 
@@ -172,20 +177,11 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
     mainParamsComponent.addHeaderComponent(recordButton.get());
     mainParamsComponent.addHeaderComponent(perfcomp.get());
 
-    filter1Drop = std::make_unique<DropDownComponent>();
-    fillDropWithFilters(0, *filter1Drop, "Filter 1");
-    filter1Drop->OnItemSelected = [this]() { handleFilterSelection(0); };
-    insert1ParamsComponent.addHeaderComponent(filter1Drop.get());
-
-    filter2Drop = std::make_unique<DropDownComponent>();
-    fillDropWithFilters(1, *filter2Drop, "Filter 2");
-    filter2Drop->OnItemSelected = [this]() { handleFilterSelection(1); };
-    insert2ParamsComponent.addHeaderComponent(filter2Drop.get());
-
     for (int i = 0; i < processorRef.granulator.parmetadatas.size(); ++i)
     {
         auto &pmd = processorRef.granulator.parmetadatas[i];
-        if (!choc::text::startsWith(pmd.groupName, "LFO") && pmd.groupName != "Spatialization")
+        if (!choc::text::startsWith(pmd.groupName, "LFO") && pmd.groupName != "Spatialization" &&
+            pmd.groupName != "Insert A" && pmd.groupName != "Insert B")
         {
             XapSlider::Style style = XapSlider::SS_HorizontalSlider;
             if (pmd.groupName == "Time" || pmd.groupName == "Stacking" ||
@@ -219,14 +215,7 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
             {
                 volumeParamsComponent.addSlider(std::move(slid));
             }
-            else if (pmd.groupName == "Insert A")
-            {
-                insert1ParamsComponent.addSlider(std::move(slid));
-            }
-            else if (pmd.groupName == "Insert B")
-            {
-                insert2ParamsComponent.addSlider(std::move(slid));
-            }
+
             else if (pmd.groupName == "Stacking")
             {
                 stackParamsComponent.addSlider(std::move(slid));
@@ -272,131 +261,6 @@ MainPageComponent::~MainPageComponent()
     deinit_step_sequencer_js();
 }
 
-void MainPageComponent::updateInsertParameterMetaDatas()
-{
-    auto f = [this](ParameterGroupComponent *g) {
-        for (auto &s : g->sliders)
-        {
-            auto id = s->getParameterMetaData().id;
-            auto pmd = processorRef.granulator.idtoparmetadata[id];
-            if (s->getParameterMetaData().name != pmd->name)
-            {
-                s->setParameterMetaData(*pmd, false);
-            }
-        }
-    };
-    f(&insert1ParamsComponent);
-    f(&insert2ParamsComponent);
-    // should do this in a cleaner way...
-    if (auto parent = dynamic_cast<AudioPluginAudioProcessorEditor *>(
-            getParentComponent()->getParentComponent()))
-    {
-        for (auto &c : parent->modulationPage.modRowComps)
-        {
-            c->initDestinationDrop();
-        }
-    }
-    else
-        jassert(false);
-}
-
-void MainPageComponent::handleFilterSelection(int filterindex)
-{
-    DropDownComponent *c = filter1Drop.get();
-    if (filterindex == 1)
-        c = filter2Drop.get();
-    auto it = filterInfoMap.find(c->selectedId);
-    if (it != filterInfoMap.end())
-    {
-        DBG(it->second.displayname);
-        ThreadMessage msg;
-        msg.opcode = ThreadMessage::OP_FILTERTYPE;
-        msg.filterindex = filterindex;
-        msg.insertmainmode = it->second.mainmode;
-        msg.awtype = it->second.awtype;
-        msg.filtermodel = it->second.sstmodel;
-        msg.filterconfig = it->second.sstconfig;
-        processorRef.from_gui_fifo.push(msg);
-    }
-    juce::Timer::callAfterDelay(250, [this]() { updateInsertParameterMetaDatas(); });
-}
-
-void MainPageComponent::fillDropWithFilters(int filterIndex, DropDownComponent &drop,
-                                            std::string rootText)
-{
-    drop.rootNode.text = rootText;
-    std::map<std::string, DropDownComponent::Node *> nodemap;
-    drop.rootNode.children.reserve(32);
-    auto inserttypes = GrainInsertFX::getAvailableModes();
-    int filterID = 0;
-    for (auto &mod : inserttypes)
-    {
-        if (!mod.groupname.empty() && !nodemap.contains(mod.groupname))
-        {
-            drop.rootNode.children.push_back({mod.groupname, -1});
-            nodemap[mod.groupname] = &drop.rootNode.children.back();
-        }
-        if (!mod.groupname.empty())
-        {
-            nodemap[mod.groupname]->children.push_back({mod.displayname, filterID});
-            filterInfoMap[filterID] = mod;
-            ++filterID;
-        }
-        else
-        {
-            drop.rootNode.children.push_back({mod.displayname, filterID});
-            filterInfoMap[filterID] = mod;
-            ++filterID;
-        }
-    }
-    drop.setSelectedId(0);
-#ifdef JUSTSSTFILTERS
-    auto models = sfpp::Filter::availableModels();
-    int filterID = 0;
-    for (auto &mod : models)
-    {
-        auto modelname = sfpp::toString(mod);
-        if (!nodemap.contains(modelname))
-        {
-            drop.rootNode.children.push_back({sfpp::toString(mod), filterID});
-            filterInfoMap[filterID] = {mod};
-            ++filterID;
-            nodemap[modelname] = &drop.rootNode.children.back();
-        }
-        auto subm = sfpp::Filter::availableModelConfigurations(mod, true);
-        if (subm.size() > 0)
-        {
-            for (auto s : subm)
-            {
-                std::string subname = "";
-                auto [pt, st, dt, smt] = s;
-                if (pt != sfpp::Passband::UNSUPPORTED)
-                {
-                    subname += " " + sfpp::toString(pt);
-                }
-                if (st != sfpp::Slope::UNSUPPORTED)
-                {
-                    subname += " " + sfpp::toString(st);
-                }
-                if (dt != sfpp::DriveMode::UNSUPPORTED)
-                {
-                    subname += " " + sfpp::toString(dt);
-                }
-                if (smt != sfpp::FilterSubModel::UNSUPPORTED)
-                {
-                    subname += " " + sfpp::toString(smt);
-                }
-                nodemap[modelname]->children.push_back({subname, filterID});
-                filterInfoMap[filterID] = {mod, s};
-                ++filterID;
-            }
-        }
-    }
-
-    drop.setSelectedId(0);
-#endif
-}
-
 void MainPageComponent::paint(juce::Graphics &g) { g.fillAll(juce::Colours::darkgrey); }
 
 void MainPageComponent::resized()
@@ -411,11 +275,10 @@ void MainPageComponent::resized()
 
     spatModuleComponent.setBounds(0, 302, 600, 125);
     mainParamsComponent.setBounds(spatModuleComponent.getRight() + 2, 302, 500, 125);
-    insert1ParamsComponent.setBounds(0, spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4,
-                                     100);
-    insert2ParamsComponent.setBounds(insert2ParamsComponent.getRight() + 1,
-                                     spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 100);
-    insert1Component.setBounds(0, insert1ParamsComponent.getBottom(), getWidth() / 2 - 4, 100);
+    insertComponents[0]->setBounds(0, spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 100);
+    insertComponents[1]->setBounds(insertComponents[0]->getRight() + 1,
+                                   spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 100);
+
     stackParamsComponent.setBounds(timeParamsComponent.getRight() + 2, 0, 500, 125);
 }
 
