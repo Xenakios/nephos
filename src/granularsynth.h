@@ -1,12 +1,9 @@
 #pragma once
+#include <mutex>
 #include <vector>
 #include <span>
 // #include "sst/basic-blocks/dsp/CorrelatedNoise.h"
 #include "sst/basic-blocks/dsp/EllipticBlepOscillators.h"
-// #include <print>
-// #include "sst/basic-blocks/dsp/SmoothingStrategies.h"
-// #include "text/choc_StringUtilities.h"
-// #include "text/choc_Files.h"
 #include <variant>
 #include "../Common/xen_ambisonics.h"
 #include "../Common/xap_utils.h"
@@ -16,6 +13,7 @@
 #include "sst/basic-blocks/modulators/SimpleLFO.h"
 #include "sst/basic-blocks/params/ParamMetadata.h"
 #include "containers/choc_SingleReaderSingleWriterFIFO.h"
+#include "threading/choc_SpinLock.h"
 #include "easing.h"
 #define SIMDE_ENABLE_NATIVE_ALIASES // lets you skip the simde_ prefix
 #include <simde/x86/avx2.h>
@@ -1208,15 +1206,15 @@ class ToneGranulator
 
     std::vector<std::unique_ptr<GranulatorVoice>> voices;
     events_t events;
-    events_t events_to_switch;
     events_t scheduledGrains;
     alignas(16) int scheduledIndex = 0;
-    std::atomic<int> thread_op{0};
-
     int evindex = 0;
     int playposframes = 0;
     int num_out_chans = 0;
     int missedgrains = 0;
+    // ideally we would not use a lock at all but it looks like it's cleaner
+    // to just use revert to using that for a some things
+    alignas(16) choc::threading::SpinLock spinLock;
     alignas(16) double graingen_phase = 0.0;
     alignas(16) double graingen_phase_prior = 2.0;
     alignas(16) sst::basic_blocks::dsp::OnePoleLag<float, true> gainlag;
@@ -2003,51 +2001,45 @@ class ToneGranulator
             // v->gain_envelope.steps = env;
         }
     }
-    float next_samplerate = 0.0f;
+
     int current_ambisonic_order = 0;
     int pending_ambisonic_order = 0;
     void prepare(float samplerate, events_t evlist, int filter_routing, float tail_len,
                  float tail_fade_len)
     {
-        if (thread_op == 1)
-        {
-            // std::print("prepare called while audio thread should do state switch!\n");
-        }
-        missedgrains = 0;
         if (evlist.size() > 0)
         {
-            events_to_switch = std::move(evlist);
-            std::sort(events_to_switch.begin(), events_to_switch.end(),
-                      [](GrainEvent &lhs, GrainEvent &rhs) {
-                          return lhs.time_position < rhs.time_position;
-                      });
-            std::erase_if(events_to_switch, [](GrainEvent &e) {
+            std::sort(evlist.begin(), evlist.end(), [](GrainEvent &lhs, GrainEvent &rhs) {
+                return lhs.time_position < rhs.time_position;
+            });
+            std::erase_if(evlist, [](GrainEvent &e) {
                 return e.time_position < 0.0 || (e.time_position + e.duration) > 120.0;
             });
         }
-        for (int i = 0; i < numvoices; ++i)
         {
-            auto &v = voices[i];
-            v->set_samplerate(samplerate);
-            v->filter_routing = (GranulatorVoice::FilterRouting)filter_routing;
-            v->tail_len = tail_len;
-            v->tail_fade_len = tail_fade_len;
-            v->set_insert_type(0, 0, 0, {}, {});
-            v->set_insert_type(1, 0, 0, {}, {});
+            std::lock_guard<choc::threading::SpinLock> locker(spinLock);
+            std::swap(evlist, events);
+            for (int i = 0; i < numvoices; ++i)
+            {
+                auto &v = voices[i];
+                v->set_samplerate(samplerate);
+                v->filter_routing = (GranulatorVoice::FilterRouting)filter_routing;
+                v->tail_len = tail_len;
+                v->tail_fade_len = tail_fade_len;
+                v->set_insert_type(0, 0, 0, {}, {});
+                v->set_insert_type(1, 0, 0, {}, {});
+            }
+            m_sr = samplerate;
+            missedgrains = 0;
+            evindex = 0;
+            playposframes = 0;
+            gainlag.setRateInMilliseconds(1000.0, m_sr, 1.0);
+            gainlag.snapTo(0.0);
+            graingen_phase = 0.0;
+            graingen_phase_prior = 2.0;
+            modmatrix.m.prepare(modmatrix.rt, samplerate, granul_block_size);
         }
-        next_samplerate = samplerate;
-
-        // next_filt0type = filt0type;
-        // next_filt1type = filt1type;
-        // next_filter_routing = filter_routing;
-        // next_tail_len = tail_len;
-        // next_tail_fade_len = tail_fade_len;
-        //  set_ambisonics_order(ambisonics_order);
-        modmatrix.m.prepare(modmatrix.rt, samplerate, granul_block_size);
-        thread_op = 1;
     }
-
-    std::atomic<bool> is_prepared{false};
     void set_ambisonics_order(int order)
     {
         assert(order > 0 && order < 8);
@@ -2251,23 +2243,9 @@ class ToneGranulator
     void process_block(std::span<float> outputbuffer)
     {
         assert(outputbuffer.size() == granul_block_size * 64);
-        if (thread_op == 1)
-        {
-            std::swap(events_to_switch, events);
-            evindex = 0;
-            playposframes = 0;
-            m_sr = next_samplerate;
-
-            // initFilter(m_sr, next_filter_routing, next_filt0type, next_filt1type,
-            // next_tail_len,
-            //            next_tail_fade_len);
-            gainlag.setRateInMilliseconds(1000.0, m_sr, 1.0);
-            gainlag.snapTo(0.0);
-            graingen_phase = 0.0;
-            graingen_phase_prior = 2.0;
-            thread_op = 0;
-        }
-
+        // this will be contended only when prepare is called, which should be infrequently
+        // we should not depend on this lock for anything else, ideally...
+        std::lock_guard<choc::threading::SpinLock> locker(spinLock);
         set_ambisonics_order(1 + *idtoparvalptr[PAR_AMBORDER]);
         auxenvwarpmodulated =
             modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_AUXENVTIMEWARP});
