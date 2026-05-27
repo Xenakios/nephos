@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "juce_core/juce_core.h"
 #include "text/choc_Files.h"
 
 void init_step_sequencer_js();
@@ -334,11 +335,14 @@ void StepSeqComponent::paint(juce::Graphics &g)
     g.setColour(juce::Colours::black);
     g.drawLine(float(graphxpos), getHeight() / 2.0f, getWidth(), getHeight() / 2.0f);
     juce::String txt;
-    txt << editRange.getStart() << " " << editRange.getEnd() << "\n";
+    txt << editRange.getStart() << " " << editRange.getEnd();
     if (autoSetLoop)
-        txt << "LOOP FOLLOWS SELECTION";
+        txt << "\nLOOP FOLLOWS SELECTION";
+    juce::GenericScopedLock locker(spinlock);
+    if (!js_error.empty())
+        txt << "\nJavaScript error : " << js_error;
     g.setColour(juce::Colours::white);
-    g.drawMultiLineText(txt, graphxpos, 20, 200);
+    g.drawMultiLineText(txt, graphxpos + 2, 20, getWidth() - graphxpos - 3);
 }
 
 bool StepSeqComponent::keyPressed(const juce::KeyPress &ev)
@@ -502,8 +506,10 @@ void StepSeqComponent::runJSInThread()
     auto tokens = juce::StringArray::fromTokens(scriptParamsEditor.getText(), true);
     if (tokens.size() < 1 || tokens.size() > 1024)
     {
+        js_error = "There must be more than 0 and less 1024 tokens in parameters";
         return;
     }
+    js_error = "";
     js_status.store(1);
     cancelButton.setVisible(true);
     std::vector<float> params;
@@ -516,8 +522,7 @@ void StepSeqComponent::runJSInThread()
     threadPool->addJob([this, params]() {
         try
         {
-            auto jscode = choc::file::loadFileAsString(
-                R"(C:\develop\AudioPluginHost_mk2\Source\granularsynth\generatesteps.js)");
+            auto jscode = choc::file::loadFileAsString(R"(C:\develop\nephos\src\generatesteps.js)");
             auto steps = gr->stepModSources[sindex].steps;
             steps =
                 generate_from_js(jscode, steps, editRange.getStart(), editRange.getEnd(), params);
@@ -530,6 +535,8 @@ void StepSeqComponent::runJSInThread()
         catch (std::exception &ex)
         {
             DBG(ex.what());
+            juce::GenericScopedLock locker(spinlock);
+            js_error = ex.what();
         }
         js_status.store(0);
         juce::MessageManager::callAsync([this]() { cancelButton.setVisible(false); });

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PluginProcessor.h"
+#include "juce_core/juce_core.h"
 #include "juce_gui_basics/juce_gui_basics.h"
 #include "xap_slider.h"
 #include "dashboardcomponent.h"
@@ -308,6 +309,8 @@ struct StepSeqComponent : public juce::Component
     void runExternalProgram();
     void runJSInThread();
     std::atomic<int> js_status{0};
+    juce::SpinLock spinlock;
+    std::string js_error;
     juce::TextButton cancelButton;
     StepSeqComponent(int seqindex, ToneGranulator *g, juce::ThreadPool *tp);
     void mouseDown(const juce::MouseEvent &ev) override
