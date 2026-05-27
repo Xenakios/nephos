@@ -2293,7 +2293,7 @@ class ToneGranulator
             modulatedParValueForGUI.store(modmatrix.m.getTargetValue(
                 GranulatorModConfig::TargetIdentifier{(int)modulatedParamToStore.load()}));
         }
-        float ambiofadebuf[granul_block_size];
+        alignas(16) float ambiofadebuf[granul_block_size];
         for (int i = 0; i < granul_block_size; ++i)
             ambiofadebuf[i] = fadeForLargeStateChange.step();
         if (!self_generate)
