@@ -116,24 +116,29 @@ struct DropDownComponent : public juce::Component
     };
     Node rootNode;
     DropDownComponent() {}
-    void buildMenusRecur(Node &n, juce::PopupMenu &menu)
+    bool buildMenusRecur(Node &n, juce::PopupMenu &menu)
     {
         if (n.children.size() == 0)
-            menu.addItem(n.text, [this, n]() {
+        {
+            bool ticked = selectedId == n.id;
+            menu.addItem(n.text, true, ticked, [this, n]() {
                 selectedId = n.id;
                 if (OnItemSelected)
                     OnItemSelected();
                 selectedText = n.text;
                 repaint();
             });
-        if (n.children.size() > 0)
+            return ticked;
+        }
+        else
         {
             juce::PopupMenu submenu;
+            bool anyTicked = false;
             for (auto &e : n.children)
-            {
-                buildMenusRecur(e, submenu);
-            }
-            menu.addSubMenu(n.text, submenu);
+                anyTicked |= buildMenusRecur(e, submenu);
+
+            menu.addSubMenu(n.text, submenu, true, nullptr, anyTicked);
+            return anyTicked;
         }
     }
     Node *findNodeRecur(Node &n, int64_t tofind)
@@ -841,7 +846,7 @@ class InsertModuleComponent : public juce::GroupComponent
     }
     void resized() override
     {
-        insertDrop.setBounds(7, 17, 150, 20);
+        insertDrop.setBounds(7, 17, 275, 20);
         juce::FlexBox flex;
         flex.flexDirection = juce::FlexBox::Direction::row;
         for (auto &c : knobs)
