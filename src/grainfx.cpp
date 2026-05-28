@@ -37,8 +37,7 @@ std::vector<GrainInsertFX::ModeInfo> GrainInsertFX::getAvailableModes()
     result.emplace_back("AW WoodenBox", "AirWindows", GFXAIRWINDOWS, 12);
     result.emplace_back("AW PitchNasty", "AirWindows", GFXAIRWINDOWS, 13);
     result.emplace_back("Xenakios Dust", "Xenakios", GFXXENAKIOS, 0);
-    std::sort(result.begin(), result.end(),
-              [](auto const &lhs, auto const &rhs) { return lhs.displayname < rhs.displayname; });
+
     auto models = sfpp::Filter::availableModels();
     for (auto &mo : models)
     {
@@ -67,7 +66,9 @@ std::vector<GrainInsertFX::ModeInfo> GrainInsertFX::getAvailableModes()
                                 GFXSSTFILTER, 0, mo, co);
         }
     }
-
+    std::sort(result.begin(), result.end(), [](auto const &lhs, auto const &rhs) {
+        return (lhs.groupname + "/" + lhs.displayname) < (rhs.groupname + "/" + rhs.displayname);
+    });
     return result;
 }
 
