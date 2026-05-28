@@ -219,7 +219,8 @@ class XapSlider : public juce::Component
             juce::PopupMenu menu;
             for (auto &e : m_pardesc.discreteValues)
             {
-                menu.addItem(e.second, [e, this]() { setValue(e.first, true); });
+                menu.addItem(e.second, true, e.first == (int)m_value,
+                             [e, this]() { setValue(e.first, true); });
             }
             menu.showMenuAsync(
                 juce::PopupMenu::Options{}.withTargetComponent(this).withMousePosition());
