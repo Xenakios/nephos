@@ -9,6 +9,7 @@
 #include "audio/choc_AudioFileFormat.h"
 #include "../Common/xap_breakpoint_envelope.h"
 #include "sst/basic-blocks/dsp/EllipticBlepOscillators.h"
+#include "sst/basic-blocks/dsp/SpecialFunctions.h"
 #include "sst/filters++/enums.h"
 #include "sst/filters++/model_config.h"
 #include "sst/filters/FastTiltNoiseFilter.h"
@@ -189,9 +190,9 @@ inline void test_routing(std::vector<std::tuple<int, int, int>> routings)
             matrix[i][j] = -1;
     for (auto &e : routings)
     {
-        int fx = std::get<0>(e);
-        int fxx = std::get<1>(e);
-        int fxy = std::get<2>(e);
+        int fx = std::clamp(std::get<0>(e), 0, 3);
+        int fxx = std::clamp(std::get<1>(e), 0, 3);
+        int fxy = std::clamp(std::get<2>(e), 0, 3);
         matrix[fxy][fxx] = fx;
     }
     for (int i = 0; i < 4; ++i)
@@ -265,8 +266,9 @@ inline void test_routing(std::vector<std::tuple<int, int, int>> routings)
 
         float outputsignal_left = 0.0f;
         float outputsignal_right = 0.0f;
-        float gain = 1.0 - std::fmod(1.0 / sr * 2.0 * samplecounter, 1.0);
+        float gain = std::fmod(1.0 / sr * 2.0 * samplecounter, 1.0);
         gain = gain * gain * gain;
+        gain = sst::basic_blocks::dsp::blackman(samplecounter % 11025, 11025);
         inputsignal = 0.5 * gain * oscillator.step();
         for (int i = 0; i < plan.chainCount; ++i)
         {
@@ -304,21 +306,24 @@ int main(int argc, char **argv)
     if (argc > 1)
     {
         std::vector<std::tuple<int, int, int>> routings;
-        for (int i = 1; i < argc; ++i)
+        if (std::string(argv[1]) != "-")
         {
-            std::string token = argv[i];
-            if (token.size() == 3)
+            for (int i = 1; i < argc; ++i)
             {
-                int fxindex = token[0] - '0';
-                int fxx = token[1] - '0';
-                int fxy = token[2] - '0';
-                routings.emplace_back(fxindex, fxx, fxy);
+                std::string token = argv[i];
+                if (token.size() == 3)
+                {
+                    int fxindex = token[0] - '0';
+                    int fxx = token[1] - '0';
+                    int fxy = token[2] - '0';
+                    routings.emplace_back(fxindex, fxx, fxy);
+                }
             }
-        }
-        for (auto &e : routings)
-        {
-            std::cout << fmt::format("{} -> {},{}\n", std::get<0>(e), std::get<1>(e),
-                                     std::get<2>(e));
+            for (auto &e : routings)
+            {
+                std::cout << fmt::format("{} -> {},{}\n", std::get<0>(e), std::get<1>(e),
+                                         std::get<2>(e));
+            }
         }
         test_routing(routings);
     }
