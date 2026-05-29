@@ -181,17 +181,28 @@ ExecutionPlan buildPlan(const int8_t matrix[4][4])
     return plan;
 }
 
-inline void test_routing()
+inline void test_routing(std::vector<std::tuple<int, int, int>> routings)
 {
-    /*
+    int8_t matrix[4][4];
+    for (int i = 0; i < 4; ++i)
+        for (int j = 0; j < 4; ++j)
+            matrix[i][j] = -1;
+    for (auto &e : routings)
+    {
+        int fx = std::get<0>(e);
+        int fxx = std::get<1>(e);
+        int fxy = std::get<2>(e);
+        matrix[fxy][fxx] = fx;
+    }
     for (int i = 0; i < 4; ++i)
     {
         for (int j = 0; j < 4; ++j)
+        {
             std::cout << fmt::format("{:3}", matrix[i][j]);
+        }
         std::cout << "\n";
     }
-    */
-    int8_t matrix[4][4] = {{0, -1, 3, -1}, {2, 1, -1, -1}, {-1, -1, -1, -1}, {-1, -1, -1, -1}};
+
     GrainInsertFX fx[4];
 
     float inputsignal = 0.0;
@@ -216,6 +227,7 @@ inline void test_routing()
 
     mode.awtype = 11; // glitchshifter
     fx[2].setMode(mode);
+    fx[2].paramvalues[0] = 0.7;
 
     mode.mainmode = GrainInsertFX::GFXSSTFILTER;
     mode.sstmodel = sst::filtersplusplus::FilterModel::CytomicSVF;
@@ -223,7 +235,7 @@ inline void test_routing()
     fx[3].setMode(mode);
     fx[3].paramvalues[1] = 0.8;
     xenakios::Envelope cutoffenv{{{0.0, 50.0}, {5.0, -12.0}, {10.0, 50.0}}};
-    xenakios::Envelope oscpitchenv{{{0.0, 60.0}, {4.0, 60.0}, {10.0, 72.0}}};
+    xenakios::Envelope oscpitchenv{{{0.0, 60.0}, {3.0, 60.5}, {5.5, 24.0}, {10.0, 84.0}}};
     unsigned int outlen = 10.0 * sr;
     choc::buffer::ChannelArrayBuffer<float> outbuf{2, outlen};
     outbuf.clear();
@@ -285,27 +297,32 @@ inline void test_routing()
         }
     }
     writer->appendFrames(outbuf.getView());
-    return;
-    for (int i = 0; i < 4; ++i)
-    {
-        float processedsignal_left = inputsignal;
-        float processedsignal_right = inputsignal;
-        for (int j = 0; j < 4; ++j)
-        {
-            int fxindex = matrix[i][j];
-            if (fxindex >= 0 && fxindex < 4)
-            {
-                // fx[fxindex].process(processedsignal_left, processedsignal_right);
-            }
-        }
-        // outputsignal_left += processedsignal_left;
-        // outputsignal_right += processedsignal_right;
-    }
 }
 
-int main()
+int main(int argc, char **argv)
 {
-    test_routing();
+    if (argc > 1)
+    {
+        std::vector<std::tuple<int, int, int>> routings;
+        for (int i = 1; i < argc; ++i)
+        {
+            std::string token = argv[i];
+            if (token.size() == 3)
+            {
+                int fxindex = token[0] - '0';
+                int fxx = token[1] - '0';
+                int fxy = token[2] - '0';
+                routings.emplace_back(fxindex, fxx, fxy);
+            }
+        }
+        for (auto &e : routings)
+        {
+            std::cout << fmt::format("{} -> {},{}\n", std::get<0>(e), std::get<1>(e),
+                                     std::get<2>(e));
+        }
+        test_routing(routings);
+    }
+
     // test_colored_noise();
     return 0;
 }
