@@ -1,12 +1,18 @@
 
 #include "audio/choc_SampleBuffers.h"
+#include "grainfx.h"
 #include "granularsynth.h"
 #include "audio/choc_AudioFileFormat_WAV.h"
 #include <chrono>
+#include <cstdint>
 #include <random>
 #include "audio/choc_AudioFileFormat.h"
 #include "../Common/xap_breakpoint_envelope.h"
+#include "sst/basic-blocks/dsp/EllipticBlepOscillators.h"
+#include "sst/filters++/enums.h"
+#include "sst/filters++/model_config.h"
 #include "sst/filters/FastTiltNoiseFilter.h"
+#include "sst/filters/FilterConfiguration.h"
 
 inline int test_nephos_render()
 {
@@ -130,8 +136,176 @@ inline void test_colored_noise()
     std::cout << clipped << " samples clipped, max sample " << maxsample << "\n";
 }
 
+struct Effect
+{
+    void process(float &left, float &right) {}
+};
+
+struct ChainStep
+{
+    int8_t fxIndices[4]; // fx to apply in sequence, -1 = end
+    int8_t count;        // number of valid fx in this chain
+};
+
+struct ExecutionPlan
+{
+    ChainStep chains[4];
+    int8_t chainCount;
+};
+
+ExecutionPlan buildPlan(const int8_t matrix[4][4])
+{
+    ExecutionPlan plan{};
+    plan.chainCount = 0;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        ChainStep &step = plan.chains[plan.chainCount];
+        step.count = 0;
+
+        for (int j = 0; j < 4; ++j)
+        {
+            int8_t idx = matrix[i][j];
+            if (idx >= 0 && idx < 4)
+            {
+                step.fxIndices[step.count++] = idx;
+            }
+        }
+
+        // Only include chains that actually do something
+        if (step.count > 0)
+        {
+            ++plan.chainCount;
+        }
+    }
+    return plan;
+}
+
+inline void test_routing()
+{
+    /*
+    for (int i = 0; i < 4; ++i)
+    {
+        for (int j = 0; j < 4; ++j)
+            std::cout << fmt::format("{:3}", matrix[i][j]);
+        std::cout << "\n";
+    }
+    */
+    int8_t matrix[4][4] = {{0, -1, 3, -1}, {2, 1, -1, -1}, {-1, -1, -1, -1}, {-1, -1, -1, -1}};
+    GrainInsertFX fx[4];
+
+    float inputsignal = 0.0;
+    // Build once when matrix changes
+    ExecutionPlan plan = buildPlan(matrix);
+    double sr = 44100.0;
+    for (int i = 0; i < 4; ++i)
+    {
+        fx[i].prepareInstance(sr, 1);
+    }
+    GrainInsertFX::ModeInfo mode;
+    mode.mainmode = GrainInsertFX::GFXAIRWINDOWS;
+    mode.awtype = 3; // ringmod
+    fx[0].setMode(mode);
+    fx[0].paramvalues[0] = 0.65;
+    fx[0].paramvalues[3] = 1.0; // drywet
+
+    mode.awtype = 2; // kwoodroom
+    fx[1].setMode(mode);
+    fx[1].paramvalues[0] = 0.9; // regen
+    fx[1].paramvalues[5] = 0.6; // drywet
+
+    mode.awtype = 11; // glitchshifter
+    fx[2].setMode(mode);
+
+    mode.mainmode = GrainInsertFX::GFXSSTFILTER;
+    mode.sstmodel = sst::filtersplusplus::FilterModel::CytomicSVF;
+    mode.sstconfig = sst::filtersplusplus::ModelConfig{sst::filtersplusplus::Passband::LP};
+    fx[3].setMode(mode);
+    fx[3].paramvalues[1] = 0.8;
+    xenakios::Envelope cutoffenv{{{0.0, 50.0}, {5.0, -12.0}, {10.0, 50.0}}};
+    xenakios::Envelope oscpitchenv{{{0.0, 60.0}, {4.0, 60.0}, {10.0, 72.0}}};
+    unsigned int outlen = 10.0 * sr;
+    choc::buffer::ChannelArrayBuffer<float> outbuf{2, outlen};
+    outbuf.clear();
+    choc::audio::AudioFileProperties props;
+    props.bitDepth = choc::audio::BitDepth::float32;
+    props.numChannels = 2;
+    props.sampleRate = sr;
+    choc::audio::WAVAudioFileFormat<true> wavformat;
+    auto writer = wavformat.createWriter("matrixout.wav", props);
+    sst::basic_blocks::dsp::EBSaw<> oscillator;
+    oscillator.setSampleRate(sr);
+
+    for (int samplecounter = 0; samplecounter < outlen; ++samplecounter)
+    {
+        if (samplecounter % 32 == 0)
+        {
+            double tpos = samplecounter / sr;
+            fx[3].paramvalues[0] = cutoffenv.getValueAtPosition(tpos);
+            for (int i = 0; i < 4; ++i)
+            {
+                fx[i].prepareBlock();
+            }
+            float pitch = oscpitchenv.getValueAtPosition(tpos);
+            float hz = 440.0 * std::pow(2.0, (1.0 / 12) * (pitch - 69));
+            oscillator.setFrequency(hz);
+        }
+
+        float outputsignal_left = 0.0f;
+        float outputsignal_right = 0.0f;
+        float gain = 1.0 - std::fmod(1.0 / sr * 2.0 * samplecounter, 1.0);
+        gain = gain * gain * gain;
+        inputsignal = 0.5 * gain * oscillator.step();
+        for (int i = 0; i < plan.chainCount; ++i)
+        {
+            const ChainStep &chain = plan.chains[i];
+            float l = inputsignal, r = inputsignal;
+
+            for (int j = 0; j < chain.count; ++j)
+            {
+                fx[chain.fxIndices[j]].processStereo(l, r);
+            }
+
+            outputsignal_left += l;
+            outputsignal_right += r;
+        }
+        if (plan.chainCount == 0)
+        {
+            outputsignal_left = inputsignal;
+            outputsignal_right = inputsignal;
+        }
+        outbuf.getSample(0, samplecounter) = outputsignal_left;
+        outbuf.getSample(1, samplecounter) = outputsignal_right;
+        if (samplecounter % 32 == 0)
+        {
+            for (int i = 0; i < 4; ++i)
+            {
+                fx[i].concludeBlock();
+            }
+        }
+    }
+    writer->appendFrames(outbuf.getView());
+    return;
+    for (int i = 0; i < 4; ++i)
+    {
+        float processedsignal_left = inputsignal;
+        float processedsignal_right = inputsignal;
+        for (int j = 0; j < 4; ++j)
+        {
+            int fxindex = matrix[i][j];
+            if (fxindex >= 0 && fxindex < 4)
+            {
+                // fx[fxindex].process(processedsignal_left, processedsignal_right);
+            }
+        }
+        // outputsignal_left += processedsignal_left;
+        // outputsignal_right += processedsignal_right;
+    }
+}
+
 int main()
 {
-    test_colored_noise();
+    test_routing();
+    // test_colored_noise();
     return 0;
 }

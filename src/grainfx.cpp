@@ -106,6 +106,7 @@ std::string GrainInsertFX::getParameterName(size_t index)
 
 void GrainInsertFX::setMode(ModeInfo m)
 {
+    // prepare must be called before setMode
     assert(sr > 0);
     if (m.mainmode == GFXNONE)
     {
