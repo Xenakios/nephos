@@ -99,7 +99,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     {
         try
         {
-            auto fname = fmt::format("{}{}.json)", presetsPath, i + 1);
+            auto fname = fmt::format("{}{}.json", presetsPath, i + 1);
             if (std::filesystem::exists(fname))
             {
                 auto jsontxt = choc::file::loadFileAsString(fname);
@@ -112,7 +112,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         }
         catch (std::exception &ex)
         {
-            // DBG(i << " error loading state : " << ex.what());
+            DBG(i << " error loading state : " << ex.what());
         }
     }
     for (int i = 0; i < 8; ++i)
