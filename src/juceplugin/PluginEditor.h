@@ -896,6 +896,17 @@ class VolumeModuleComponent : public juce::GroupComponent
         addAndMakeVisible(startCurveSlider);
         addAndMakeVisible(endCurveSlider);
         addAndMakeVisible(envcomp);
+        for (int i = 0; i < 7; ++i)
+        {
+            auto knob = std::make_unique<XapSlider>(
+                XapSlider::SS_Knob,
+                *p.granulator.idtoparmetadata[ToneGranulator::PAR_PITCHBANDGAIN0 + i * 10]);
+            knob->OnValueChanged = [i, this, knobptr = knob.get()]() {
+                onParamChanged(ToneGranulator::PAR_PITCHBANDGAIN0 + i, knobptr->getValue());
+            };
+            addAndMakeVisible(*knob);
+            pitchBandGainKnobs.push_back(std::move(knob));
+        }
     }
     void onParamChanged(uint32_t id, float val)
     {
@@ -908,14 +919,25 @@ class VolumeModuleComponent : public juce::GroupComponent
     {
         juce::FlexBox flex;
         flex.flexDirection = juce::FlexBox::Direction::row;
-        flex.items.add(juce::FlexItem(volumeKnob).withFlex(1.0).withMargin(2));
-        flex.items.add(juce::FlexItem(morphKnob).withFlex(1.0).withMargin(2));
-        flex.items.add(
-            juce::FlexItem(startCurveSlider).withFlex(2.0).withMargin(2).withMaxHeight(25));
-        flex.items.add(
-            juce::FlexItem(endCurveSlider).withFlex(2.0).withMargin(2).withMaxHeight(25));
+        flex.flexWrap = juce::FlexBox::Wrap::wrap;
+        flex.items.add(juce::FlexItem(volumeKnob).withFlex(1.0).withMargin(2).withMinWidth(60));
+        flex.items.add(juce::FlexItem(morphKnob).withFlex(1.0).withMargin(2).withMinWidth(60));
+        flex.items.add(juce::FlexItem(startCurveSlider)
+                           .withFlex(2.0)
+                           .withMargin(2)
+                           .withMaxHeight(25)
+                           .withMinWidth(60));
+        flex.items.add(juce::FlexItem(endCurveSlider)
+                           .withFlex(2.0)
+                           .withMargin(2)
+                           .withMaxHeight(25)
+                           .withMinWidth(60));
         flex.items.add(juce::FlexItem(envcomp).withFlex(1.0).withMargin(2));
-        flex.performLayout(juce::Rectangle<int>(7, 17, getWidth() - 16, getHeight() - 48));
+        for (auto &c : pitchBandGainKnobs)
+        {
+            flex.items.add(juce::FlexItem(*c).withFlex(1.0).withMargin(2).withMinWidth(60));
+        }
+        flex.performLayout(juce::Rectangle<int>(7, 17, getWidth() - 16, getHeight() - 27));
     }
 };
 

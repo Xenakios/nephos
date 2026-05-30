@@ -67,9 +67,15 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
 
     idToSlider[ToneGranulator::PAR_GRAINVOLUME] = &mainPage.volumeModuleComponent.volumeKnob;
     idToSlider[ToneGranulator::PAR_ENVMORPH] = &mainPage.volumeModuleComponent.morphKnob;
-    idToSlider[ToneGranulator::PAR_VOLENVEASINGSTART] = &mainPage.volumeModuleComponent.startCurveSlider;
-    idToSlider[ToneGranulator::PAR_VOLENVEASINGEND] = &mainPage.volumeModuleComponent.endCurveSlider;
-
+    idToSlider[ToneGranulator::PAR_VOLENVEASINGSTART] =
+        &mainPage.volumeModuleComponent.startCurveSlider;
+    idToSlider[ToneGranulator::PAR_VOLENVEASINGEND] =
+        &mainPage.volumeModuleComponent.endCurveSlider;
+    for (int i = 0; i < 7; ++i)
+    {
+        idToSlider[ToneGranulator::PAR_PITCHBANDGAIN0 + i * 10] =
+            mainPage.volumeModuleComponent.pitchBandGainKnobs[i].get();
+    }
 #if JUCE_MAC
     setScaleFactor(0.75);
 #else
@@ -165,7 +171,7 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
         cpu = processorRef.perfMeasurer.getLoadAsProportion();
     };
     init_step_sequencer_js();
-    
+
     addAndMakeVisible(auxenvcomp);
 
     addAndMakeVisible(oscillatorComponent);
@@ -277,13 +283,15 @@ void MainPageComponent::paint(juce::Graphics &g) { g.fillAll(juce::Colours::dark
 void MainPageComponent::resized()
 {
     oscillatorComponent.setBounds(0, 0, 500, 175);
-    volumeModuleComponent.setBounds(0, oscillatorComponent.getBottom() + 1, 700, 125);
+    volumeModuleComponent.setBounds(0, oscillatorComponent.getBottom() + 1, 700, 150);
     timeParamsComponent.setBounds(502, 0, 300, 125);
 
-    auxenvcomp.setBounds(volumeModuleComponent.getRight() + 2, timeParamsComponent.getBottom() + 1, 175, 175);
+    auxenvcomp.setBounds(volumeModuleComponent.getRight() + 2, timeParamsComponent.getBottom() + 1,
+                         175, 175);
 
-    spatModuleComponent.setBounds(0, 302, 600, 125);
-    mainParamsComponent.setBounds(spatModuleComponent.getRight() + 2, 302, 500, 125);
+    spatModuleComponent.setBounds(0, volumeModuleComponent.getBottom() + 2, 600, 125);
+    mainParamsComponent.setBounds(spatModuleComponent.getRight() + 2,
+                                  volumeModuleComponent.getBottom() + 2, 500, 125);
     insertComponents[0]->setBounds(0, spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 125);
     insertComponents[1]->setBounds(insertComponents[0]->getRight() + 1,
                                    spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 125);
