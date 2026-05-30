@@ -761,8 +761,8 @@ class InsertModuleComponent : public juce::GroupComponent
 {
   public:
     InsertModuleComponent(AudioPluginAudioProcessor &p, int insertIndex)
-        : juce::GroupComponent("", "Insert FX" + juce::String(insertIndex + 1)), processorRef(p),
-          insertsIndex(insertIndex)
+        : juce::GroupComponent("", fmt::format("Insert FX {}", char('A' + insertIndex))),
+          processorRef(p), insertsIndex(insertIndex)
     {
         fillInsertDrop();
         addAndMakeVisible(insertDrop);

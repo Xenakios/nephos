@@ -51,6 +51,7 @@ struct MacroKnobBinding
     int dest_type = -1;
     int dest = 0;
     std::optional<std::pair<float, float>> par_range;
+    std::string label;
 };
 
 namespace StateIgnoreStrings

@@ -21,6 +21,7 @@ void AudioPluginAudioProcessor::loadMacroKnobs(std::string filename)
                 continue;
             macroBindings[index].dest_type = binding["desttype"].getWithDefault(-1);
             macroBindings[index].dest = binding["dest"].getWithDefault(0);
+            macroBindings[index].label = binding["name"].getWithDefault(fmt::format("M{}", i + 1));
             if (binding.hasObjectMember("min") && binding.hasObjectMember("max"))
             {
                 macroBindings[index].par_range = {binding["min"].getWithDefault(-1.0f),

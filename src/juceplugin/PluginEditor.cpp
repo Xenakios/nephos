@@ -285,9 +285,9 @@ void MainPageComponent::resized()
 
     spatModuleComponent.setBounds(0, 302, 600, 125);
     mainParamsComponent.setBounds(spatModuleComponent.getRight() + 2, 302, 500, 125);
-    insertComponents[0]->setBounds(0, spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 100);
+    insertComponents[0]->setBounds(0, spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 125);
     insertComponents[1]->setBounds(insertComponents[0]->getRight() + 1,
-                                   spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 100);
+                                   spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 125);
 
     stackParamsComponent.setBounds(timeParamsComponent.getRight() + 2, 0, 500, 125);
 }
