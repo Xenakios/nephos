@@ -902,7 +902,7 @@ class VolumeModuleComponent : public juce::GroupComponent
                 XapSlider::SS_Knob,
                 *p.granulator.idtoparmetadata[ToneGranulator::PAR_PITCHBANDGAIN0 + i * 10]);
             knob->OnValueChanged = [i, this, knobptr = knob.get()]() {
-                onParamChanged(ToneGranulator::PAR_PITCHBANDGAIN0 + i, knobptr->getValue());
+                onParamChanged(ToneGranulator::PAR_PITCHBANDGAIN0 + i * 10, knobptr->getValue());
             };
             addAndMakeVisible(*knob);
             pitchBandGainKnobs.push_back(std::move(knob));
@@ -919,7 +919,6 @@ class VolumeModuleComponent : public juce::GroupComponent
     {
         juce::FlexBox flex;
         flex.flexDirection = juce::FlexBox::Direction::row;
-        flex.flexWrap = juce::FlexBox::Wrap::wrap;
         flex.items.add(juce::FlexItem(volumeKnob).withFlex(1.0).withMargin(2).withMinWidth(60));
         flex.items.add(juce::FlexItem(morphKnob).withFlex(1.0).withMargin(2).withMinWidth(60));
         flex.items.add(juce::FlexItem(startCurveSlider)
@@ -933,11 +932,15 @@ class VolumeModuleComponent : public juce::GroupComponent
                            .withMaxHeight(25)
                            .withMinWidth(60));
         flex.items.add(juce::FlexItem(envcomp).withFlex(1.0).withMargin(2));
+        flex.performLayout(juce::Rectangle<int>(7, 17, getWidth() - 16, 70));
+        juce::FlexBox pitchgainflex;
+        pitchgainflex.flexDirection = juce::FlexBox::Direction::row;
         for (auto &c : pitchBandGainKnobs)
         {
-            flex.items.add(juce::FlexItem(*c).withFlex(1.0).withMargin(2).withMinWidth(60));
+            pitchgainflex.items.add(
+                juce::FlexItem(*c).withFlex(1.0).withMargin(2).withMinWidth(60));
         }
-        flex.performLayout(juce::Rectangle<int>(7, 17, getWidth() - 16, getHeight() - 27));
+        pitchgainflex.performLayout(juce::Rectangle<int>(7, 17 + 71, getWidth() - 16, 62));
     }
 };
 

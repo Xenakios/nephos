@@ -773,7 +773,7 @@ class GranulatorVoice
         float g0 = pitchBandAttens[ind0];
         float g1 = pitchBandAttens[ind1];
         float gatten = g0 + (g1 - g0) * frac;
-        assert(gatten >= 0.0f && gatten <= 1.0f);
+        gatten = std::clamp(gatten, 0.0f, 1.0f);
         graingain *= gatten;
 
         graingain = graingain * graingain * graingain;
@@ -2253,7 +2253,8 @@ class ToneGranulator
         taillen = 0.002 + 0.998 * std::pow(taillen, 3.0);
         for (int i = 0; i < numPitchBandAttens; ++i)
         {
-            pitchBandAttensShared[i] = *idtoparvalptr[PAR_PITCHBANDGAIN0 + i * 10];
+            pitchBandAttensShared[i] = modmatrix.m.getTargetValue(
+                GranulatorModConfig::TargetIdentifier{PAR_PITCHBANDGAIN0 + i * 10});
         }
         pitchBandAttensShared[numPitchBandAttens] = pitchBandAttensShared[numPitchBandAttens - 1];
 
