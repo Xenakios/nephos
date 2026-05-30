@@ -863,6 +863,62 @@ class InsertModuleComponent : public juce::GroupComponent
     std::vector<std::unique_ptr<XapSlider>> knobs;
 };
 
+class VolumeModuleComponent : public juce::GroupComponent
+{
+  public:
+    AudioPluginAudioProcessor &processorRef;
+    XapSlider volumeKnob;
+    XapSlider morphKnob;
+    XapSlider startCurveSlider;
+    XapSlider endCurveSlider;
+    std::vector<std::unique_ptr<XapSlider>> pitchBandGainKnobs;
+    VolumeEnvelopeComponent envcomp;
+    VolumeModuleComponent(AudioPluginAudioProcessor &p)
+        : juce::GroupComponent("", "Volume"), processorRef(p),
+          volumeKnob(XapSlider::SS_Knob,
+                     *p.granulator.idtoparmetadata[ToneGranulator::PAR_GRAINVOLUME]),
+          morphKnob(XapSlider::SS_Knob,
+                    *p.granulator.idtoparmetadata[ToneGranulator::PAR_ENVMORPH]),
+          startCurveSlider(XapSlider::SS_HorizontalSlider,
+                           *p.granulator.idtoparmetadata[ToneGranulator::PAR_VOLENVEASINGSTART]),
+          endCurveSlider(XapSlider::SS_HorizontalSlider,
+                         *p.granulator.idtoparmetadata[ToneGranulator::PAR_VOLENVEASINGEND]),
+          envcomp(&p.granulator, false)
+    {
+        addAndMakeVisible(volumeKnob);
+        volumeKnob.OnValueChanged = [this]() {
+            onParamChanged(ToneGranulator::PAR_GRAINVOLUME, volumeKnob.getValue());
+        };
+        addAndMakeVisible(morphKnob);
+        morphKnob.OnValueChanged = [this]() {
+            onParamChanged(ToneGranulator::PAR_ENVMORPH, morphKnob.getValue());
+        };
+        addAndMakeVisible(startCurveSlider);
+        addAndMakeVisible(endCurveSlider);
+        addAndMakeVisible(envcomp);
+    }
+    void onParamChanged(uint32_t id, float val)
+    {
+        ParameterMessage msg;
+        msg.id = id;
+        msg.value = val;
+        processorRef.params_from_gui_fifo.push(msg);
+    }
+    void resized() override
+    {
+        juce::FlexBox flex;
+        flex.flexDirection = juce::FlexBox::Direction::row;
+        flex.items.add(juce::FlexItem(volumeKnob).withFlex(1.0).withMargin(2));
+        flex.items.add(juce::FlexItem(morphKnob).withFlex(1.0).withMargin(2));
+        flex.items.add(
+            juce::FlexItem(startCurveSlider).withFlex(2.0).withMargin(2).withMaxHeight(25));
+        flex.items.add(
+            juce::FlexItem(endCurveSlider).withFlex(2.0).withMargin(2).withMaxHeight(25));
+        flex.items.add(juce::FlexItem(envcomp).withFlex(1.0).withMargin(2));
+        flex.performLayout(juce::Rectangle<int>(7, 17, getWidth() - 16, getHeight() - 48));
+    }
+};
+
 class SpatializationModuleComponent : public juce::GroupComponent
 {
   public:
@@ -1034,12 +1090,11 @@ class MainPageComponent final : public juce::Component
     ParameterGroupComponent mainParamsComponent{"Main", false};
     SpatializationModuleComponent spatModuleComponent;
     ParameterGroupComponent miscParamsComponent{"Misc parameters", false};
-    ParameterGroupComponent volumeParamsComponent{"Volume", true};
+    VolumeModuleComponent volumeModuleComponent;
     ParameterGroupComponent timeParamsComponent{"Time", true};
     ParameterGroupComponent stackParamsComponent{"Stacking", true};
     std::vector<std::unique_ptr<InsertModuleComponent>> insertComponents;
 
-    VolumeEnvelopeComponent envcomp;
     VolumeEnvelopeComponent auxenvcomp;
 
     std::vector<XapSlider *> xapsliders;

@@ -83,15 +83,18 @@ void XapSlider::paintKnob(juce::Graphics &g)
     g.fillAll(juce::Colours::black);
     g.setColour(juce::Colours::white);
     float texth = 25.0;
+    
     if (!m_mousedown)
     {
-        g.drawFittedText(m_pardesc.name, 0, 0, getWidth(), texth, juce::Justification::centred, 2);
+        g.setFont(m_font.withHeight(texth * 0.8f));
+        g.drawFittedText(m_pardesc.name, 1, 0, getWidth() - 2, texth, juce::Justification::centred,
+                         2);
         // g.drawText(m_pardesc.name, 0, 0, getWidth(), 20, juce::Justification::centred);
     }
-
     else
     {
-        g.drawText(getFormattedParamText(), 0, 0, getWidth(), texth, juce::Justification::centred);
+        g.drawText(getFormattedParamText(), 1, 0, getWidth() - 2, texth,
+                   juce::Justification::centred);
     }
 
     if (hasKeyboardFocus(false))

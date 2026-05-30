@@ -64,6 +64,12 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
     idToSlider[ToneGranulator::PAR_ELEVATION] = &mainPage.spatModuleComponent.elevationKnob;
     idToSlider[ToneGranulator::PAR_AMBSPREAD] = &mainPage.spatModuleComponent.spreadKnob;
     idToSlider[ToneGranulator::PAR_AMBROTATE] = &mainPage.spatModuleComponent.rotateKnob;
+
+    idToSlider[ToneGranulator::PAR_GRAINVOLUME] = &mainPage.volumeModuleComponent.volumeKnob;
+    idToSlider[ToneGranulator::PAR_ENVMORPH] = &mainPage.volumeModuleComponent.morphKnob;
+    idToSlider[ToneGranulator::PAR_VOLENVEASINGSTART] = &mainPage.volumeModuleComponent.startCurveSlider;
+    idToSlider[ToneGranulator::PAR_VOLENVEASINGEND] = &mainPage.volumeModuleComponent.endCurveSlider;
+
 #if JUCE_MAC
     setScaleFactor(0.75);
 #else
@@ -86,7 +92,7 @@ AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor() {}
 
 void AudioPluginAudioProcessorEditor::timerCallback()
 {
-    mainPage.envcomp.updateIfNeeded();
+    mainPage.volumeModuleComponent.envcomp.updateIfNeeded();
     mainPage.auxenvcomp.updateIfNeeded();
 
     for (auto &c : modulationPage.stepcomps)
@@ -148,7 +154,7 @@ void AudioPluginAudioProcessorEditor::resized()
 }
 
 MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
-    : processorRef(p), spatModuleComponent(p), envcomp(&p.granulator, false),
+    : processorRef(p), spatModuleComponent(p), volumeModuleComponent(p),
       auxenvcomp(&p.granulator, true)
 {
 
@@ -159,14 +165,14 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
         cpu = processorRef.perfMeasurer.getLoadAsProportion();
     };
     init_step_sequencer_js();
-    addAndMakeVisible(envcomp);
+    
     addAndMakeVisible(auxenvcomp);
 
     addAndMakeVisible(oscillatorComponent);
     addAndMakeVisible(spatModuleComponent);
     addAndMakeVisible(miscParamsComponent);
     addAndMakeVisible(mainParamsComponent);
-    addAndMakeVisible(volumeParamsComponent);
+    addAndMakeVisible(volumeModuleComponent);
 
     for (int i = 0; i < 2; ++i)
     {
@@ -197,7 +203,7 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
     {
         auto &pmd = processorRef.granulator.parmetadatas[i];
         if (!choc::text::startsWith(pmd.groupName, "LFO") && pmd.groupName != "Spatialization" &&
-            pmd.groupName != "Insert A" && pmd.groupName != "Insert B")
+            pmd.groupName != "Insert A" && pmd.groupName != "Insert B" && pmd.groupName != "Volume")
         {
             XapSlider::Style style = XapSlider::SS_HorizontalSlider;
             if (pmd.groupName == "Time" || pmd.groupName == "Stacking" ||
@@ -221,11 +227,6 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
             {
                 mainParamsComponent.addSlider(std::move(slid));
             }
-            else if (pmd.groupName == "Volume")
-            {
-                volumeParamsComponent.addSlider(std::move(slid));
-            }
-
             else if (pmd.groupName == "Stacking")
             {
                 stackParamsComponent.addSlider(std::move(slid));
@@ -276,12 +277,10 @@ void MainPageComponent::paint(juce::Graphics &g) { g.fillAll(juce::Colours::dark
 void MainPageComponent::resized()
 {
     oscillatorComponent.setBounds(0, 0, 500, 175);
-    volumeParamsComponent.setBounds(0, oscillatorComponent.getBottom() + 1, 700, 125);
+    volumeModuleComponent.setBounds(0, oscillatorComponent.getBottom() + 1, 700, 125);
     timeParamsComponent.setBounds(502, 0, 300, 125);
 
-    envcomp.setBounds(volumeParamsComponent.getRight() + 2, timeParamsComponent.getBottom() + 1,
-                      175, 175);
-    auxenvcomp.setBounds(envcomp.getRight() + 2, timeParamsComponent.getBottom() + 1, 175, 175);
+    auxenvcomp.setBounds(volumeModuleComponent.getRight() + 2, timeParamsComponent.getBottom() + 1, 175, 175);
 
     spatModuleComponent.setBounds(0, 302, 600, 125);
     mainParamsComponent.setBounds(spatModuleComponent.getRight() + 2, 302, 500, 125);
