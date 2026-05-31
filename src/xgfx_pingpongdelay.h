@@ -14,7 +14,6 @@ class XPingPongFX : public XenFXBase
         sample_rate = samplerate;
         delayBuf.resize(maxDelayLen * samplerate * 2);
         std::fill(delayBuf.begin(), delayBuf.end(), 0.0f);
-        set_parameter(0, 0.1);
     }
     void reset() override { std::fill(delayBuf.begin(), delayBuf.end(), 0.0f); }
     size_t num_params() override { return 3; }
@@ -30,28 +29,33 @@ class XPingPongFX : public XenFXBase
     }
     float get_parameter(size_t index) override
     {
-        if (index == 0)
-            return delayLen;
+        if (index >= 0 && index < 3)
+        {
+            return normalizedParamValues[index];
+        }
         return 0.0f;
     }
     void set_parameter(size_t paramindex, float value) override
     {
+        value = std::clamp(value, 0.0f, 1.0f);
         if (paramindex == 0)
         {
-            value = value * value * value;
-            delayLen = 0.001 + 0.999 * value;
-            int delsamples = delayLen * sample_rate;
+            normalizedParamValues[0] = value;
+            float delaylen = value * value * value;
+            delaylen = 0.001 + 0.999 * delaylen;
+            int delsamples = delaylen * sample_rate;
             delsamples = std::clamp(delsamples, 1, (int)(maxDelayLen * sample_rate) - 1);
             if (delsamples != delayLenSamples)
             {
                 delayLenSamples = delsamples;
-                delay_write_pos = (delayLen * sample_rate) - 1;
+                delay_write_pos = delsamples - 1;
                 delay_read_pos = 0;
             }
         }
         if (paramindex == 1)
         {
-            feedback = std::clamp(value, 0.0f, 1.0f);
+            normalizedParamValues[1] = value;
+            feedback = value;
             if (feedback < 0.5f)
             {
                 feedback = xenakios::mapvalue(feedback, 0.0f, 0.5f, 0.0f, 1.0f);
@@ -70,13 +74,13 @@ class XPingPongFX : public XenFXBase
         }
         if (paramindex == 2)
         {
-            wetmix = std::clamp(value, 0.0f, 1.0f);
+            normalizedParamValues[2] = value;
+            wetmix = value;
         }
     }
     void process(float **inbuffer, float **outbuffer, size_t num_frames) override
     {
         assert(sample_rate > 0.0);
-        assert(delayLen > 0.0);
         assert(delayLenSamples > 0);
         for (int i = 0; i < num_frames; ++i)
         {
@@ -98,7 +102,7 @@ class XPingPongFX : public XenFXBase
         }
     }
     static constexpr float maxDelayLen = 1.0;
-    float delayLen = 0.0;
+    float normalizedParamValues[3] = {0.2f, 0.5f, 0.5f};
     float feedback = 0.5;
     float wetmix = 1.0;
     int delayLenSamples = 0;
