@@ -16,6 +16,7 @@
 #include "plugins/WoodenBox.h"
 #include "plugins/PitchNasty.h"
 #include "xgfx_dust.h"
+#include "xgfx_pingpongdelay.h"
 
 std::vector<GrainInsertFX::ModeInfo> GrainInsertFX::getAvailableModes()
 {
@@ -37,7 +38,7 @@ std::vector<GrainInsertFX::ModeInfo> GrainInsertFX::getAvailableModes()
     result.emplace_back("AW WoodenBox", "AirWindows", GFXAIRWINDOWS, 12);
     result.emplace_back("AW PitchNasty", "AirWindows", GFXAIRWINDOWS, 13);
     result.emplace_back("Xenakios Dust", "Xenakios", GFXXENAKIOS, 0);
-
+    result.emplace_back("Xenakios PingPongDelay", "Xenakios", GFXXENAKIOS, 1);
     auto models = sfpp::Filter::availableModels();
     for (auto &mo : models)
     {
@@ -234,8 +235,10 @@ void GrainInsertFX::setMode(ModeInfo m)
         if (m.awtype == 0)
         {
             xenplugin = std::make_unique<DustFX>();
-            numParams = xenplugin->num_params();
         }
+        if (m.awtype == 1)
+            xenplugin = std::make_unique<XPingPongFX>();
+        numParams = xenplugin->num_params();
         xenplugin->prepare(sr, 1);
         std::fill(paramvalues.begin(), paramvalues.end(), 0.0f);
         for (size_t i = 0; i < numParams; ++i)

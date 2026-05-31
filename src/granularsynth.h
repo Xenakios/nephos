@@ -1513,7 +1513,7 @@ class ToneGranulator
             {
                 sms.steps[i] = *values.begin() + i;
             }
-            sms.numactivesteps = values.size();
+            sms.numactivesteps = StepModSource::maxSteps;
             sms.loopstartstep = 0;
             sms.looplen = values.size();
         };
