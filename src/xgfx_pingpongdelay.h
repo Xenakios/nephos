@@ -52,7 +52,21 @@ class XPingPongFX : public XenFXBase
         if (paramindex == 1)
         {
             feedback = std::clamp(value, 0.0f, 1.0f);
-            feedback = xenakios::mapvalue(value, 0.0f, 1.0f, -0.999f, 0.999f);
+            if (feedback < 0.5f)
+            {
+                feedback = xenakios::mapvalue(feedback, 0.0f, 0.5f, 0.0f, 1.0f);
+                feedback = feedback * feedback * feedback;
+                feedback -= 1.0f;
+            }
+            else
+            {
+                feedback = xenakios::mapvalue(feedback, 0.5f, 1.0f, 0.0f, 1.0f);
+                feedback = 1.0f - feedback;
+                feedback = feedback * feedback * feedback;
+                feedback = 1.0f - feedback;
+            }
+            feedback = std::clamp(feedback, -0.999f, 0.999f);
+            // feedback = xenakios::mapvalue(value, 0.0f, 1.0f, -0.999f, 0.999f);
         }
         if (paramindex == 2)
         {
