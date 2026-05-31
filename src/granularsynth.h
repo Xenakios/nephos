@@ -1,4 +1,5 @@
 #pragma once
+#include <initializer_list>
 #include <mutex>
 #include <vector>
 #include <span>
@@ -1506,22 +1507,20 @@ class ToneGranulator
         scheduledGrains.reserve(2048);
         for (auto &v : stepModValues)
             v = 0.0f;
-        auto sendfunc = [this](uint32_t destss, std::vector<float> values) {
-            int i = 0;
-            for (auto v : values)
+        
+        auto initssfunc = [](StepModSource &sms, std::initializer_list<float> values) {
+            for (int i = 0; i < values.size(); ++i)
             {
-                fifo.push({StepModSource::Message::OP_SETSTEP, destss, v, i});
-                ++i;
+                sms.steps[i] = *values.begin() + i;
             }
-            fifo.push({StepModSource::Message::OP_NUMSTEPS, destss, 0.0f, StepModSource::maxSteps});
-            fifo.push({StepModSource::Message::OP_LOOPSTART, destss, 0.0f, 0});
-            fifo.push({StepModSource::Message::OP_LOOPLEN, destss, 0.0f, (int)values.size()});
+            sms.numactivesteps = values.size();
+            sms.loopstartstep = 0;
+            sms.looplen = values.size();
         };
-        sendfunc(0, {-1.0f, 1.0f});
-        sendfunc(1, {-1.0f, 0.0f, 1.0f});
-        sendfunc(2, {-1.0f, -0.333f, 0.333f, 1.0f});
-        sendfunc(3, {-1.0f, -0.5f, 0.0f, 0.5f, 1.0f});
-
+        initssfunc(stepModSources[0], {-1.0f, 1.0f});
+        initssfunc(stepModSources[1], {-1.0f, 0.0f, 1.0f});
+        initssfunc(stepModSources[2], {-1.0f, -0.333f, 0.333f, 1.0f});
+        initssfunc(stepModSources[3], {-1.0f, -0.5f, 0.0f, 0.5f, 1.0f});
         for (size_t i = 0; i < 4; ++i)
         {
             stepModSources[4 + i].steps.resize(128);

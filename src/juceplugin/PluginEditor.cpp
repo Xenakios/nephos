@@ -163,7 +163,7 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
     : processorRef(p), spatModuleComponent(p), volumeModuleComponent(p),
       auxenvcomp(&p.granulator, true)
 {
-
+    addAndMakeVisible(p.avisComponent);
     perfcomp = std::make_unique<PerformanceComponent>();
     perfcomp->RequestData = [this](int &maxvoices, int &usedvoices, float &cpu) {
         maxvoices = processorRef.granulator.voices.size();
@@ -297,6 +297,7 @@ void MainPageComponent::resized()
                                    spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 125);
 
     stackParamsComponent.setBounds(timeParamsComponent.getRight() + 2, 0, 500, 125);
+    processorRef.avisComponent.setBounds(0, getHeight() - 150, getWidth(), 149);
 }
 
 void StepSeqComponent::paint(juce::Graphics &g)

@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "juce_audio_utils/juce_audio_utils.h"
 #include "text/choc_Files.h"
 #include "text/choc_JSON.h"
 #include <exception>
@@ -82,7 +83,8 @@ void AudioPluginAudioProcessor::handleMacroKnob(int knobindex, float value, bool
 AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     : AudioProcessor(BusesProperties()
                          .withInput("Input", juce::AudioChannelSet::stereo(), true)
-                         .withOutput("Output", juce::AudioChannelSet::ambisonic(3), true))
+                         .withOutput("Output", juce::AudioChannelSet::ambisonic(3), true)),
+      avisComponent(2)
 {
     macroBindings.resize(16);
 #ifdef JUCE_MAC
@@ -271,7 +273,7 @@ void AudioPluginAudioProcessor::changeProgramName(int index, const juce::String 
 void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     DBG("prepareToPlay");
-
+    avisComponent.setNumChannels(getTotalNumOutputChannels());
     perfMeasurer.reset(sampleRate, samplesPerBlock);
     // workBuffer.resize(samplesPerBlock * 64);
     workBuffer.resize(granul_block_size * 64);
@@ -565,6 +567,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             }
         }
     }
+    avisComponent.pushBuffer(buffer);
     jassert(buffer.getNumSamples() > 0);
     double cpu_bench_t1 = juce::Time::getMillisecondCounterHiRes();
     double elapsed_secs = (cpu_bench_t1 - cpu_bench_t0) / 1000.0;

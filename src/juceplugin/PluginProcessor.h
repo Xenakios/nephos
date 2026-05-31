@@ -2,6 +2,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_formats/juce_audio_formats.h>
+#include <juce_audio_utils/juce_audio_utils.h>
 #include "../granularsynth.h"
 #include "containers/choc_SingleReaderSingleWriterFIFO.h"
 #include "threading/choc_SpinLock.h"
@@ -126,6 +127,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     void loadMacroKnobs(std::string filename);
     std::string presetsPath;
     std::string macroKnobsPath;
+    juce::AudioVisualiserComponent avisComponent;
   private:
     alignas(32) std::vector<float> workBuffer;
     alignas(32) choc::fifo::SingleReaderSingleWriterFIFO<
