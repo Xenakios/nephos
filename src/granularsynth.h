@@ -1853,6 +1853,7 @@ class ToneGranulator
                                        .withDecimalPlaces(3)
                                        .withATwoToTheBFormatting(1.0f, 1.0f, "Hz")
                                        .withName(fmt::format("LFO {} RATE", i + 1))
+                                       .withShortName("RATE")
                                        .withGroupName(fmt::format("LFO {}", i + 1))
                                        .withID(PAR_LFORATES + i)
                                        .withFlags(CLAP_PARAM_IS_MODULATABLE));
@@ -1861,6 +1862,7 @@ class ToneGranulator
                                        .withDefault(0.0)
                                        .withLinearScaleFormatting("%", 100.0f)
                                        .withName(fmt::format("LFO {} DEFORM", i + 1))
+                                       .withShortName("DEFORM")
                                        .withGroupName(fmt::format("LFO {}", i + 1))
                                        .withID(PAR_LFODEFORMS + i)
                                        .withFlags(CLAP_PARAM_IS_MODULATABLE));

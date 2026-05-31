@@ -281,10 +281,10 @@ struct LFOComponent : public juce::Component
         juce::FlexBox flex;
         flex.flexDirection = juce::FlexBox::Direction::row;
 
-        flex.items.add(juce::FlexItem(rateSlider).withFlex(1.0));
-        flex.items.add(juce::FlexItem(deformSlider).withFlex(1.0));
-        flex.items.add(juce::FlexItem(shiftSlider).withFlex(1.0));
-        flex.items.add(juce::FlexItem(warpSlider).withFlex(1.0));
+        flex.items.add(juce::FlexItem(rateSlider).withFlex(1.0).withMargin(2));
+        flex.items.add(juce::FlexItem(deformSlider).withFlex(1.0).withMargin(2));
+        flex.items.add(juce::FlexItem(shiftSlider).withFlex(1.0).withMargin(2));
+        flex.items.add(juce::FlexItem(warpSlider).withFlex(1.0).withMargin(2));
         flex.performLayout(juce::Rectangle<int>(0, 25, getWidth(), getHeight() - 25));
     }
     int lfoindex = -1;
