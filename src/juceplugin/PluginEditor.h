@@ -509,13 +509,11 @@ class MainPageComponent final : public juce::Component
 
     // MyCustomLNF lnf;
     AudioPluginAudioProcessor &processorRef;
-    // ParameterGroupComponent oscillatorComponent{"Oscillator", false};
     OscillatorModuleComponent oscModuleComponent;
     ParameterGroupComponent mainParamsComponent{"Main", false};
     SpatializationModuleComponent spatModuleComponent;
-    ParameterGroupComponent miscParamsComponent{"Misc parameters", false};
     VolumeModuleComponent volumeModuleComponent;
-    ParameterGroupComponent timeParamsComponent{"Time", true};
+    TimeModuleComponent timeModuleComponent;
     ParameterGroupComponent stackParamsComponent{"Stacking", true};
     std::vector<std::unique_ptr<InsertModuleComponent>> insertComponents;
 
@@ -690,6 +688,6 @@ class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor,
     DashPage dashPage;
     juce::TabbedComponent mainTabs;
     std::unordered_map<uint32_t, XapSlider *> idToSlider;
-    void addChildSlidersFrom(juce::Component& c);
+    void addChildSlidersFrom(juce::Component &c);
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioPluginAudioProcessorEditor)
 };

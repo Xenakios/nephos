@@ -56,7 +56,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
     addChildSlidersFrom(mainPage.spatModuleComponent);
     addChildSlidersFrom(mainPage.volumeModuleComponent);
     addChildSlidersFrom(mainPage.oscModuleComponent);
-
+    addChildSlidersFrom(mainPage.timeModuleComponent);
 #if JUCE_MAC
     setScaleFactor(0.75);
 #else
@@ -153,8 +153,8 @@ void AudioPluginAudioProcessorEditor::resized()
 }
 
 MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
-    : processorRef(p), oscModuleComponent(p), spatModuleComponent(p), volumeModuleComponent(p),
-      auxenvcomp(&p.granulator, true)
+    : processorRef(p), oscModuleComponent(p), timeModuleComponent(p), spatModuleComponent(p),
+      volumeModuleComponent(p), auxenvcomp(&p.granulator, true)
 {
     addAndMakeVisible(p.avisComponent);
     perfcomp = std::make_unique<PerformanceComponent>();
@@ -169,7 +169,6 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
 
     addAndMakeVisible(oscModuleComponent);
     addAndMakeVisible(spatModuleComponent);
-    addAndMakeVisible(miscParamsComponent);
     addAndMakeVisible(mainParamsComponent);
     addAndMakeVisible(volumeModuleComponent);
 
@@ -181,7 +180,7 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
     }
 
     addAndMakeVisible(stackParamsComponent);
-    addAndMakeVisible(timeParamsComponent);
+    addAndMakeVisible(timeModuleComponent);
 
     recordButton = std::make_unique<juce::TextButton>();
     recordButton->setButtonText("Record");
@@ -203,7 +202,7 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
         auto &pmd = processorRef.granulator.parmetadatas[i];
         if (!choc::text::startsWith(pmd.groupName, "LFO") && pmd.groupName != "Spatialization" &&
             pmd.groupName != "Insert A" && pmd.groupName != "Insert B" &&
-            pmd.groupName != "Volume" && pmd.groupName != "Oscillator")
+            pmd.groupName != "Volume" && pmd.groupName != "Oscillator" && pmd.groupName != "Time")
         {
             XapSlider::Style style = XapSlider::SS_HorizontalSlider;
             if (pmd.groupName == "Time" || pmd.groupName == "Stacking" ||
@@ -226,14 +225,7 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
             {
                 stackParamsComponent.addSlider(std::move(slid));
             }
-            else if (pmd.groupName == "Time")
-            {
-                timeParamsComponent.addSlider(std::move(slid));
-            }
-            else
-            {
-                miscParamsComponent.addSlider(std::move(slid));
-            }
+            
         }
     }
 
@@ -259,9 +251,9 @@ void MainPageComponent::resized()
 {
     oscModuleComponent.setBounds(0, 0, 500, 175);
     volumeModuleComponent.setBounds(0, oscModuleComponent.getBottom() + 1, 700, 150);
-    timeParamsComponent.setBounds(502, 0, 300, 125);
+    timeModuleComponent.setBounds(502, 0, 300, 125);
 
-    auxenvcomp.setBounds(volumeModuleComponent.getRight() + 2, timeParamsComponent.getBottom() + 1,
+    auxenvcomp.setBounds(volumeModuleComponent.getRight() + 2, timeModuleComponent.getBottom() + 1,
                          175, 175);
 
     spatModuleComponent.setBounds(0, volumeModuleComponent.getBottom() + 2, 600, 125);
@@ -271,7 +263,7 @@ void MainPageComponent::resized()
     insertComponents[1]->setBounds(insertComponents[0]->getRight() + 1,
                                    spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 125);
 
-    stackParamsComponent.setBounds(timeParamsComponent.getRight() + 2, 0, 500, 125);
+    stackParamsComponent.setBounds(timeModuleComponent.getRight() + 2, 0, 500, 125);
     processorRef.avisComponent.setBounds(0, getHeight() - 150, getWidth(), 149);
 }
 

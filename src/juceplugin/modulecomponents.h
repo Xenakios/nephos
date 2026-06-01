@@ -2,6 +2,7 @@
 
 #include "PluginProcessor.h"
 #include "juce_core/juce_core.h"
+#include "juce_graphics/juce_graphics.h"
 #include "juce_gui_basics/juce_gui_basics.h"
 #include "xap_slider.h"
 #include "dropdowncomponent.h"
@@ -183,6 +184,18 @@ class VolumeEnvelopeComponent : public juce::Component
     bool auxenvmode = false;
 };
 
+inline void initSlider(AudioPluginAudioProcessor &processor, juce::Component &parentComponent,
+                       XapSlider &slid)
+{
+    parentComponent.addAndMakeVisible(slid);
+    slid.OnValueChanged = [&processor, &slid]() {
+        ParameterMessage msg;
+        msg.id = slid.getParameterMetaData().id;
+        msg.value = slid.getValue();
+        processor.params_from_gui_fifo.push(msg);
+    };
+}
+
 class OscillatorModuleComponent : public juce::GroupComponent
 {
   public:
@@ -223,58 +236,20 @@ class OscillatorModuleComponent : public juce::GroupComponent
               XapSlider::SS_Knob,
               *p.granulator.idtoparmetadata[ToneGranulator::PAR_NOISECORRELATION])
     {
-        addAndMakeVisible(oscTypeDrop);
-        oscTypeDrop.OnValueChanged = [this]() {
-            onParamChanged(ToneGranulator::PAR_OSCTYPE, oscTypeDrop.getValue());
-        };
-        initSlider(oscPitchKnob);
-        
-        addAndMakeVisible(pitchEnvKnob);
-        pitchEnvKnob.OnValueChanged = make_param_sender(p, pitchEnvKnob);
-        addAndMakeVisible(pitchEnvWarpKnob);
-        pitchEnvWarpKnob.OnValueChanged = make_param_sender(p, pitchEnvWarpKnob);
-        addAndMakeVisible(oscSyncKnob);
-        oscSyncKnob.OnValueChanged = make_param_sender(p, oscSyncKnob);
-        addAndMakeVisible(oscPWKnob);
-        oscPWKnob.OnValueChanged = make_param_sender(p, oscPWKnob);
-        addAndMakeVisible(oscFMPitchKnob);
-        oscFMPitchKnob.OnValueChanged = make_param_sender(p, oscFMPitchKnob);
-        addAndMakeVisible(oscFMDepthKnob);
-        oscFMDepthKnob.OnValueChanged = make_param_sender(p, oscFMDepthKnob);
-        addAndMakeVisible(oscFMFeedbackKnob);
-        oscFMFeedbackKnob.OnValueChanged = make_param_sender(p, oscFMFeedbackKnob);
-        addAndMakeVisible(oscNoiseModeDrop);
+        initSlider(p, *this, oscTypeDrop);
+        initSlider(p, *this, oscPitchKnob);
+        initSlider(p, *this, pitchEnvKnob);
+        initSlider(p, *this, pitchEnvWarpKnob);
+        initSlider(p, *this, oscSyncKnob);
+        initSlider(p, *this, oscPWKnob);
+        initSlider(p, *this, oscFMPitchKnob);
+        initSlider(p, *this, oscFMDepthKnob);
+        initSlider(p, *this, oscFMFeedbackKnob);
+        initSlider(p, *this, oscNoiseModeDrop);
         oscNoiseModeDrop.dropdownXpercent = 0.3;
-        oscNoiseModeDrop.OnValueChanged = make_param_sender(p, oscNoiseModeDrop);
-        addAndMakeVisible(oscNoiseCorrelationKnob);
-        oscNoiseCorrelationKnob.OnValueChanged = make_param_sender(p, oscNoiseCorrelationKnob);
+        initSlider(p, *this, oscNoiseCorrelationKnob);
     }
-    void initSlider(XapSlider &slid)
-    {
-        addAndMakeVisible(slid);
-        slid.OnValueChanged = [this, &slid]() {
-            ParameterMessage msg;
-            msg.id = slid.getParameterMetaData().id;
-            msg.value = slid.getValue();
-            processorRef.params_from_gui_fifo.push(msg);
-        };
-    }
-    std::function<void(void)> make_param_sender(AudioPluginAudioProcessor &p, XapSlider &slid)
-    {
-        return [&p, &slid]() {
-            ParameterMessage msg;
-            msg.id = slid.getParameterMetaData().id;
-            msg.value = slid.getValue();
-            p.params_from_gui_fifo.push(msg);
-        };
-    }
-    void onParamChanged(uint32_t id, float val)
-    {
-        ParameterMessage msg;
-        msg.id = id;
-        msg.value = val;
-        processorRef.params_from_gui_fifo.push(msg);
-    }
+
     void resized() override
     {
         oscTypeDrop.setBounds(7, 17, 200, 25);
@@ -293,6 +268,36 @@ class OscillatorModuleComponent : public juce::GroupComponent
                                    25);
         oscNoiseCorrelationKnob.setBounds(oscSyncKnob.getRight() + 2,
                                           oscNoiseModeDrop.getBottom() + 1, 80, 50);
+    }
+};
+
+class TimeModuleComponent : public juce::GroupComponent
+{
+  public:
+    AudioPluginAudioProcessor &processorRef;
+    XapSlider densityKnob;
+    XapSlider durationKnob;
+    XapSlider tailKnob;
+    TimeModuleComponent(AudioPluginAudioProcessor &p)
+        : juce::GroupComponent("", "Time"), processorRef(p),
+          densityKnob(XapSlider::SS_Knob,
+                      *p.granulator.idtoparmetadata[ToneGranulator::PAR_DENSITY]),
+          durationKnob(XapSlider::SS_Knob,
+                       *p.granulator.idtoparmetadata[ToneGranulator::PAR_DURATION]),
+          tailKnob(XapSlider::SS_Knob, *p.granulator.idtoparmetadata[ToneGranulator::PAR_GRAINTAIL])
+    {
+        initSlider(p, *this, densityKnob);
+        initSlider(p, *this, durationKnob);
+        initSlider(p, *this, tailKnob);
+    }
+    void resized() override
+    {
+        juce::FlexBox flex;
+        flex.flexDirection = juce::FlexBox::Direction::row;
+        flex.items.add(juce::FlexItem(densityKnob).withFlex(1.0).withMargin(2));
+        flex.items.add(juce::FlexItem(durationKnob).withFlex(1.0).withMargin(2));
+        flex.items.add(juce::FlexItem(tailKnob).withFlex(1.0).withMargin(2));
+        flex.performLayout(juce::Rectangle<int>(7, 17, getWidth() - 14, getHeight() - 28));
     }
 };
 
