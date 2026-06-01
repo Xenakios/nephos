@@ -509,7 +509,8 @@ class MainPageComponent final : public juce::Component
 
     // MyCustomLNF lnf;
     AudioPluginAudioProcessor &processorRef;
-    ParameterGroupComponent oscillatorComponent{"Oscillator", false};
+    // ParameterGroupComponent oscillatorComponent{"Oscillator", false};
+    OscillatorModuleComponent oscModuleComponent;
     ParameterGroupComponent mainParamsComponent{"Main", false};
     SpatializationModuleComponent spatModuleComponent;
     ParameterGroupComponent miscParamsComponent{"Misc parameters", false};

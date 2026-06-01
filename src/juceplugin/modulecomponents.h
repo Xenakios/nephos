@@ -183,6 +183,62 @@ class VolumeEnvelopeComponent : public juce::Component
     bool auxenvmode = false;
 };
 
+class OscillatorModuleComponent : public juce::GroupComponent
+{
+  public:
+    AudioPluginAudioProcessor &processorRef;
+    XapSlider oscTypeDrop;
+    XapSlider oscPitchKnob;
+    XapSlider oscSyncKnob;
+    XapSlider oscPWKnob;
+    OscillatorModuleComponent(AudioPluginAudioProcessor &p)
+        : processorRef(p), oscTypeDrop(XapSlider::SS_HorizontalSlider,
+                                       *p.granulator.idtoparmetadata[ToneGranulator::PAR_OSCTYPE]),
+          oscPitchKnob(XapSlider::SS_Knob,
+                       *p.granulator.idtoparmetadata[ToneGranulator::PAR_PITCH]),
+          oscSyncKnob(XapSlider::SS_Knob,
+                      *p.granulator.idtoparmetadata[ToneGranulator::PAR_OSC_SYNC]),
+          oscPWKnob(XapSlider::SS_Knob,
+                      *p.granulator.idtoparmetadata[ToneGranulator::PAR_OSC_PW])
+    {
+        addAndMakeVisible(oscTypeDrop);
+        oscTypeDrop.OnValueChanged = [this]() {
+            onParamChanged(ToneGranulator::PAR_OSCTYPE, oscTypeDrop.getValue());
+        };
+        addAndMakeVisible(oscPitchKnob);
+        oscPitchKnob.OnValueChanged = [this]() {
+            onParamChanged(ToneGranulator::PAR_PITCH, oscPitchKnob.getValue());
+        };
+        addAndMakeVisible(oscSyncKnob);
+        oscSyncKnob.OnValueChanged = make_param_sender(p, oscSyncKnob);
+        addAndMakeVisible(oscPWKnob);
+        oscPWKnob.OnValueChanged = make_param_sender(p, oscPWKnob);
+    }
+    std::function<void(void)> make_param_sender(AudioPluginAudioProcessor &p, XapSlider &slid)
+    {
+        return [&p, &slid]() {
+            ParameterMessage msg;
+            msg.id = slid.getParameterMetaData().id;
+            msg.value = slid.getValue();
+            p.params_from_gui_fifo.push(msg);
+        };
+    }
+    void onParamChanged(uint32_t id, float val)
+    {
+        ParameterMessage msg;
+        msg.id = id;
+        msg.value = val;
+        processorRef.params_from_gui_fifo.push(msg);
+    }
+    void resized() override
+    {
+        oscTypeDrop.setBounds(7, 17, 200, 25);
+        oscPitchKnob.setBounds(7, oscTypeDrop.getBottom() + 1, 80, 100);
+        oscSyncKnob.setBounds(oscPitchKnob.getRight() + 2, oscTypeDrop.getBottom() + 1, 80, 50);
+        oscPWKnob.setBounds(oscPitchKnob.getRight() + 2, oscSyncKnob.getBottom() + 1, 80, 50);
+    }
+};
+
 class InsertModuleComponent : public juce::GroupComponent
 {
   public:

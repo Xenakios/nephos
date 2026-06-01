@@ -1,6 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include "juce_core/juce_core.h"
+#include "modulecomponents.h"
 #include "text/choc_Files.h"
 
 void init_step_sequencer_js();
@@ -160,7 +161,7 @@ void AudioPluginAudioProcessorEditor::resized()
 }
 
 MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
-    : processorRef(p), spatModuleComponent(p), volumeModuleComponent(p),
+    : processorRef(p), oscModuleComponent(p), spatModuleComponent(p), volumeModuleComponent(p),
       auxenvcomp(&p.granulator, true)
 {
     addAndMakeVisible(p.avisComponent);
@@ -174,7 +175,7 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
 
     addAndMakeVisible(auxenvcomp);
 
-    addAndMakeVisible(oscillatorComponent);
+    addAndMakeVisible(oscModuleComponent);
     addAndMakeVisible(spatModuleComponent);
     addAndMakeVisible(miscParamsComponent);
     addAndMakeVisible(mainParamsComponent);
@@ -209,7 +210,8 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
     {
         auto &pmd = processorRef.granulator.parmetadatas[i];
         if (!choc::text::startsWith(pmd.groupName, "LFO") && pmd.groupName != "Spatialization" &&
-            pmd.groupName != "Insert A" && pmd.groupName != "Insert B" && pmd.groupName != "Volume")
+            pmd.groupName != "Insert A" && pmd.groupName != "Insert B" &&
+            pmd.groupName != "Volume" && pmd.groupName != "Oscillator")
         {
             XapSlider::Style style = XapSlider::SS_HorizontalSlider;
             if (pmd.groupName == "Time" || pmd.groupName == "Stacking" ||
@@ -224,12 +226,7 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
                 processorRef.params_from_gui_fifo.push(msg);
             };
             xapsliders.push_back(slid.get());
-
-            if (pmd.groupName == "Oscillator")
-            {
-                oscillatorComponent.addSlider(std::move(slid));
-            }
-            else if (pmd.groupName == "Main output")
+            if (pmd.groupName == "Main output")
             {
                 mainParamsComponent.addSlider(std::move(slid));
             }
@@ -282,8 +279,8 @@ void MainPageComponent::paint(juce::Graphics &g) { g.fillAll(juce::Colours::dark
 
 void MainPageComponent::resized()
 {
-    oscillatorComponent.setBounds(0, 0, 500, 175);
-    volumeModuleComponent.setBounds(0, oscillatorComponent.getBottom() + 1, 700, 150);
+    oscModuleComponent.setBounds(0, 0, 500, 175);
+    volumeModuleComponent.setBounds(0, oscModuleComponent.getBottom() + 1, 700, 150);
     timeParamsComponent.setBounds(502, 0, 300, 125);
 
     auxenvcomp.setBounds(volumeModuleComponent.getRight() + 2, timeParamsComponent.getBottom() + 1,
