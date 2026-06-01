@@ -58,6 +58,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
     addChildSlidersFrom(mainPage.oscModuleComponent);
     addChildSlidersFrom(mainPage.timeModuleComponent);
     addChildSlidersFrom(mainPage.stackModuleComponent);
+    addChildSlidersFrom(mainPage.mainOutModuleComponent);
 #if JUCE_MAC
     setScaleFactor(0.75);
 #else
@@ -155,11 +156,12 @@ void AudioPluginAudioProcessorEditor::resized()
 
 MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
     : processorRef(p), oscModuleComponent(p), timeModuleComponent(p), spatModuleComponent(p),
-      volumeModuleComponent(p), stackModuleComponent(p), auxenvcomp(&p.granulator, true)
+      volumeModuleComponent(p), stackModuleComponent(p), mainOutModuleComponent(p),
+      auxenvcomp(&p.granulator, true)
 {
     addAndMakeVisible(p.avisComponent);
-    perfcomp = std::make_unique<PerformanceComponent>();
-    perfcomp->RequestData = [this](int &maxvoices, int &usedvoices, float &cpu) {
+    mainOutModuleComponent.perfComponent.RequestData = [this](int &maxvoices, int &usedvoices,
+                                                              float &cpu) {
         maxvoices = processorRef.granulator.voices.size();
         usedvoices = processorRef.granulator.numVoicesUsed;
         cpu = processorRef.perfMeasurer.getLoadAsProportion();
@@ -170,7 +172,7 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
 
     addAndMakeVisible(oscModuleComponent);
     addAndMakeVisible(spatModuleComponent);
-    addAndMakeVisible(mainParamsComponent);
+    addAndMakeVisible(mainOutModuleComponent);
     addAndMakeVisible(volumeModuleComponent);
 
     for (int i = 0; i < 2; ++i)
@@ -195,36 +197,8 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
         else
             recordButton->setButtonText("Record");
     };
-    mainParamsComponent.addHeaderComponent(recordButton.get());
-    mainParamsComponent.addHeaderComponent(perfcomp.get());
-
-    for (int i = 0; i < processorRef.granulator.parmetadatas.size(); ++i)
-    {
-        auto &pmd = processorRef.granulator.parmetadatas[i];
-        if (!choc::text::startsWith(pmd.groupName, "LFO") && pmd.groupName != "Spatialization" &&
-            pmd.groupName != "Insert A" && pmd.groupName != "Insert B" &&
-            pmd.groupName != "Volume" && pmd.groupName != "Oscillator" && pmd.groupName != "Time" &&
-            pmd.groupName != "Stacking")
-        {
-            XapSlider::Style style = XapSlider::SS_HorizontalSlider;
-            if (pmd.groupName == "Time" || pmd.groupName == "Stacking" ||
-                pmd.groupName == "Insert A" || pmd.groupName == "Insert B" ||
-                pmd.groupName == "Volume")
-                style = XapSlider::SS_Knob;
-            auto slid = std::make_unique<XapSlider>(style, pmd);
-            slid->OnValueChanged = [this, pid = pmd.id, sli = slid.get()]() {
-                ParameterMessage msg;
-                msg.id = pid;
-                msg.value = sli->getValue();
-                processorRef.params_from_gui_fifo.push(msg);
-            };
-            xapsliders.push_back(slid.get());
-            if (pmd.groupName == "Main output")
-            {
-                mainParamsComponent.addSlider(std::move(slid));
-            }
-        }
-    }
+    // mainParamsComponent.addHeaderComponent(recordButton.get());
+    // mainParamsComponent.addHeaderComponent(perfcomp.get());
 
     auto &idtomd = processorRef.granulator.idtoparmetadata;
 
@@ -254,8 +228,8 @@ void MainPageComponent::resized()
                          175, 175);
 
     spatModuleComponent.setBounds(0, volumeModuleComponent.getBottom() + 2, 600, 125);
-    mainParamsComponent.setBounds(spatModuleComponent.getRight() + 2,
-                                  volumeModuleComponent.getBottom() + 2, 500, 125);
+    mainOutModuleComponent.setBounds(spatModuleComponent.getRight() + 2,
+                                     volumeModuleComponent.getBottom() + 2, 500, 125);
     insertComponents[0]->setBounds(0, spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 125);
     insertComponents[1]->setBounds(insertComponents[0]->getRight() + 1,
                                    spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 125);

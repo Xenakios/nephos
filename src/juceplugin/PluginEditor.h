@@ -466,37 +466,6 @@ struct ModulationRowComponent : public juce::Component
     DropDownComponent destDrop;
 };
 
-class PerformanceComponent : public juce::Component, public juce::Timer
-{
-  public:
-    PerformanceComponent() { startTimer(100); }
-    void timerCallback() override { repaint(); }
-    void paint(juce::Graphics &g) override
-    {
-        g.fillAll(juce::Colours::black);
-        int maxvoices = 0;
-        int usedvoices = 0;
-        float cpu_use = 0.0f;
-        if (RequestData)
-        {
-            RequestData(maxvoices, usedvoices, cpu_use);
-            float w = (float)(getWidth() - 2) / maxvoices * usedvoices * 0.5;
-            g.setColour(juce::Colours::yellow);
-            g.fillRect(juce::Rectangle<float>(0.0f, 0.0f, w, 20.0f));
-            g.setColour(juce::Colours::white);
-            g.drawText(fmt::format("VOICES {:2}/{:2}", usedvoices, maxvoices), 0, 0,
-                       getWidth() / 2 - 2, 20, juce::Justification::centredRight);
-            w = cpu_use * (getWidth() - 2) * 0.5;
-            g.setColour(juce::Colours::green);
-            g.fillRect(juce::Rectangle<float>(getWidth() / 2.0, 0.0f, w, 20.0f));
-            g.setColour(juce::Colours::white);
-            g.drawText(fmt::format("CPU {}%", (int)(cpu_use * 100.0)), getWidth() / 2 - 2, 0,
-                       getWidth() / 2, 20, juce::Justification::centredRight);
-        }
-    }
-    std::function<void(int &, int &, float &)> RequestData;
-};
-
 class MainPageComponent final : public juce::Component
 {
   public:
@@ -510,7 +479,7 @@ class MainPageComponent final : public juce::Component
     // MyCustomLNF lnf;
     AudioPluginAudioProcessor &processorRef;
     OscillatorModuleComponent oscModuleComponent;
-    ParameterGroupComponent mainParamsComponent{"Main", false};
+    MainOutputModule mainOutModuleComponent;
     SpatializationModuleComponent spatModuleComponent;
     VolumeModuleComponent volumeModuleComponent;
     TimeModuleComponent timeModuleComponent;
@@ -520,7 +489,7 @@ class MainPageComponent final : public juce::Component
     VolumeEnvelopeComponent auxenvcomp;
 
     std::vector<XapSlider *> xapsliders;
-    std::unique_ptr<PerformanceComponent> perfcomp;
+    
     std::unique_ptr<juce::TextButton> recordButton;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainPageComponent)

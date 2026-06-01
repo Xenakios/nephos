@@ -313,6 +313,58 @@ class StackingModuleComponent : public juce::GroupComponent
     }
 };
 
+class PerformanceComponent : public juce::Component, public juce::Timer
+{
+  public:
+    PerformanceComponent() { startTimer(100); }
+    void timerCallback() override { repaint(); }
+    void paint(juce::Graphics &g) override
+    {
+        g.fillAll(juce::Colours::black);
+        int maxvoices = 0;
+        int usedvoices = 0;
+        float cpu_use = 0.0f;
+        if (RequestData)
+        {
+            RequestData(maxvoices, usedvoices, cpu_use);
+            float w = (float)(getWidth() - 2) / maxvoices * usedvoices * 0.5;
+            g.setColour(juce::Colours::yellow);
+            g.fillRect(juce::Rectangle<float>(0.0f, 0.0f, w, 20.0f));
+            g.setColour(juce::Colours::white);
+            g.drawText(fmt::format("VOICES {:2}/{:2}", usedvoices, maxvoices), 0, 0,
+                       getWidth() / 2 - 2, 20, juce::Justification::centredRight);
+            w = cpu_use * (getWidth() - 2) * 0.5;
+            g.setColour(juce::Colours::green);
+            g.fillRect(juce::Rectangle<float>(getWidth() / 2.0, 0.0f, w, 20.0f));
+            g.setColour(juce::Colours::white);
+            g.drawText(fmt::format("CPU {}%", (int)(cpu_use * 100.0)), getWidth() / 2 - 2, 0,
+                       getWidth() / 2, 20, juce::Justification::centredRight);
+        }
+    }
+    std::function<void(int &, int &, float &)> RequestData;
+};
+
+class MainOutputModule : public juce::GroupComponent
+{
+  public:
+    AudioPluginAudioProcessor &processorRef;
+    XapSlider mainVolumeKnob;
+    PerformanceComponent perfComponent;
+    MainOutputModule(AudioPluginAudioProcessor &p)
+        : juce::GroupComponent("", "Main Output"), processorRef(p),
+          mainVolumeKnob(XapSlider::SS_Knob,
+                         *p.granulator.idtoparmetadata[ToneGranulator::PAR_MAINVOLUME])
+    {
+        initSlider(p, *this, mainVolumeKnob);
+        addAndMakeVisible(perfComponent);
+    }
+    void resized() override
+    {
+        mainVolumeKnob.setBounds(7, 17, 100, getHeight() - 20);
+        perfComponent.setBounds(mainVolumeKnob.getRight() + 2, 17, getWidth() - 115, 21);
+    }
+};
+
 class TimeModuleComponent : public juce::GroupComponent
 {
   public:
