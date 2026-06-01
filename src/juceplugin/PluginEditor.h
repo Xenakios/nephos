@@ -690,5 +690,6 @@ class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor,
     DashPage dashPage;
     juce::TabbedComponent mainTabs;
     std::unordered_map<uint32_t, XapSlider *> idToSlider;
+    void addChildSlidersFrom(juce::Component& c);
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioPluginAudioProcessorEditor)
 };

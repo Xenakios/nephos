@@ -227,10 +227,8 @@ class OscillatorModuleComponent : public juce::GroupComponent
         oscTypeDrop.OnValueChanged = [this]() {
             onParamChanged(ToneGranulator::PAR_OSCTYPE, oscTypeDrop.getValue());
         };
-        addAndMakeVisible(oscPitchKnob);
-        oscPitchKnob.OnValueChanged = [this]() {
-            onParamChanged(ToneGranulator::PAR_PITCH, oscPitchKnob.getValue());
-        };
+        initSlider(oscPitchKnob);
+        
         addAndMakeVisible(pitchEnvKnob);
         pitchEnvKnob.OnValueChanged = make_param_sender(p, pitchEnvKnob);
         addAndMakeVisible(pitchEnvWarpKnob);
@@ -250,6 +248,16 @@ class OscillatorModuleComponent : public juce::GroupComponent
         oscNoiseModeDrop.OnValueChanged = make_param_sender(p, oscNoiseModeDrop);
         addAndMakeVisible(oscNoiseCorrelationKnob);
         oscNoiseCorrelationKnob.OnValueChanged = make_param_sender(p, oscNoiseCorrelationKnob);
+    }
+    void initSlider(XapSlider &slid)
+    {
+        addAndMakeVisible(slid);
+        slid.OnValueChanged = [this, &slid]() {
+            ParameterMessage msg;
+            msg.id = slid.getParameterMetaData().id;
+            msg.value = slid.getValue();
+            processorRef.params_from_gui_fifo.push(msg);
+        };
     }
     std::function<void(void)> make_param_sender(AudioPluginAudioProcessor &p, XapSlider &slid)
     {
@@ -272,7 +280,8 @@ class OscillatorModuleComponent : public juce::GroupComponent
         oscTypeDrop.setBounds(7, 17, 200, 25);
         oscPitchKnob.setBounds(7, oscTypeDrop.getBottom() + 1, 80, 100);
         pitchEnvKnob.setBounds(oscPitchKnob.getRight() + 2, oscTypeDrop.getBottom() + 1, 80, 50);
-        pitchEnvWarpKnob.setBounds(oscPitchKnob.getRight() + 2, pitchEnvKnob.getBottom() + 1, 80, 50);
+        pitchEnvWarpKnob.setBounds(oscPitchKnob.getRight() + 2, pitchEnvKnob.getBottom() + 1, 80,
+                                   50);
         oscSyncKnob.setBounds(pitchEnvKnob.getRight() + 2, oscTypeDrop.getBottom() + 1, 80, 50);
         oscPWKnob.setBounds(pitchEnvKnob.getRight() + 2, oscSyncKnob.getBottom() + 1, 80, 50);
         oscFMPitchKnob.setBounds(oscSyncKnob.getRight() + 2, oscTypeDrop.getBottom() + 1, 80, 50);

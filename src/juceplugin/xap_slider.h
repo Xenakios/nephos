@@ -5,6 +5,10 @@
 
 using ParamDesc = sst::basic_blocks::params::ParamMetaData;
 
+// this is really no longer just a slider, but also a knob and
+// a drop down selector component, but we are keeping the name as XapSlider
+// for now...maybe rename it later to XapGenericParameterComponent or something
+
 class XapSlider : public juce::Component
 {
     double m_value = 0.0;

@@ -43,12 +43,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
     for (int i = 0; i < 8; ++i)
     {
         auto lfoc = modulationPage.lfocomps[i].get();
-        idToSlider[ToneGranulator::PAR_LFORATES + i] = &lfoc->rateSlider;
-        idToSlider[ToneGranulator::PAR_LFODEFORMS + i] = &lfoc->deformSlider;
-        idToSlider[ToneGranulator::PAR_LFOSHIFTS + i] = &lfoc->shiftSlider;
-        idToSlider[ToneGranulator::PAR_LFOWARPS + i] = &lfoc->warpSlider;
-        idToSlider[ToneGranulator::PAR_LFOSHAPES + i] = &lfoc->shapeSlider;
-        idToSlider[ToneGranulator::PAR_LFOUNIPOLARS + i] = &lfoc->unipolarSlider;
+        addChildSlidersFrom(*lfoc);
     }
     for (auto e : mainPage.xapsliders)
     {
@@ -56,40 +51,18 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
     }
     for (auto &e : mainPage.insertComponents)
     {
-        for (auto &c : e->knobs)
-        {
-            idToSlider[c->getParameterMetaData().id] = c.get();
-        }
+        addChildSlidersFrom(*e);
     }
-    idToSlider[ToneGranulator::PAR_AMBORDER] = &mainPage.spatModuleComponent.ambOrderDrop;
-    idToSlider[ToneGranulator::PAR_AZIMUTH] = &mainPage.spatModuleComponent.azimuthKnob;
-    idToSlider[ToneGranulator::PAR_ELEVATION] = &mainPage.spatModuleComponent.elevationKnob;
-    idToSlider[ToneGranulator::PAR_AMBSPREAD] = &mainPage.spatModuleComponent.spreadKnob;
-    idToSlider[ToneGranulator::PAR_AMBROTATE] = &mainPage.spatModuleComponent.rotateKnob;
+    addChildSlidersFrom(mainPage.spatModuleComponent);
+    addChildSlidersFrom(mainPage.volumeModuleComponent);
+    addChildSlidersFrom(mainPage.oscModuleComponent);
 
-    idToSlider[ToneGranulator::PAR_GRAINVOLUME] = &mainPage.volumeModuleComponent.volumeKnob;
-    idToSlider[ToneGranulator::PAR_ENVMORPH] = &mainPage.volumeModuleComponent.morphKnob;
-    idToSlider[ToneGranulator::PAR_VOLENVEASINGSTART] =
-        &mainPage.volumeModuleComponent.startCurveSlider;
-    idToSlider[ToneGranulator::PAR_VOLENVEASINGEND] =
-        &mainPage.volumeModuleComponent.endCurveSlider;
-    for (int i = 0; i < 7; ++i)
-    {
-        idToSlider[ToneGranulator::PAR_PITCHBANDGAIN0 + i * 10] =
-            mainPage.volumeModuleComponent.pitchBandGainKnobs[i].get();
-    }
-    for (auto &c : mainPage.oscModuleComponent.getChildren())
-    {
-        if (auto knob = dynamic_cast<XapSlider *>(c))
-        {
-            idToSlider[knob->getParameterMetaData().id] = knob;
-        }
-    }
 #if JUCE_MAC
     setScaleFactor(0.75);
 #else
     // setScaleFactor(0.90);
 #endif
+
     for (auto &c : mainPage.insertComponents)
     {
         c->OnInsertTypeChanged = [this]() {
@@ -101,6 +74,17 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
     }
     setSize(1500, 780);
     startTimer(50);
+}
+
+void AudioPluginAudioProcessorEditor::addChildSlidersFrom(juce::Component &c)
+{
+    for (auto &c : c.getChildren())
+    {
+        if (auto knob = dynamic_cast<XapSlider *>(c))
+        {
+            idToSlider[knob->getParameterMetaData().id] = knob;
+        }
+    }
 }
 
 AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor() {}
