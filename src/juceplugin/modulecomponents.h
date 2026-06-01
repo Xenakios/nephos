@@ -189,6 +189,8 @@ class OscillatorModuleComponent : public juce::GroupComponent
     AudioPluginAudioProcessor &processorRef;
     XapSlider oscTypeDrop;
     XapSlider oscPitchKnob;
+    XapSlider pitchEnvKnob;
+    XapSlider pitchEnvWarpKnob;
     XapSlider oscSyncKnob;
     XapSlider oscPWKnob;
     XapSlider oscFMPitchKnob;
@@ -197,10 +199,15 @@ class OscillatorModuleComponent : public juce::GroupComponent
     XapSlider oscNoiseCorrelationKnob;
     XapSlider oscNoiseModeDrop;
     OscillatorModuleComponent(AudioPluginAudioProcessor &p)
-        : processorRef(p), oscTypeDrop(XapSlider::SS_HorizontalSlider,
-                                       *p.granulator.idtoparmetadata[ToneGranulator::PAR_OSCTYPE]),
+        : juce::GroupComponent("", "Oscillator"), processorRef(p),
+          oscTypeDrop(XapSlider::SS_HorizontalSlider,
+                      *p.granulator.idtoparmetadata[ToneGranulator::PAR_OSCTYPE]),
           oscPitchKnob(XapSlider::SS_Knob,
                        *p.granulator.idtoparmetadata[ToneGranulator::PAR_PITCH]),
+          pitchEnvKnob(XapSlider::SS_Knob,
+                       *p.granulator.idtoparmetadata[ToneGranulator::PAR_AUXENVTOPITCHAMT]),
+          pitchEnvWarpKnob(XapSlider::SS_Knob,
+                           *p.granulator.idtoparmetadata[ToneGranulator::PAR_AUXENVTIMEWARP]),
           oscSyncKnob(XapSlider::SS_Knob,
                       *p.granulator.idtoparmetadata[ToneGranulator::PAR_OSC_SYNC]),
           oscPWKnob(XapSlider::SS_Knob, *p.granulator.idtoparmetadata[ToneGranulator::PAR_OSC_PW]),
@@ -224,6 +231,10 @@ class OscillatorModuleComponent : public juce::GroupComponent
         oscPitchKnob.OnValueChanged = [this]() {
             onParamChanged(ToneGranulator::PAR_PITCH, oscPitchKnob.getValue());
         };
+        addAndMakeVisible(pitchEnvKnob);
+        pitchEnvKnob.OnValueChanged = make_param_sender(p, pitchEnvKnob);
+        addAndMakeVisible(pitchEnvWarpKnob);
+        pitchEnvWarpKnob.OnValueChanged = make_param_sender(p, pitchEnvWarpKnob);
         addAndMakeVisible(oscSyncKnob);
         oscSyncKnob.OnValueChanged = make_param_sender(p, oscSyncKnob);
         addAndMakeVisible(oscPWKnob);
@@ -260,8 +271,10 @@ class OscillatorModuleComponent : public juce::GroupComponent
     {
         oscTypeDrop.setBounds(7, 17, 200, 25);
         oscPitchKnob.setBounds(7, oscTypeDrop.getBottom() + 1, 80, 100);
-        oscSyncKnob.setBounds(oscPitchKnob.getRight() + 2, oscTypeDrop.getBottom() + 1, 80, 50);
-        oscPWKnob.setBounds(oscPitchKnob.getRight() + 2, oscSyncKnob.getBottom() + 1, 80, 50);
+        pitchEnvKnob.setBounds(oscPitchKnob.getRight() + 2, oscTypeDrop.getBottom() + 1, 80, 50);
+        pitchEnvWarpKnob.setBounds(oscPitchKnob.getRight() + 2, pitchEnvKnob.getBottom() + 1, 80, 50);
+        oscSyncKnob.setBounds(pitchEnvKnob.getRight() + 2, oscTypeDrop.getBottom() + 1, 80, 50);
+        oscPWKnob.setBounds(pitchEnvKnob.getRight() + 2, oscSyncKnob.getBottom() + 1, 80, 50);
         oscFMPitchKnob.setBounds(oscSyncKnob.getRight() + 2, oscTypeDrop.getBottom() + 1, 80, 50);
         oscFMDepthKnob.setBounds(oscFMPitchKnob.getRight() + 2, oscTypeDrop.getBottom() + 1, 80,
                                  50);

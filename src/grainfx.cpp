@@ -1,6 +1,7 @@
 #include "grainfx.h"
 #include <fmt/format.h>
 // #include <print>
+#include "platform/choc_DisableAllWarnings.h"
 #include "plugins/BezEQ.h"
 #include "plugins/HipCrush.h"
 #include "plugins/kWoodRoom.h"
@@ -15,6 +16,7 @@
 #include "plugins/GlitchShifter.h"
 #include "plugins/WoodenBox.h"
 #include "plugins/PitchNasty.h"
+#include "platform/choc_ReenableAllWarnings.h"
 #include "xgfx_dust.h"
 #include "xgfx_pingpongdelay.h"
 

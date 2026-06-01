@@ -65,6 +65,7 @@ add_library(AWLIMITED
 )
 
 target_compile_definitions(AWLIMITED PUBLIC _USE_MATH_DEFINES=1)
+target_compile_options(AWLIMITED PRIVATE -w)
 
 add_executable(NephosCLI
     src/nephosmain.cpp
