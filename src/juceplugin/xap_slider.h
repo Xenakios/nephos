@@ -200,6 +200,7 @@ class XapSlider : public juce::Component
         };
     }
     juce::String m_err_msg;
+    float dropdownXpercent = 0.5f;
     void mouseDown(const juce::MouseEvent &ev) override
     {
         if (!isEnabled())

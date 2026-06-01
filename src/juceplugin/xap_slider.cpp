@@ -66,7 +66,7 @@ void XapSlider::paint(juce::Graphics &g)
         else
         {
             g.setColour(juce::Colours::grey);
-            int midx = getWidth() / 2;
+            int midx = getWidth() * dropdownXpercent;
             g.fillRect(midx, 1, getWidth() - midx, getHeight() - 2);
             if (hasKeyboardFocus(false))
                 g.setColour(juce::Colours::cyan);

@@ -191,6 +191,11 @@ class OscillatorModuleComponent : public juce::GroupComponent
     XapSlider oscPitchKnob;
     XapSlider oscSyncKnob;
     XapSlider oscPWKnob;
+    XapSlider oscFMPitchKnob;
+    XapSlider oscFMDepthKnob;
+    XapSlider oscFMFeedbackKnob;
+    XapSlider oscNoiseCorrelationKnob;
+    XapSlider oscNoiseModeDrop;
     OscillatorModuleComponent(AudioPluginAudioProcessor &p)
         : processorRef(p), oscTypeDrop(XapSlider::SS_HorizontalSlider,
                                        *p.granulator.idtoparmetadata[ToneGranulator::PAR_OSCTYPE]),
@@ -198,8 +203,18 @@ class OscillatorModuleComponent : public juce::GroupComponent
                        *p.granulator.idtoparmetadata[ToneGranulator::PAR_PITCH]),
           oscSyncKnob(XapSlider::SS_Knob,
                       *p.granulator.idtoparmetadata[ToneGranulator::PAR_OSC_SYNC]),
-          oscPWKnob(XapSlider::SS_Knob,
-                      *p.granulator.idtoparmetadata[ToneGranulator::PAR_OSC_PW])
+          oscPWKnob(XapSlider::SS_Knob, *p.granulator.idtoparmetadata[ToneGranulator::PAR_OSC_PW]),
+          oscFMPitchKnob(XapSlider::SS_Knob,
+                         *p.granulator.idtoparmetadata[ToneGranulator::PAR_FMPITCH]),
+          oscFMDepthKnob(XapSlider::SS_Knob,
+                         *p.granulator.idtoparmetadata[ToneGranulator::PAR_FMDEPTH]),
+          oscFMFeedbackKnob(XapSlider::SS_Knob,
+                            *p.granulator.idtoparmetadata[ToneGranulator::PAR_FMFEEDBACK]),
+          oscNoiseModeDrop(XapSlider::SS_HorizontalSlider,
+                           *p.granulator.idtoparmetadata[ToneGranulator::PAR_NOISEMODE]),
+          oscNoiseCorrelationKnob(
+              XapSlider::SS_Knob,
+              *p.granulator.idtoparmetadata[ToneGranulator::PAR_NOISECORRELATION])
     {
         addAndMakeVisible(oscTypeDrop);
         oscTypeDrop.OnValueChanged = [this]() {
@@ -213,6 +228,17 @@ class OscillatorModuleComponent : public juce::GroupComponent
         oscSyncKnob.OnValueChanged = make_param_sender(p, oscSyncKnob);
         addAndMakeVisible(oscPWKnob);
         oscPWKnob.OnValueChanged = make_param_sender(p, oscPWKnob);
+        addAndMakeVisible(oscFMPitchKnob);
+        oscFMPitchKnob.OnValueChanged = make_param_sender(p, oscFMPitchKnob);
+        addAndMakeVisible(oscFMDepthKnob);
+        oscFMDepthKnob.OnValueChanged = make_param_sender(p, oscFMDepthKnob);
+        addAndMakeVisible(oscFMFeedbackKnob);
+        oscFMFeedbackKnob.OnValueChanged = make_param_sender(p, oscFMFeedbackKnob);
+        addAndMakeVisible(oscNoiseModeDrop);
+        oscNoiseModeDrop.dropdownXpercent = 0.3;
+        oscNoiseModeDrop.OnValueChanged = make_param_sender(p, oscNoiseModeDrop);
+        addAndMakeVisible(oscNoiseCorrelationKnob);
+        oscNoiseCorrelationKnob.OnValueChanged = make_param_sender(p, oscNoiseCorrelationKnob);
     }
     std::function<void(void)> make_param_sender(AudioPluginAudioProcessor &p, XapSlider &slid)
     {
@@ -236,6 +262,15 @@ class OscillatorModuleComponent : public juce::GroupComponent
         oscPitchKnob.setBounds(7, oscTypeDrop.getBottom() + 1, 80, 100);
         oscSyncKnob.setBounds(oscPitchKnob.getRight() + 2, oscTypeDrop.getBottom() + 1, 80, 50);
         oscPWKnob.setBounds(oscPitchKnob.getRight() + 2, oscSyncKnob.getBottom() + 1, 80, 50);
+        oscFMPitchKnob.setBounds(oscSyncKnob.getRight() + 2, oscTypeDrop.getBottom() + 1, 80, 50);
+        oscFMDepthKnob.setBounds(oscFMPitchKnob.getRight() + 2, oscTypeDrop.getBottom() + 1, 80,
+                                 50);
+        oscFMFeedbackKnob.setBounds(oscFMDepthKnob.getRight() + 2, oscTypeDrop.getBottom() + 1, 80,
+                                    50);
+        oscNoiseModeDrop.setBounds(oscSyncKnob.getRight() + 2, oscFMPitchKnob.getBottom() + 1, 250,
+                                   25);
+        oscNoiseCorrelationKnob.setBounds(oscSyncKnob.getRight() + 2,
+                                          oscNoiseModeDrop.getBottom() + 1, 80, 50);
     }
 };
 

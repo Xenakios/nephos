@@ -3,6 +3,7 @@
 #include "juce_core/juce_core.h"
 #include "modulecomponents.h"
 #include "text/choc_Files.h"
+#include "xap_slider.h"
 
 void init_step_sequencer_js();
 void deinit_step_sequencer_js();
@@ -76,6 +77,13 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
     {
         idToSlider[ToneGranulator::PAR_PITCHBANDGAIN0 + i * 10] =
             mainPage.volumeModuleComponent.pitchBandGainKnobs[i].get();
+    }
+    for (auto &c : mainPage.oscModuleComponent.getChildren())
+    {
+        if (auto knob = dynamic_cast<XapSlider *>(c))
+        {
+            idToSlider[knob->getParameterMetaData().id] = knob;
+        }
     }
 #if JUCE_MAC
     setScaleFactor(0.75);
@@ -246,21 +254,7 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
     }
 
     auto &idtomd = processorRef.granulator.idtoparmetadata;
-    for (int i = 0; i < 8; ++i)
-    {
-        /*
-        auto lfoc = std::make_unique<LFOComponent>(i, &processorRef.granulator);
-        lfoc->stateChangedCallback = [this](uint32_t parid, float val) {
-            ParameterMessage parmsg;
-            parmsg.id = parid;
-            parmsg.value = val;
-            processorRef.params_from_gui_fifo.push(parmsg);
-        };
-        */
 
-        // lfoTabs.addTab("LFO " + juce::String(i + 1), juce::Colours::darkgrey, lfoc.get(), false);
-        // lfocomps.push_back(std::move(lfoc));
-    }
     // addAndMakeVisible(insertsTabs);
 
     // setLookAndFeel(&lnf);

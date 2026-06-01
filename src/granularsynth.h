@@ -1728,15 +1728,15 @@ class ToneGranulator
                                    .withFlags(CLAP_PARAM_IS_MODULATABLE));
         parmetadatas.push_back(
             pmd()
-                .withUnorderedMapFormatting({{0, "Correlated noise No interpolation"},
-                                             {1, "Correlated noise Linear interpolation"},
-                                             {2, "Correlated noise Corrupted output"},
-                                             {3, "Correlated noise BounceIn interpolation"},
+                .withUnorderedMapFormatting({{0, "Corr noise No interpolation"},
+                                             {1, "Corr noise Linear interpolation"},
+                                             {2, "Corr noise Corrupted output"},
+                                             {3, "Corr noise BounceIn interpolation"},
                                              {4, "Logistic Chaos Linear interpolation"},
                                              {5, "Sinc/Pulse"}},
                                             true)
                 .withDefault(1)
-                .withName("Mode")
+                .withName("Noise Mode")
                 .withGroupName("Oscillator")
                 .withID(PAR_NOISEMODE));
         for (size_t i = 0; i < GranulatorVoice::numInsertSlots; ++i)
