@@ -514,7 +514,7 @@ class MainPageComponent final : public juce::Component
     SpatializationModuleComponent spatModuleComponent;
     VolumeModuleComponent volumeModuleComponent;
     TimeModuleComponent timeModuleComponent;
-    ParameterGroupComponent stackParamsComponent{"Stacking", true};
+    StackingModuleComponent stackModuleComponent;
     std::vector<std::unique_ptr<InsertModuleComponent>> insertComponents;
 
     VolumeEnvelopeComponent auxenvcomp;

@@ -271,6 +271,48 @@ class OscillatorModuleComponent : public juce::GroupComponent
     }
 };
 
+class StackingModuleComponent : public juce::GroupComponent
+{
+  public:
+    AudioPluginAudioProcessor &processorRef;
+    XapSlider countKnob;
+    XapSlider lengthKnob;
+    XapSlider warpKnob;
+    XapSlider pitchRandomKnob;
+    XapSlider spatRandomKnob;
+    StackingModuleComponent(AudioPluginAudioProcessor &p)
+        : juce::GroupComponent("", "Stacking"), processorRef(p),
+          countKnob(XapSlider::SS_Knob,
+                    *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKCOUNT]),
+          lengthKnob(XapSlider::SS_Knob,
+                     *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKTIMESPAN]),
+          warpKnob(XapSlider::SS_Knob,
+                   *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKTIMECURVE]),
+          pitchRandomKnob(XapSlider::SS_Knob,
+                          *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKRANDOMPITCH]),
+          spatRandomKnob(
+              XapSlider::SS_Knob,
+              *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKRANDOMSPATIALIZATION])
+    {
+        initSlider(p, *this, countKnob);
+        initSlider(p, *this, lengthKnob);
+        initSlider(p, *this, warpKnob);
+        initSlider(p, *this, pitchRandomKnob);
+        initSlider(p, *this, spatRandomKnob);
+    }
+    void resized() override
+    {
+        juce::FlexBox flex;
+        flex.flexDirection = juce::FlexBox::Direction::row;
+        flex.items.add(juce::FlexItem(countKnob).withFlex(1.0).withMargin(2));
+        flex.items.add(juce::FlexItem(lengthKnob).withFlex(1.0).withMargin(2));
+        flex.items.add(juce::FlexItem(warpKnob).withFlex(1.0).withMargin(2));
+        flex.items.add(juce::FlexItem(pitchRandomKnob).withFlex(1.0).withMargin(2));
+        flex.items.add(juce::FlexItem(spatRandomKnob).withFlex(1.0).withMargin(2));
+        flex.performLayout(juce::Rectangle<int>(7, 17, getWidth() - 14, getHeight() - 28));
+    }
+};
+
 class TimeModuleComponent : public juce::GroupComponent
 {
   public:
