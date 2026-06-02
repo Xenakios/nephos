@@ -491,7 +491,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     for (int i = 0; i < 16; ++i)
     {
         auto rpar = dynamic_cast<juce::AudioParameterFloat *>(pars[i + 1]);
-        granulator.modSourceValues[ToneGranulator::MACROSTART + i] = *rpar;
+        granulator.modSourceValues[ToneGranulator::HOSTPARAMSTART + i] = *rpar;
     }
     /*
     const auto &pars = getParameters();

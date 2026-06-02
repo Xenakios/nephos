@@ -1318,8 +1318,8 @@ class ToneGranulator
         STEPS5,
         STEPS6,
         STEPS7,
-        MACROSTART,
-        MIDINOTE = MACROSTART + 16,
+        HOSTPARAMSTART,
+        MIDINOTE = HOSTPARAMSTART + 16,
         MIDIVELO,
         MIDIAT,
         MIDICCSTART,
@@ -1926,8 +1926,8 @@ class ToneGranulator
         }
         for (uint32_t i = 0; i < 16; ++i)
         {
-            modSources.emplace_back(fmt::format("Macro {}", i + 1), "Macro Parameter",
-                                    GranulatorModConfig::SourceIdentifier{MACROSTART + i});
+            modSources.emplace_back(fmt::format("Host Parameter {}", i + 1), "Host Parameter",
+                                    GranulatorModConfig::SourceIdentifier{HOSTPARAMSTART + i});
         }
         modSources.emplace_back("MIDI KEY", "MIDI NOTES",
                                 GranulatorModConfig::SourceIdentifier{MIDINOTE});
