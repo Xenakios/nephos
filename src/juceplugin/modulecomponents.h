@@ -357,11 +357,15 @@ class MainOutputModule : public juce::GroupComponent
     {
         initSlider(p, *this, mainVolumeKnob);
         addAndMakeVisible(perfComponent);
+        addAndMakeVisible(p.avisComponent);
     }
     void resized() override
     {
-        mainVolumeKnob.setBounds(7, 17, 100, getHeight() - 20);
+        mainVolumeKnob.setBounds(7, 17, 100, getHeight() - 25);
         perfComponent.setBounds(mainVolumeKnob.getRight() + 2, 17, getWidth() - 115, 21);
+        processorRef.avisComponent.setBounds(mainVolumeKnob.getRight() + 2,
+                                             perfComponent.getBottom() + 1, getWidth() - 115,
+                                             getHeight() - 25 - 21);
     }
 };
 
