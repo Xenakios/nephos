@@ -1,4 +1,5 @@
 #include "xap_slider.h"
+#include "juce_graphics/juce_graphics.h"
 
 void XapSlider::paint(juce::Graphics &g)
 {
@@ -30,7 +31,7 @@ void XapSlider::paint(juce::Graphics &g)
         if (m_value >= 0.5)
             g.setColour(juce::Colours::green);
         else
-            g.setColour(juce::Colours::red);
+            g.setColour(juce::Colours::darkgrey);
         g.fillRect(3, 1, getWidth() - 5, getHeight() - 1);
         g.setColour(juce::Colours::lightgrey);
         g.drawRect(2, 0, getWidth() - 4, getHeight());

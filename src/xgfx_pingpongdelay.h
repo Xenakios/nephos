@@ -75,7 +75,9 @@ class XPingPongFX : public XenFXBase
         if (paramindex == 2)
         {
             normalizedParamValues[2] = value;
-            wetmix = value;
+            const float pidiv = M_PI / 2;
+            wetmixcoeffs[0] = std::cos(pidiv * value);
+            wetmixcoeffs[1] = std::sin(pidiv * value);
         }
     }
     void process(float **inbuffer, float **outbuffer, size_t num_frames) override
@@ -89,8 +91,10 @@ class XPingPongFX : public XenFXBase
             delayBuf[delay_write_pos * 2 + 1] = feedback * feedbacks[1];
             float delayouts[2] = {delayBuf[delay_read_pos * 2 + 0],
                                   delayBuf[delay_read_pos * 2 + 1]};
-            outbuffer[0][i] = insamples[0] * (1.0 - wetmix) + delayouts[0] * wetmix;
-            outbuffer[1][i] = insamples[1] * (1.0 - wetmix) + delayouts[1] * wetmix;
+            outbuffer[0][i] =
+                insamples[0] * (1.0 - wetmixcoeffs[0]) + delayouts[0] * wetmixcoeffs[1];
+            outbuffer[1][i] =
+                insamples[1] * (1.0 - wetmixcoeffs[0]) + delayouts[1] * wetmixcoeffs[1];
             feedbacks[0] = delayouts[1];
             feedbacks[1] = delayouts[0];
             ++delay_read_pos;
@@ -104,7 +108,7 @@ class XPingPongFX : public XenFXBase
     static constexpr float maxDelayLen = 1.0;
     float normalizedParamValues[3] = {0.2f, 0.5f, 0.5f};
     float feedback = 0.5;
-    float wetmix = 1.0;
+    float wetmixcoeffs[2] = {0.0f, 0.0f};
     int delayLenSamples = 0;
     float sample_rate = 0.0f;
     alignas(16) int delay_read_pos = 0;
