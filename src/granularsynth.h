@@ -2071,6 +2071,33 @@ class ToneGranulator
     std::atomic<float> auxenvwarpmodulated = 0.0f;
     std::atomic<uint32_t> modulatedParamToStore{0};
     std::atomic<float> modulatedParValueForGUI{0.0f};
+    void process_modulations()
+    {
+        for (uint32_t i = 0; i < modmatrix.numLfos; ++i)
+        {
+            float shift = modmatrix.m.getTargetValue(
+                GranulatorModConfig::TargetIdentifier{(int)(PAR_LFOSHIFTS + i)});
+            modmatrix.m_lfos[i]->applyPhaseOffset(shift);
+            float rate = modmatrix.m.getTargetValue(
+                GranulatorModConfig::TargetIdentifier{(int)(PAR_LFORATES + i)});
+            float deform = modmatrix.m.getTargetValue(
+                GranulatorModConfig::TargetIdentifier{(int)(PAR_LFODEFORMS + i)});
+            float warp = modmatrix.m.getTargetValue(
+                GranulatorModConfig::TargetIdentifier{(int)(PAR_LFOWARPS + i)});
+            int shape = *idtoparvalptr[PAR_LFOSHAPES + i];
+            shape = shapeParToActualShape[shape];
+            modmatrix.m_lfos[i]->process_block(rate, deform, shape, false, 1.0f, warp);
+            bool unipolar = (*idtoparvalptr[PAR_LFOUNIPOLARS + i]) > 0.5f;
+            if (!unipolar)
+                modSourceValues[LFO0 + i] = modmatrix.m_lfos[i]->outputBlock[0];
+            else
+                modSourceValues[LFO0 + i] = (modmatrix.m_lfos[i]->outputBlock[0] + 1.0f) * 0.5f;
+        }
+        for (size_t i = 0; i < stepModSources.size(); ++i)
+            modSourceValues[STEPS0 + i] = stepModValues[i];
+        modSourceValues[MIDINOTE] = midiNoteModValue;
+        modmatrix.m.process();
+    }
     void generate_grain()
     {
         double actgrate =
@@ -2412,46 +2439,23 @@ class ToneGranulator
         // we should not depend on this lock for anything else, ideally...
         std::lock_guard<choc::threading::SpinLock> locker(spinLock);
         set_ambisonics_order(1 + *idtoparvalptr[PAR_AMBORDER]);
-        auxenvwarpmodulated =
-            modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_AUXENVTIMEWARP});
+
         float taillen = *idtoparvalptr[PAR_GRAINTAIL];
         taillen = 0.002 + 0.998 * std::pow(taillen, 3.0);
+        handleStepSequencerMessages();
+        bool self_generate = false;
+        if (events.size() == 0)
+            self_generate = true;
+        // bool doambcoeffsnormalization = *idtoparvalptr[PAR_AMBUSENORMALIZATION];
+        process_modulations();
+        auxenvwarpmodulated =
+            modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_AUXENVTIMEWARP});
         for (int i = 0; i < numPitchBandAttens; ++i)
         {
             pitchBandAttensShared[i] = modmatrix.m.getTargetValue(
                 GranulatorModConfig::TargetIdentifier{PAR_PITCHBANDGAIN0 + i * 10});
         }
         pitchBandAttensShared[numPitchBandAttens] = pitchBandAttensShared[numPitchBandAttens - 1];
-
-        handleStepSequencerMessages();
-        bool self_generate = false;
-        if (events.size() == 0)
-            self_generate = true;
-        // bool doambcoeffsnormalization = *idtoparvalptr[PAR_AMBUSENORMALIZATION];
-        for (uint32_t i = 0; i < modmatrix.numLfos; ++i)
-        {
-            float shift = modmatrix.m.getTargetValue(
-                GranulatorModConfig::TargetIdentifier{(int)(PAR_LFOSHIFTS + i)});
-            modmatrix.m_lfos[i]->applyPhaseOffset(shift);
-            float rate = modmatrix.m.getTargetValue(
-                GranulatorModConfig::TargetIdentifier{(int)(PAR_LFORATES + i)});
-            float deform = modmatrix.m.getTargetValue(
-                GranulatorModConfig::TargetIdentifier{(int)(PAR_LFODEFORMS + i)});
-            float warp = modmatrix.m.getTargetValue(
-                GranulatorModConfig::TargetIdentifier{(int)(PAR_LFOWARPS + i)});
-            int shape = *idtoparvalptr[PAR_LFOSHAPES + i];
-            shape = shapeParToActualShape[shape];
-            modmatrix.m_lfos[i]->process_block(rate, deform, shape, false, 1.0f, warp);
-            bool unipolar = (*idtoparvalptr[PAR_LFOUNIPOLARS + i]) > 0.5f;
-            if (!unipolar)
-                modSourceValues[LFO0 + i] = modmatrix.m_lfos[i]->outputBlock[0];
-            else
-                modSourceValues[LFO0 + i] = (modmatrix.m_lfos[i]->outputBlock[0] + 1.0f) * 0.5f;
-        }
-        for (size_t i = 0; i < stepModSources.size(); ++i)
-            modSourceValues[STEPS0 + i] = stepModValues[i];
-        modSourceValues[MIDINOTE] = midiNoteModValue;
-        modmatrix.m.process();
         if (modulatedParamToStore.load())
         {
             modulatedParValueForGUI.store(modmatrix.m.getTargetValue(

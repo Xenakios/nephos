@@ -488,8 +488,6 @@ class MainPageComponent final : public juce::Component
 
     VolumeEnvelopeComponent auxenvcomp;
 
-    std::vector<XapSlider *> xapsliders;
-    
     std::unique_ptr<juce::TextButton> recordButton;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainPageComponent)

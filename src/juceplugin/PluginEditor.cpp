@@ -45,10 +45,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
         auto lfoc = modulationPage.lfocomps[i].get();
         addChildSlidersFrom(*lfoc);
     }
-    for (auto e : mainPage.xapsliders)
-    {
-        idToSlider[e->getParameterMetaData().id] = e;
-    }
+    
     for (auto &e : mainPage.insertComponents)
     {
         addChildSlidersFrom(*e);
