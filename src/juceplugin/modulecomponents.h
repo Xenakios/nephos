@@ -43,9 +43,13 @@ class VolumeEnvelopeComponent : public juce::Component
         {
             juce::PopupMenu menu;
             menu.addSectionHeader("Interpolation mode");
-            menu.addItem("None", [this]() { set_interpolation_mode(0); });
-            menu.addItem("Linear", [this]() { set_interpolation_mode(1); });
-            menu.addItem("Spline", [this]() { set_interpolation_mode(2); });
+            juce::StringArray modes{"None", "Linear", "Spline"};
+            for (int i = 0; i < modes.size(); ++i)
+            {
+                menu.addItem(modes[i], true, granul->get_aux_envelope_interpolation_mode() == i,
+                             [i, this]() { set_interpolation_mode(i); });
+            }
+
             menu.addSectionHeader("Generate");
             menu.addItem("Reset to zero", [this]() { generate_steps(GM_RESET); });
             menu.addItem("Ramp up", [this]() { generate_steps(GM_RAMPUP); });
@@ -113,9 +117,11 @@ class VolumeEnvelopeComponent : public juce::Component
         else
         {
             float warp = granul->auxenvwarpmodulated;
-            if (warp != priorauxwarp)
+            float depth = granul->auxenvdepthpmodulated / 12.0f;
+            if (warp != priorauxwarp || depth != priorauxamount)
             {
                 priorauxwarp = warp;
+                priorauxamount = depth;
                 repaint();
             }
         }
@@ -126,6 +132,7 @@ class VolumeEnvelopeComponent : public juce::Component
     int priorendcurve = 0;
     float priormorph = 0.0f;
     float priorauxwarp = 0.0f;
+    float priorauxamount = 0.0f;
     bool auxenvmode = false;
 };
 

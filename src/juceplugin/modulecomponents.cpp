@@ -37,7 +37,7 @@ void VolumeEnvelopeComponent::paint(juce::Graphics &g)
         }
         else
         {
-            normy = auxenv.get_value(normx, priorauxwarp);
+            normy = priorauxamount * auxenv.get_value(normx, priorauxwarp);
             normy *= 1.0;
         }
 

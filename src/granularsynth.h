@@ -1349,6 +1349,7 @@ class ToneGranulator
     std::unordered_map<int, int> midiCCMap;
     alignas(16) std::atomic<int> numVoicesUsed;
     void set_aux_envelope_interpolation_mode(int m) { voiceaux_envelope.interpmode = m; }
+    int get_aux_envelope_interpolation_mode() const { return voiceaux_envelope.interpmode; }
     void handleStepSequencerMessages()
     {
         StepModSource::Message msg;
@@ -2070,6 +2071,7 @@ class ToneGranulator
         num_out_chans = ambisonicOrderNumChannels(order);
     }
     std::atomic<float> auxenvwarpmodulated = 0.0f;
+    std::atomic<float> auxenvdepthpmodulated = 0.0f;
     std::atomic<uint32_t> modulatedParamToStore{0};
     std::atomic<float> modulatedParValueForGUI{0.0f};
     void process_modulations()
@@ -2160,7 +2162,7 @@ class ToneGranulator
 
                 genev.modamounts[GrainEvent::MD_PITCH] = modmatrix.m.getTargetValue(
                     GranulatorModConfig::TargetIdentifier{PAR_AUXENVTOPITCHAMT});
-
+                auxenvdepthpmodulated = genev.modamounts[GrainEvent::MD_PITCH];
                 genev.auxenvtimewarp = auxenvwarpmodulated;
 
                 int numToSchedule = std::clamp(*idtoparvalptr[PAR_STACKCOUNT], 1.0f, 16.0f);
