@@ -45,7 +45,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
         auto lfoc = modulationPage.lfocomps[i].get();
         addChildSlidersFrom(*lfoc);
     }
-    
+
     for (auto &e : mainPage.insertComponents)
     {
         addChildSlidersFrom(*e);
@@ -91,7 +91,7 @@ AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor() {}
 void AudioPluginAudioProcessorEditor::timerCallback()
 {
     mainPage.volumeModuleComponent.envcomp.updateIfNeeded();
-    mainPage.auxenvcomp.updateIfNeeded();
+    mainPage.oscModuleComponent.pitchEnvelopeComponent.updateIfNeeded();
 
     for (auto &c : modulationPage.stepcomps)
     {
@@ -112,7 +112,7 @@ void AudioPluginAudioProcessorEditor::timerCallback()
     {
         if (msg.opcode == ThreadMessage::OP_STEPSEQUENCER)
         {
-            mainPage.auxenvcomp.repaint();
+            mainPage.oscModuleComponent.pitchEnvelopeComponent.repaint();
         }
         if (msg.opcode == ThreadMessage::OP_FILTERTYPE)
         {
@@ -153,8 +153,7 @@ void AudioPluginAudioProcessorEditor::resized()
 
 MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
     : processorRef(p), oscModuleComponent(p), timeModuleComponent(p), spatModuleComponent(p),
-      volumeModuleComponent(p), stackModuleComponent(p), mainOutModuleComponent(p),
-      auxenvcomp(&p.granulator, true)
+      volumeModuleComponent(p), stackModuleComponent(p), mainOutModuleComponent(p)
 {
     // addAndMakeVisible(p.avisComponent);
     mainOutModuleComponent.perfComponent.RequestData = [this](int &maxvoices, int &usedvoices,
@@ -164,8 +163,6 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
         cpu = processorRef.perfMeasurer.getLoadAsProportion();
     };
     init_step_sequencer_js();
-
-    addAndMakeVisible(auxenvcomp);
 
     addAndMakeVisible(oscModuleComponent);
     addAndMakeVisible(spatModuleComponent);
@@ -217,12 +214,9 @@ void MainPageComponent::paint(juce::Graphics &g) { g.fillAll(juce::Colours::dark
 
 void MainPageComponent::resized()
 {
-    oscModuleComponent.setBounds(0, 0, 500, 175);
+    oscModuleComponent.setBounds(0, 0, 700, 200);
     volumeModuleComponent.setBounds(0, oscModuleComponent.getBottom() + 1, 700, 150);
-    timeModuleComponent.setBounds(502, 0, 300, 125);
-
-    auxenvcomp.setBounds(volumeModuleComponent.getRight() + 2, timeModuleComponent.getBottom() + 1,
-                         175, 175);
+    timeModuleComponent.setBounds(oscModuleComponent.getRight() + 2, 0, 300, 125);
 
     spatModuleComponent.setBounds(0, volumeModuleComponent.getBottom() + 2, 600, 125);
     mainOutModuleComponent.setBounds(spatModuleComponent.getRight() + 2,

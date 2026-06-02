@@ -486,8 +486,6 @@ class MainPageComponent final : public juce::Component
     StackingModuleComponent stackModuleComponent;
     std::vector<std::unique_ptr<InsertModuleComponent>> insertComponents;
 
-    VolumeEnvelopeComponent auxenvcomp;
-
     std::unique_ptr<juce::TextButton> recordButton;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainPageComponent)
