@@ -1,4 +1,5 @@
 #include "modulecomponents.h"
+#include "juce_graphics/juce_graphics.h"
 #include <stdexcept>
 
 void VolumeEnvelopeComponent::paint(juce::Graphics &g)
@@ -58,8 +59,9 @@ void VolumeEnvelopeComponent::paint(juce::Graphics &g)
             float y = juce::jmap<float>(auxenv.steps[i], -1.1f, 1.1f, getHeight(), 0);
             g.drawLine(x0, y, x1, y, 2.0f);
         }
-        g.drawFittedText(lastError, 1, 1, getWidth() - 2, getHeight() - 2,
-                         juce::Justification::left, 8);
+        g.drawText("Pitch Envelope", 1, 1, getWidth() - 2, 20, juce::Justification::centredTop);
+        g.drawFittedText(lastError, 1, 20, getWidth() - 2, getHeight() - 2,
+                         juce::Justification::topLeft, 8);
     }
 }
 
@@ -79,7 +81,7 @@ void VolumeEnvelopeComponent::generate_steps(GenMode mode)
                 {
                     StepModSource::Message msg;
                     msg.opcode = StepModSource::Message::OP_SETSTEP;
-                    msg.fval0 = arr[i].getWithDefault(0.0f);
+                    msg.fval0 = std::clamp(arr[i].getWithDefault(0.0f), -1.0f, 1.0f);
                     msg.dest = 1000;
                     msg.ival0 = i;
                     granul->fifo.push(msg);

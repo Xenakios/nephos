@@ -81,7 +81,7 @@ class VolumeEnvelopeComponent : public juce::Component
         {
             float delta = wheel.deltaY * 0.2;
             auto &auxenv = granul->voiceaux_envelope;
-            float val = auxenv.steps[stepindex] + delta;
+            float val = std::clamp(auxenv.steps[stepindex] + delta, -1.0f, 1.0f);
             StepModSource::Message msg;
             msg.opcode = StepModSource::Message::OP_SETSTEP;
             msg.fval0 = val;
