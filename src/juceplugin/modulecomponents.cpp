@@ -1,5 +1,7 @@
 #include "modulecomponents.h"
+#include "juce_core/juce_core.h"
 #include "juce_graphics/juce_graphics.h"
+#include "sst/basic-blocks/dsp/SpecialFunctions.h"
 #include <stdexcept>
 
 void VolumeEnvelopeComponent::paint(juce::Graphics &g)
@@ -86,6 +88,25 @@ void VolumeEnvelopeComponent::transform_steps(TransformMode mode)
                     oldsteps.begin() + numsteps);
         waschanged = true;
     }
+    if (mode == TM_Sort)
+    {
+        std::sort(oldsteps.begin(), oldsteps.begin() + numsteps);
+        waschanged = true;
+    }
+    if (mode == TM_ApplyEnvelope)
+    {
+        for (int i = 0; i < numsteps; ++i)
+        {
+            float x = juce::jmap<float>(i, 0, numsteps - 1, 0.0f, 1.0f);
+            float y = 0.0f;
+            if (x < 0.5)
+                y = juce::jmap(x, 0.0f, 0.5f, 0.0f, 1.0f);
+            else
+                y = juce::jmap(x, 0.5f, 1.0f, 1.0f, 0.0f);
+            oldsteps[i] *= y;
+        }
+        waschanged = true;
+    }
     if (waschanged)
     {
         for (int i = 0; i < numsteps; ++i)
@@ -99,6 +120,59 @@ void VolumeEnvelopeComponent::transform_steps(TransformMode mode)
         }
         juce::Timer::callAfterDelay(100, [this]() { repaint(); });
     }
+}
+
+void VolumeEnvelopeComponent::mouseDown(const juce::MouseEvent &ev)
+{
+    if (!auxenvmode)
+        return;
+    auto numsteps = SimpleEnvelope<false>::maxnumsteps;
+    if (ev.mods.isRightButtonDown())
+    {
+        juce::PopupMenu menu;
+        menu.addSectionHeader("Interpolation mode");
+        juce::StringArray modes{"None", "Linear", "Spline"};
+        for (int i = 0; i < modes.size(); ++i)
+        {
+            menu.addItem(modes[i], true, granul->get_aux_envelope_interpolation_mode() == i,
+                         [i, this]() { set_interpolation_mode(i); });
+        }
+        menu.addSectionHeader("Transform");
+        menu.addItem("Reverse", [this]() { transform_steps(TM_Reverse); });
+        menu.addItem("Rotate left", [this]() { transform_steps(TM_RotateLeft); });
+        menu.addItem("Rotate right", [this]() { transform_steps(TM_RotateRight); });
+        menu.addItem("Sort", [this]() { transform_steps(TM_Sort); });
+        menu.addItem("Envelope", [this]() { transform_steps(TM_ApplyEnvelope); });
+
+        menu.addSectionHeader("Generate");
+        menu.addItem("Reset to zero", [this]() { generate_steps(GM_RESET); });
+        menu.addItem("Ramp up", [this]() { generate_steps(GM_RAMPUP); });
+        menu.addItem("Random Uniform", [this]() { generate_steps(GM_RANDOM); });
+        menu.addItem("Paste from JSON array in clipboard",
+                     [this]() { generate_steps(GM_CLIPBOARD); });
+        /*
+                     menu.addItem("Help", []() {
+            juce::URL("file:///C:/develop/nephos/src/nephos_help.html")
+                .launchInDefaultBrowser();
+        });
+        */
+        menu.showMenuAsync(juce::PopupMenu::Options{});
+    }
+    else
+    {
+        int stepindex = numsteps / (float)getWidth() * ev.x;
+        if (stepindex >= 0 && stepindex < numsteps)
+        {
+            float val = juce::jmap<float>(ev.y, 0, getHeight(), 1.1, -1.1);
+            StepModSource::Message msg;
+            msg.opcode = StepModSource::Message::OP_SETSTEP;
+            msg.fval0 = val;
+            msg.dest = 1000;
+            msg.ival0 = stepindex;
+            granul->fifo.push(msg);
+        }
+    }
+    juce::Timer::callAfterDelay(100, [this]() { repaint(); });
 }
 
 void VolumeEnvelopeComponent::generate_steps(GenMode mode)

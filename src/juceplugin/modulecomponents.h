@@ -31,7 +31,9 @@ class VolumeEnvelopeComponent : public juce::Component
     {
         TM_Reverse,
         TM_RotateLeft,
-        TM_RotateRight
+        TM_RotateRight,
+        TM_Sort,
+        TM_ApplyEnvelope
     };
     void generate_steps(GenMode mode);
     void transform_steps(TransformMode mode);
@@ -40,50 +42,8 @@ class VolumeEnvelopeComponent : public juce::Component
         granul->set_aux_envelope_interpolation_mode(m);
         juce::Timer::callAfterDelay(100, [this]() { repaint(); });
     }
-    void mouseDown(const juce::MouseEvent &ev) override
-    {
-        if (!auxenvmode)
-            return;
-        auto numsteps = SimpleEnvelope<false>::maxnumsteps;
-        if (ev.mods.isRightButtonDown())
-        {
-            juce::PopupMenu menu;
-            menu.addSectionHeader("Interpolation mode");
-            juce::StringArray modes{"None", "Linear", "Spline"};
-            for (int i = 0; i < modes.size(); ++i)
-            {
-                menu.addItem(modes[i], true, granul->get_aux_envelope_interpolation_mode() == i,
-                             [i, this]() { set_interpolation_mode(i); });
-            }
-            menu.addSectionHeader("Transform");
-            menu.addItem("Reverse", [this]() { transform_steps(TM_Reverse); });
-            menu.addItem("Rotate left", [this]() { transform_steps(TM_RotateLeft); });
-            menu.addItem("Rotate right", [this]() { transform_steps(TM_RotateRight); });
+    void mouseDown(const juce::MouseEvent &ev) override;
 
-            menu.addSectionHeader("Generate");
-            menu.addItem("Reset to zero", [this]() { generate_steps(GM_RESET); });
-            menu.addItem("Ramp up", [this]() { generate_steps(GM_RAMPUP); });
-            menu.addItem("Random Uniform", [this]() { generate_steps(GM_RANDOM); });
-            menu.addItem("Paste from JSON in clipboard",
-                         [this]() { generate_steps(GM_CLIPBOARD); });
-            menu.showMenuAsync(juce::PopupMenu::Options{});
-        }
-        else
-        {
-            int stepindex = numsteps / (float)getWidth() * ev.x;
-            if (stepindex >= 0 && stepindex < numsteps)
-            {
-                float val = juce::jmap<float>(ev.y, 0, getHeight(), 1.1, -1.1);
-                StepModSource::Message msg;
-                msg.opcode = StepModSource::Message::OP_SETSTEP;
-                msg.fval0 = val;
-                msg.dest = 1000;
-                msg.ival0 = stepindex;
-                granul->fifo.push(msg);
-            }
-        }
-        juce::Timer::callAfterDelay(100, [this]() { repaint(); });
-    }
     void mouseWheelMove(const juce::MouseEvent &event,
                         const juce::MouseWheelDetails &wheel) override
     {
