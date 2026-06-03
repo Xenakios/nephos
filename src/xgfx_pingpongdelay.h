@@ -91,10 +91,8 @@ class XPingPongFX : public XenFXBase
             delayBuf[delay_write_pos * 2 + 1] = feedback * feedbacks[1];
             float delayouts[2] = {delayBuf[delay_read_pos * 2 + 0],
                                   delayBuf[delay_read_pos * 2 + 1]};
-            outbuffer[0][i] =
-                insamples[0] * (1.0 - wetmixcoeffs[0]) + delayouts[0] * wetmixcoeffs[1];
-            outbuffer[1][i] =
-                insamples[1] * (1.0 - wetmixcoeffs[0]) + delayouts[1] * wetmixcoeffs[1];
+            outbuffer[0][i] = insamples[0] * wetmixcoeffs[0] + delayouts[0] * wetmixcoeffs[1];
+            outbuffer[1][i] = insamples[1] * wetmixcoeffs[0] + delayouts[1] * wetmixcoeffs[1];
             feedbacks[0] = delayouts[1];
             feedbacks[1] = delayouts[0];
             ++delay_read_pos;

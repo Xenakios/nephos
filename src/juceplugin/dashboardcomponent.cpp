@@ -314,12 +314,13 @@ void DashBoardComponent::paint(juce::Graphics &g)
 
     // 2. Format with leading zeros
     juce::String timeText = juce::String::formatted("%02d:%02d.%03d", mins, secs, ms);
-    timeText += " " + juce::String(gr->missedgrains) + " missed grains";
+    timeText += " [" + juce::String(gr->missedgrains) + " missed grains]";
     // timeText += " " + juce::String(persisted_events.size()) + " events in history";
     // timeText += " " + juce::String(gr->parmetadatas.size()) + " parameters";
-    timeText += " current snapshot : " + juce::String(gr->currentSnapShot);
-    timeText += " ambisonic order " + juce::String(gr->current_ambisonic_order);
-    timeText += " engine channels " + juce::String(gr->num_out_chans);
+    timeText += " [snapshot : " + juce::String(gr->currentSnapShot) + "]";
+    timeText += " [ambisonic ord " + juce::String(gr->current_ambisonic_order) + "]";
+    timeText += " [" + juce::String(gr->num_out_chans) + " eng channels]";
+    timeText += " [" + juce::String(gr->prepare_count) + " prepare calls]";
     g.setFont(18.0f);
     g.drawText(timeText, cloudArea.getX(), 1.0f, cloudArea.getWidth(), 25,
                juce::Justification::left);
