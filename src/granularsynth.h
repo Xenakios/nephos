@@ -1365,6 +1365,7 @@ class ToneGranulator
                     // steps array has extra space for interpolation
                     voiceaux_envelope.steps[numsteps] = msg.fval0;
                     voiceaux_envelope.steps[numsteps + 1] = msg.fval0;
+                    voiceaux_envelope.steps[numsteps + 2] = msg.fval0;
                 }
 
                 // voiceaux_envelope.steps[msg.ival0] = msg.fval0;

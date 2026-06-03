@@ -27,8 +27,14 @@ class VolumeEnvelopeComponent : public juce::Component
         GM_RANDOM,
         GM_CLIPBOARD
     };
+    enum TransformMode
+    {
+        TM_Reverse,
+        TM_RotateLeft,
+        TM_RotateRight
+    };
     void generate_steps(GenMode mode);
-
+    void transform_steps(TransformMode mode);
     void set_interpolation_mode(int m)
     {
         granul->set_aux_envelope_interpolation_mode(m);
@@ -49,6 +55,10 @@ class VolumeEnvelopeComponent : public juce::Component
                 menu.addItem(modes[i], true, granul->get_aux_envelope_interpolation_mode() == i,
                              [i, this]() { set_interpolation_mode(i); });
             }
+            menu.addSectionHeader("Transform");
+            menu.addItem("Reverse", [this]() { transform_steps(TM_Reverse); });
+            menu.addItem("Rotate left", [this]() { transform_steps(TM_RotateLeft); });
+            menu.addItem("Rotate right", [this]() { transform_steps(TM_RotateRight); });
 
             menu.addSectionHeader("Generate");
             menu.addItem("Reset to zero", [this]() { generate_steps(GM_RESET); });

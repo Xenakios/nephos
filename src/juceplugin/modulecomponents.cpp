@@ -65,6 +65,42 @@ void VolumeEnvelopeComponent::paint(juce::Graphics &g)
     }
 }
 
+void VolumeEnvelopeComponent::transform_steps(TransformMode mode)
+{
+    auto numsteps = SimpleEnvelope<false>::maxnumsteps;
+    auto oldsteps = granul->voiceaux_envelope.steps;
+    bool waschanged = false;
+    if (mode == TM_Reverse)
+    {
+        std::reverse(oldsteps.begin(), oldsteps.begin() + numsteps);
+        waschanged = true;
+    }
+    if (mode == TM_RotateLeft)
+    {
+        std::rotate(oldsteps.begin(), oldsteps.begin() + 1, oldsteps.begin() + numsteps);
+        waschanged = true;
+    }
+    if (mode == TM_RotateRight)
+    {
+        std::rotate(oldsteps.begin(), oldsteps.begin() + (numsteps - 1),
+                    oldsteps.begin() + numsteps);
+        waschanged = true;
+    }
+    if (waschanged)
+    {
+        for (int i = 0; i < numsteps; ++i)
+        {
+            StepModSource::Message msg;
+            msg.opcode = StepModSource::Message::OP_SETSTEP;
+            msg.fval0 = oldsteps[i];
+            msg.dest = 1000;
+            msg.ival0 = i;
+            granul->fifo.push(msg);
+        }
+        juce::Timer::callAfterDelay(100, [this]() { repaint(); });
+    }
+}
+
 void VolumeEnvelopeComponent::generate_steps(GenMode mode)
 {
     auto numsteps = SimpleEnvelope<false>::maxnumsteps;
