@@ -43,7 +43,7 @@ class VolumeEnvelopeComponent : public juce::Component
         juce::Timer::callAfterDelay(100, [this]() { repaint(); });
     }
     void mouseDown(const juce::MouseEvent &ev) override;
-
+    juce::PopupMenu generate_presets_menu();
     void mouseWheelMove(const juce::MouseEvent &event,
                         const juce::MouseWheelDetails &wheel) override
     {

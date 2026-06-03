@@ -1,7 +1,11 @@
 #include "modulecomponents.h"
 #include "juce_core/juce_core.h"
 #include "juce_graphics/juce_graphics.h"
+#include "juce_gui_basics/juce_gui_basics.h"
 #include "sst/basic-blocks/dsp/SpecialFunctions.h"
+#include "text/choc_Files.h"
+#include "text/choc_JSON.h"
+#include <exception>
 #include <stdexcept>
 
 void VolumeEnvelopeComponent::paint(juce::Graphics &g)
@@ -150,12 +154,15 @@ void VolumeEnvelopeComponent::mouseDown(const juce::MouseEvent &ev)
         menu.addItem("Random Uniform", [this]() { generate_steps(GM_RANDOM); });
         menu.addItem("Paste from JSON array in clipboard",
                      [this]() { generate_steps(GM_CLIPBOARD); });
+        auto presetsmenu = generate_presets_menu();
+        menu.addSubMenu("Presets", presetsmenu);
+
         /*
-                     menu.addItem("Help", []() {
-            juce::URL("file:///C:/develop/nephos/src/nephos_help.html")
-                .launchInDefaultBrowser();
-        });
-        */
+        menu.addItem("Help", []() {
+juce::URL("file:///C:/develop/nephos/src/nephos_help.html")
+   .launchInDefaultBrowser();
+});
+*/
         menu.showMenuAsync(juce::PopupMenu::Options{});
     }
     else
@@ -173,6 +180,47 @@ void VolumeEnvelopeComponent::mouseDown(const juce::MouseEvent &ev)
         }
     }
     juce::Timer::callAfterDelay(100, [this]() { repaint(); });
+}
+
+juce::PopupMenu VolumeEnvelopeComponent::generate_presets_menu()
+{
+    juce::PopupMenu menu;
+    for (auto &f : juce::RangedDirectoryIterator{
+             juce::File(R"(C:\develop\nephos\pitchenvelopepresets)"), false})
+    {
+        menu.addItem(f.getFile().getFileNameWithoutExtension(), [f, this]() {
+            lastError = "";
+            try
+            {
+                auto txt =
+                    choc::file::loadFileAsString(f.getFile().getFullPathName().toStdString());
+                auto arr = choc::json::parse(txt);
+                auto numsteps = SimpleEnvelope<false>::maxnumsteps;
+                if (arr.isArray())
+                {
+                    for (int i = 0; i < numsteps; ++i)
+                    {
+                        if (i < arr.size())
+                        {
+                            StepModSource::Message msg;
+                            msg.opcode = StepModSource::Message::OP_SETSTEP;
+                            msg.fval0 = arr[i].getWithDefault(0.0f);
+                            msg.dest = 1000;
+                            msg.ival0 = i;
+                            granul->fifo.push(msg);
+                        }
+                    }
+                    juce::Timer::callAfterDelay(100, [this]() { repaint(); });
+                }
+            }
+            catch (std::exception &exc)
+            {
+                lastError = exc.what();
+                repaint();
+            }
+        });
+    }
+    return menu;
 }
 
 void VolumeEnvelopeComponent::generate_steps(GenMode mode)
