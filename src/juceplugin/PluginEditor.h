@@ -19,7 +19,7 @@ class JSEntryComponent : public juce::Component
     std::vector<std::unique_ptr<juce::Label>> labels;
     std::vector<std::unique_ptr<juce::TextEditor>> editors;
     juce::TextButton okButton;
-    std::function<void(choc::value::ValueView)> OnOK;
+    std::function<void(void)> OnOK;
     std::unordered_map<juce::TextEditor *, std::string> editorToProperty;
     choc::value::Value infos;
     JSEntryComponent(choc::value::ValueView info) : infos(info)
@@ -29,14 +29,7 @@ class JSEntryComponent : public juce::Component
         okButton.onClick = [this]() mutable {
             if (OnOK)
             {
-                auto result = infos;
-                auto pars = result["parameters"];
-                for (int i = 0; i < editors.size(); ++i)
-                {
-                    // auto id = editorToProperty[ed.get()];
-                    // result["parameters"][i].setMember("value", editors[i]->getText().getDoubleValue());
-                }
-                OnOK(result);
+                OnOK();
             }
         };
         if (info.hasObjectMember("title"))

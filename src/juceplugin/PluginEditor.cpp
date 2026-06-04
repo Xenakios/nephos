@@ -457,16 +457,23 @@ void StepSeqComponent::runJSInThread()
     if (!info.hasObjectMember("error"))
     {
         jsSettingsComponent = std::make_unique<JSEntryComponent>(info);
-        jsSettingsComponent->OnOK = [this, jscode](choc::value::ValueView view) {
+        jsSettingsComponent->OnOK = [this, jscode]() {
             jsSettingsComponent->setVisible(false);
             auto ob = choc::value::createObject("");
+            for (auto &ed : jsSettingsComponent->editors)
+            {
+                auto id = jsSettingsComponent->editorToProperty[ed.get()];
+                ob.setMember(id, ed->getText().getDoubleValue());
+            }
+            /*
             ob.setMember("count", 32);
             ob.setMember("prob", 0.5);
             ob.setMember("lowval", -0.5);
             ob.setMember("hival", 1.0);
+            */
             try
             {
-                auto r = perform_js(jscode, view);
+                auto r = perform_js(jscode, ob);
                 DBG(choc::json::toString(r));
                 if (r.hasObjectMember("steps"))
                 {
