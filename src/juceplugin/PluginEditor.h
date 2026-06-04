@@ -18,19 +18,27 @@ class JSEntryComponent : public juce::Component
   public:
     std::vector<std::unique_ptr<juce::Label>> labels;
     std::vector<std::unique_ptr<juce::TextEditor>> editors;
-    juce::TextButton okButton;
-    std::function<void(void)> OnOK;
+    juce::TextButton runButton;
+    juce::TextButton hideButton;
+    std::function<void(void)> OnRun;
+    std::function<void(void)> OnHide;
     std::unordered_map<juce::TextEditor *, std::string> editorToProperty;
     choc::value::Value infos;
     JSEntryComponent(choc::value::ValueView info) : infos(info)
     {
-        addAndMakeVisible(okButton);
-        okButton.setButtonText("OK");
-        okButton.onClick = [this]() mutable {
-            if (OnOK)
+        addAndMakeVisible(runButton);
+        addAndMakeVisible(hideButton);
+        runButton.setButtonText("RUN");
+        runButton.onClick = [this]() mutable {
+            if (OnRun)
             {
-                OnOK();
+                OnRun();
             }
+        };
+        hideButton.setButtonText("CLOSE");
+        hideButton.onClick = [this]() {
+            if (OnHide)
+                OnHide();
         };
         if (info.hasObjectMember("title"))
         {
@@ -49,7 +57,7 @@ class JSEntryComponent : public juce::Component
                 labels.push_back(std::move(lab));
                 auto ed = std::make_unique<juce::TextEditor>();
                 editorToProperty[ed.get()] = parob["id"].getWithDefault("");
-                ed->setText(parob["defaultval"].getWithDefault(""), false);
+                ed->setText(juce::String(parob["defaultval"].getWithDefault(0.0f)), false);
                 addAndMakeVisible(*ed);
                 editors.push_back(std::move(ed));
             }
@@ -67,7 +75,8 @@ class JSEntryComponent : public juce::Component
             labels[i]->setBounds(0, y, w / 2, rowHeight);
             editors[i]->setBounds(w / 2, y, w / 2, rowHeight);
         }
-        okButton.setBounds(getWidth() - 30, labels.back()->getBottom() + 1, 29, 20);
+        runButton.setBounds(getWidth() - 120, getHeight() - 31, 49, 30);
+        hideButton.setBounds(runButton.getRight() + 1, getHeight() - 31, 59, 30);
     }
     void paint(juce::Graphics &g) override { g.fillAll(juce::Colours::darkgrey); }
 };

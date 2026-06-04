@@ -456,25 +456,19 @@ void StepSeqComponent::runJSInThread()
     auto info = get_js_info(jscode);
     if (!info.hasObjectMember("error"))
     {
-        jsSettingsComponent = std::make_unique<JSEntryComponent>(info);
-        jsSettingsComponent->OnOK = [this, jscode]() {
-            jsSettingsComponent->setVisible(false);
+        if (!jsSettingsComponent)
+            jsSettingsComponent = std::make_unique<JSEntryComponent>(info);
+        jsSettingsComponent->OnRun = [this, jscode]() {
             auto ob = choc::value::createObject("");
             for (auto &ed : jsSettingsComponent->editors)
             {
                 auto id = jsSettingsComponent->editorToProperty[ed.get()];
                 ob.setMember(id, ed->getText().getDoubleValue());
             }
-            /*
-            ob.setMember("count", 32);
-            ob.setMember("prob", 0.5);
-            ob.setMember("lowval", -0.5);
-            ob.setMember("hival", 1.0);
-            */
             try
             {
                 auto r = perform_js(jscode, ob);
-                DBG(choc::json::toString(r));
+                // DBG(choc::json::toString(r));
                 if (r.hasObjectMember("steps"))
                 {
                     auto arr = r["steps"];
@@ -490,6 +484,7 @@ void StepSeqComponent::runJSInThread()
                 DBG(ex.what());
             }
         };
+        jsSettingsComponent->OnHide = [this]() { jsSettingsComponent->setVisible(false); };
         getParentComponent()->getParentComponent()->addAndMakeVisible(*jsSettingsComponent);
         int h = jsSettingsComponent->labels.size() * 30 + 30;
         jsSettingsComponent->setBounds(0, 0, 500, h);

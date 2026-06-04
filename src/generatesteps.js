@@ -3,7 +3,7 @@
 function get_info() {
     return {
         "title": "Bernouilli random", "parameters": [
-            { "displayname": "Number of steps", "id": "count", "defaultval": "16" },
+            { "displayname": "Number of steps", "id": "count", "defaultval": 16 },
             { "displayname": "Probability", "id": "prob", "defaultval": "0.5" },
             { "displayname": "Low value", "id": "lowval", "defaultval": "-1.0" },
             { "displayname": "High value", "id": "hival", "defaultval": "1.0" },
