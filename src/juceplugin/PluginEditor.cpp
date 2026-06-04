@@ -7,7 +7,9 @@
 #include "juce_gui_basics/juce_gui_basics.h"
 #include "modulecomponents.h"
 #include "text/choc_Files.h"
+#include "text/choc_JSON.h"
 #include "xap_slider.h"
+#include <exception>
 #include <memory>
 
 void init_step_sequencer_js();
@@ -16,6 +18,7 @@ choc::value::Value get_js_info(std::string jscode);
 void cancel_js();
 std::vector<float> generate_from_js(std::string jscode, std::vector<float> currentsteps,
                                     int startstep, int endstep, std::vector<float> params);
+choc::value::Value perform_js(std::string jscode, choc::value::ValueView info);
 
 inline void updateAllFonts(juce::Component &parent, const juce::Font &newFont)
 {
@@ -454,9 +457,35 @@ void StepSeqComponent::runJSInThread()
     if (!info.hasObjectMember("error"))
     {
         jsSettingsComponent = std::make_unique<JSEntryComponent>(info);
-        jsSettingsComponent->OnOK = [this]() { jsSettingsComponent->setVisible(false); };
-        getParentComponent()->addAndMakeVisible(*jsSettingsComponent);
-        jsSettingsComponent->setBounds(0, 0, 500, 500);
+        jsSettingsComponent->OnOK = [this, jscode](choc::value::ValueView view) {
+            jsSettingsComponent->setVisible(false);
+            auto ob = choc::value::createObject("");
+            ob.setMember("count", 32);
+            ob.setMember("prob", 0.5);
+            ob.setMember("lowval", -0.5);
+            ob.setMember("hival", 1.0);
+            try
+            {
+                auto r = perform_js(jscode, view);
+                DBG(choc::json::toString(r));
+                if (r.hasObjectMember("steps"))
+                {
+                    auto arr = r["steps"];
+                    for (int i = 0; i < arr.size(); ++i)
+                    {
+                        float val = arr[i].getWithDefault(0.0);
+                        gr->fifo.push({StepModSource::Message::OP_SETSTEP, sindex, val, (int)i});
+                    }
+                }
+            }
+            catch (std::exception &ex)
+            {
+                DBG(ex.what());
+            }
+        };
+        getParentComponent()->getParentComponent()->addAndMakeVisible(*jsSettingsComponent);
+        int h = jsSettingsComponent->labels.size() * 30 + 30;
+        jsSettingsComponent->setBounds(0, 0, 500, h);
         return;
     }
     else

@@ -2,10 +2,24 @@
 
 function get_info() {
     return {
-        "title": "Bernouilli random", "parameters": [{ "displayname": "Probability", "id": "prob", "defaultval": "0.0" },
-        { "displayname": "Foo param", "id": "foo", "defaultval": "0.5" }
+        "title": "Bernouilli random", "parameters": [
+            { "displayname": "Number of steps", "id": "count", "defaultval": "16" },
+            { "displayname": "Probability", "id": "prob", "defaultval": "0.5" },
+            { "displayname": "Low value", "id": "lowval", "defaultval": "-1.0" },
+            { "displayname": "High value", "id": "hival", "defaultval": "1.0" },
         ]
     };
+}
+
+function perform(state) {
+    steps = [];
+    for (var i = 0; i < state.count; i++) {
+        if (Math.random() < state.prob)
+            steps.push(state.lowval);
+        else steps.push(state.hival);
+    }
+    state.steps = steps;
+    return state;
 }
 
 function generate_steps(steps, startstep, endstep, params) {

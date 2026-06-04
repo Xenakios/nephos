@@ -107,6 +107,14 @@ choc::value::Value get_js_info(std::string jscode)
     }
 }
 
+choc::value::Value perform_js(std::string jscode, choc::value::ValueView info)
+{
+    assert(g_jsctx);
+    g_jsctx.run(jscode);
+    auto r = g_jsctx.invoke("perform", info);
+    return r;
+}
+
 std::vector<float> generate_from_js(std::string jscode, std::vector<float> currentsteps,
                                     int startstep, int endstep, std::vector<float> params)
 {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PluginProcessor.h"
+#include "containers/choc_Value.h"
 #include "juce_core/juce_core.h"
 #include "juce_graphics/juce_graphics.h"
 #include "juce_gui_basics/juce_gui_basics.h"
@@ -9,6 +10,8 @@
 #include "dropdowncomponent.h"
 #include "modulecomponents.h"
 #include <memory>
+#include <stdio.h>
+#include <unordered_map>
 
 class JSEntryComponent : public juce::Component
 {
@@ -16,14 +19,25 @@ class JSEntryComponent : public juce::Component
     std::vector<std::unique_ptr<juce::Label>> labels;
     std::vector<std::unique_ptr<juce::TextEditor>> editors;
     juce::TextButton okButton;
-    std::function<void(void)> OnOK;
-    JSEntryComponent(choc::value::ValueView info)
+    std::function<void(choc::value::ValueView)> OnOK;
+    std::unordered_map<juce::TextEditor *, std::string> editorToProperty;
+    choc::value::Value infos;
+    JSEntryComponent(choc::value::ValueView info) : infos(info)
     {
         addAndMakeVisible(okButton);
         okButton.setButtonText("OK");
-        okButton.onClick = [this]() {
+        okButton.onClick = [this]() mutable {
             if (OnOK)
-                OnOK();
+            {
+                auto result = infos;
+                auto pars = result["parameters"];
+                for (int i = 0; i < editors.size(); ++i)
+                {
+                    // auto id = editorToProperty[ed.get()];
+                    // result["parameters"][i].setMember("value", editors[i]->getText().getDoubleValue());
+                }
+                OnOK(result);
+            }
         };
         if (info.hasObjectMember("title"))
         {
@@ -41,6 +55,7 @@ class JSEntryComponent : public juce::Component
                 lab->setText(txt, juce::dontSendNotification);
                 labels.push_back(std::move(lab));
                 auto ed = std::make_unique<juce::TextEditor>();
+                editorToProperty[ed.get()] = parob["id"].getWithDefault("");
                 ed->setText(parob["defaultval"].getWithDefault(""), false);
                 addAndMakeVisible(*ed);
                 editors.push_back(std::move(ed));
@@ -59,7 +74,7 @@ class JSEntryComponent : public juce::Component
             labels[i]->setBounds(0, y, w / 2, rowHeight);
             editors[i]->setBounds(w / 2, y, w / 2, rowHeight);
         }
-        okButton.setBounds(0, labels.back()->getBottom() + 1, 29, 20);
+        okButton.setBounds(getWidth() - 30, labels.back()->getBottom() + 1, 29, 20);
     }
     void paint(juce::Graphics &g) override { g.fillAll(juce::Colours::darkgrey); }
 };
