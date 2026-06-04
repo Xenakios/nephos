@@ -1,5 +1,13 @@
 // 2 3.86 950
 
+function get_info() {
+    return {
+        "title": "Bernouilli random", "parameters": [{ "displayname": "Probability", "id": "prob", "defaultval": "0.0" },
+        { "displayname": "Foo param", "id": "foo", "defaultval": "0.5" }
+        ]
+    };
+}
+
 function generate_steps(steps, startstep, endstep, params) {
     x0 = 0.4;
     //for (var i = 0; i < par2; i++) {

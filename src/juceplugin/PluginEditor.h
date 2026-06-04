@@ -2,11 +2,67 @@
 
 #include "PluginProcessor.h"
 #include "juce_core/juce_core.h"
+#include "juce_graphics/juce_graphics.h"
 #include "juce_gui_basics/juce_gui_basics.h"
 #include "xap_slider.h"
 #include "dashboardcomponent.h"
 #include "dropdowncomponent.h"
 #include "modulecomponents.h"
+#include <memory>
+
+class JSEntryComponent : public juce::Component
+{
+  public:
+    std::vector<std::unique_ptr<juce::Label>> labels;
+    std::vector<std::unique_ptr<juce::TextEditor>> editors;
+    juce::TextButton okButton;
+    std::function<void(void)> OnOK;
+    JSEntryComponent(choc::value::ValueView info)
+    {
+        addAndMakeVisible(okButton);
+        okButton.setButtonText("OK");
+        okButton.onClick = [this]() {
+            if (OnOK)
+                OnOK();
+        };
+        if (info.hasObjectMember("title"))
+        {
+            setTitle(info["title"].get<std::string>());
+        }
+        if (info.hasObjectMember("parameters"))
+        {
+            auto pararr = info["parameters"];
+            for (int i = 0; i < pararr.size(); ++i)
+            {
+                auto parob = pararr[i];
+                auto lab = std::make_unique<juce::Label>();
+                addAndMakeVisible(*lab);
+                auto txt = parob["displayname"].getWithDefault("");
+                lab->setText(txt, juce::dontSendNotification);
+                labels.push_back(std::move(lab));
+                auto ed = std::make_unique<juce::TextEditor>();
+                ed->setText(parob["defaultval"].getWithDefault(""), false);
+                addAndMakeVisible(*ed);
+                editors.push_back(std::move(ed));
+            }
+        }
+    }
+    void resized() override
+    {
+        const int rowHeight = 25;
+        const int padding = 4;
+        const int w = getWidth();
+
+        for (int i = 0; i < (int)labels.size(); ++i)
+        {
+            int y = i * (rowHeight + padding);
+            labels[i]->setBounds(0, y, w / 2, rowHeight);
+            editors[i]->setBounds(w / 2, y, w / 2, rowHeight);
+        }
+        okButton.setBounds(0, labels.back()->getBottom() + 1, 29, 20);
+    }
+    void paint(juce::Graphics &g) override { g.fillAll(juce::Colours::darkgrey); }
+};
 
 class MyCustomLNF : public juce::LookAndFeel_V4
 {
@@ -199,6 +255,7 @@ struct StepSeqComponent : public juce::Component
     }
     void runExternalProgram();
     void runJSInThread();
+    std::unique_ptr<JSEntryComponent> jsSettingsComponent;
     std::atomic<int> js_status{0};
     juce::SpinLock spinlock;
     std::string js_error;

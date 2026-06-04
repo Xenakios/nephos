@@ -1,12 +1,18 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "containers/choc_Value.h"
 #include "juce_core/juce_core.h"
+#include "juce_events/juce_events.h"
+#include "juce_graphics/juce_graphics.h"
+#include "juce_gui_basics/juce_gui_basics.h"
 #include "modulecomponents.h"
 #include "text/choc_Files.h"
 #include "xap_slider.h"
+#include <memory>
 
 void init_step_sequencer_js();
 void deinit_step_sequencer_js();
+choc::value::Value get_js_info(std::string jscode);
 void cancel_js();
 std::vector<float> generate_from_js(std::string jscode, std::vector<float> currentsteps,
                                     int startstep, int endstep, std::vector<float> params);
@@ -297,6 +303,8 @@ bool StepSeqComponent::keyPressed(const juce::KeyPress &ev)
     };
     if (ev.getKeyCode() == 'R')
     {
+        runJSInThread();
+        return true;
         scriptParamsEditor.setVisible(true);
         scriptParamsEditor.setBounds(graphxpos + 1, 1, 150, 25);
         scriptParamsEditor.grabKeyboardFocus();
@@ -440,6 +448,23 @@ StepSeqComponent::StepSeqComponent(int seqindex, ToneGranulator *g, juce::Thread
 
 void StepSeqComponent::runJSInThread()
 {
+    js_error = "";
+    auto jscode = choc::file::loadFileAsString(R"(C:\develop\nephos\src\generatesteps.js)");
+    auto info = get_js_info(jscode);
+    if (!info.hasObjectMember("error"))
+    {
+        jsSettingsComponent = std::make_unique<JSEntryComponent>(info);
+        jsSettingsComponent->OnOK = [this]() { jsSettingsComponent->setVisible(false); };
+        getParentComponent()->addAndMakeVisible(*jsSettingsComponent);
+        jsSettingsComponent->setBounds(0, 0, 500, 500);
+        return;
+    }
+    else
+    {
+        js_error = info["error"].getWithDefault("");
+        repaint();
+        return;
+    }
     auto tokens = juce::StringArray::fromTokens(scriptParamsEditor.getText(), true);
     if (tokens.size() < 1 || tokens.size() > 1024)
     {

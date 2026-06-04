@@ -1,5 +1,7 @@
+#include <exception>
 #include <vector>
 #include <string>
+#include "containers/choc_Value.h"
 #include "javascript/choc_javascript_QuickJS.h"
 #include "javascript/choc_javascript.h"
 #include <algorithm>
@@ -48,7 +50,7 @@ void test_interrupt_support()
                 ctx.cancel();
                 break;
             }
-            //Sleep(10);
+            // Sleep(10);
         }
         jsthread.join();
     }
@@ -86,6 +88,23 @@ void cancel_js()
 {
     assert(g_jsctx);
     g_jsctx.cancel();
+}
+
+choc::value::Value get_js_info(std::string jscode)
+{
+    assert(g_jsctx);
+    try
+    {
+        g_jsctx.run(jscode);
+        auto r = g_jsctx.invoke("get_info");
+        return r;
+    }
+    catch (std::exception &ex)
+    {
+        auto ob = choc::value::createObject("");
+        ob.setMember("error", std::string(ex.what()));
+        return ob;
+    }
 }
 
 std::vector<float> generate_from_js(std::string jscode, std::vector<float> currentsteps,
