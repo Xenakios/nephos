@@ -464,8 +464,8 @@ class VolumeModuleComponent : public juce::GroupComponent
         morphKnob.OnValueChanged = [this]() {
             onParamChanged(ToneGranulator::PAR_ENVMORPH, morphKnob.getValue());
         };
-        addAndMakeVisible(startCurveSlider);
-        addAndMakeVisible(endCurveSlider);
+        initSlider(p, *this, startCurveSlider);
+        initSlider(p, *this, endCurveSlider);
         addAndMakeVisible(envcomp);
         for (int i = 0; i < 7; ++i)
         {
