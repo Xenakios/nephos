@@ -21,23 +21,27 @@ inline int test_nephos_render()
     double sr = 44100.0;
     g->prepare(sr, 0, 0.002, 0.002);
     events_t events;
-    events.reserve(300);
+    events.reserve(500);
     xenakios::Xoroshiro128Plus rng;
     g->set_aux_envelope_interpolation_mode(0);
-    for (int i = 0; i < 200; ++i)
+    for (int i = 0; i < 500; ++i)
     {
         GrainEvent e;
-        e.time_position = rng.nextFloatInRange(0.0f, 9.5);
-        e.pitch_semitones = rng.nextFloatInRange(0.0f, 24.0f);
+        e.time_position = rng.nextFloatInRange(0.0f, 29.5);
+        e.pitch_semitones = rng.nextFloatInRange(-24.0f, 24.0f);
         e.duration = 0.5;
         e.generator_type = 0;
+        e.azimuth = rng.nextFloatInRange(-180.0f, 180.0f);
         // e.modamounts[GrainEvent::MD_PITCH] = 0.0;
         if (rng.nextFloat() < 0.1)
         {
             e.duration = 0.95;
+            e.elevation = 90.0;
             e.generator_type = 4;
             assert(e.modamounts[GrainEvent::MD_PITCH] == 0.0f);
             e.modamounts[GrainEvent::MD_PITCH] = 12.0;
+            if (rng.nextFloat() < 0.5)
+                e.modamounts[GrainEvent::MD_PITCH] = -12.0;
         }
         else
             assert(e.modamounts[GrainEvent::MD_PITCH] == 0.0f);
@@ -62,7 +66,7 @@ inline int test_nephos_render()
         return 1;
     alignas(32) float outbuffer[64 * granul_block_size];
     choc::buffer::ChannelArrayBuffer<float> diskbuffer{numambchans, granul_block_size};
-    int outlen = sr * 10.0;
+    int outlen = sr * 30.0;
     int outcount = 0;
     xenakios::Envelope pitchenv;
     pitchenv.addPoint({0.0, 0.0});
