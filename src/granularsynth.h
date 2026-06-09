@@ -315,9 +315,13 @@ struct GrainEvent
         MD_ELE,
         MD_NUMDESTS
     };
-    GrainEvent() = default;
+    GrainEvent() {  };
     GrainEvent(double tpos, float dur, float pitch, float vol)
         : time_position(tpos), duration(dur), pitch_semitones(pitch), volume(vol)
+    {
+        // clear_mod_amounts();
+    }
+    void clear_mod_amounts()
     {
         for (int i = 0; i < MD_NUMDESTS; ++i)
             modamounts[i] = 0.0f;
@@ -344,7 +348,7 @@ struct GrainEvent
     float noisecorr = 0.0f;
     float noiseimode = 0.0f;
 
-    float modamounts[MD_NUMDESTS];
+    float modamounts[MD_NUMDESTS] = {0.0f};
     float insertparams[4][10];
 };
 

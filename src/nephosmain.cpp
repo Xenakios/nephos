@@ -19,9 +19,37 @@ inline int test_nephos_render()
 {
     auto g = std::make_unique<ToneGranulator>();
     double sr = 44100.0;
-    g->prepare(sr, {}, 0, 0.002, 0.002);
-
-    unsigned int amborder = 7;
+    g->prepare(sr, 0, 0.002, 0.002);
+    events_t events;
+    events.reserve(300);
+    xenakios::Xoroshiro128Plus rng;
+    g->set_aux_envelope_interpolation_mode(0);
+    for (int i = 0; i < 200; ++i)
+    {
+        GrainEvent e;
+        e.time_position = rng.nextFloatInRange(0.0f, 9.5);
+        e.pitch_semitones = rng.nextFloatInRange(0.0f, 24.0f);
+        e.duration = 0.5;
+        e.generator_type = 0;
+        // e.modamounts[GrainEvent::MD_PITCH] = 0.0;
+        if (rng.nextFloat() < 0.1)
+        {
+            e.duration = 0.95;
+            e.generator_type = 4;
+            assert(e.modamounts[GrainEvent::MD_PITCH] == 0.0f);
+            e.modamounts[GrainEvent::MD_PITCH] = 12.0;
+        }
+        else
+            assert(e.modamounts[GrainEvent::MD_PITCH] == 0.0f);
+        assert(e.modamounts[GrainEvent::MD_AZI] == 0.0f);
+        assert(e.modamounts[GrainEvent::MD_ELE] == 0.0f);
+        assert(e.modamounts[GrainEvent::MD_FIL0FREQ] == 0.0f);
+        assert(e.modamounts[GrainEvent::MD_FIL0RESO] == 0.0f);
+        e.volume = 1.0;
+        events.push_back(e);
+    }
+    g->set_event_list(events);
+    const unsigned int amborder = 3;
     unsigned int numambchans = ambisonicOrderNumChannels(amborder);
     g->set_ambisonics_order(amborder);
     choc::audio::AudioFileProperties props;
@@ -303,6 +331,8 @@ inline void test_routing(std::vector<std::tuple<int, int, int>> routings)
 
 int main(int argc, char **argv)
 {
+    test_nephos_render();
+    return 0;
     if (argc > 1)
     {
         std::vector<std::tuple<int, int, int>> routings;
