@@ -2024,9 +2024,7 @@ class ToneGranulator
 
     int current_ambisonic_order = 0;
     int pending_ambisonic_order = 0;
-    int prepare_count = 0;
-    void prepare(float samplerate, events_t evlist, int filter_routing, float tail_len,
-                 float tail_fade_len)
+    void set_event_list(events_t evlist)
     {
         if (evlist.size() > 0)
         {
@@ -2036,10 +2034,18 @@ class ToneGranulator
             std::erase_if(evlist, [](GrainEvent &e) {
                 return e.time_position < 0.0 || (e.time_position + e.duration) > 600.0;
             });
+            std::lock_guard<choc::threading::SpinLock> locker(spinLock);
+            missedgrains = 0;
+            evindex = 0;
+            playposframes = 0;
+            std::swap(evlist, events);
         }
+    }
+    void prepare(float samplerate, int filter_routing, float tail_len, float tail_fade_len)
+    {
+
         {
             std::lock_guard<choc::threading::SpinLock> locker(spinLock);
-            std::swap(evlist, events);
             for (int i = 0; i < numvoices; ++i)
             {
                 auto &v = voices[i];
@@ -2047,15 +2053,8 @@ class ToneGranulator
                 v->filter_routing = (GranulatorVoice::FilterRouting)filter_routing;
                 v->tail_len = tail_len;
                 v->tail_fade_len = tail_fade_len;
-                // we might have to think about this more thorougly, if the samplerate
-                // changes we may need to do some initing of the insert fx
-                if (prepare_count == 0)
-                {
-                    // v->set_insert_type(0, 0, 0, {}, {});
-                    // v->set_insert_type(1, 0, 0, {}, {});
-                }
             }
-            ++prepare_count;
+
             m_sr = samplerate;
             missedgrains = 0;
             evindex = 0;

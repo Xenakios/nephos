@@ -320,7 +320,7 @@ void DashBoardComponent::paint(juce::Graphics &g)
     timeText += " [snapshot : " + juce::String(gr->currentSnapShot) + "]";
     timeText += " [ambisonic ord " + juce::String(gr->current_ambisonic_order) + "]";
     timeText += " [" + juce::String(gr->num_out_chans) + " eng channels]";
-    timeText += " [" + juce::String(gr->prepare_count) + " prepare calls]";
+    
     g.setFont(18.0f);
     g.drawText(timeText, cloudArea.getX(), 1.0f, cloudArea.getWidth(), 25,
                juce::Justification::left);
