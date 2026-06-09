@@ -136,8 +136,17 @@ class GrainInsertFX
     {
         sr = sampleRate;
         blockSize = ablockSize;
+        if (mainmode == GFXSSTFILTER)
+        {
+            sstfilter.setSampleRateAndBlockSize(sampleRate, ablockSize);
+            sstfilter.prepareInstance();
+        }
+        if (mainmode == GFXAIRWINDOWS && awplugin)
+            awplugin->setSampleRate(sampleRate);
+        if (mainmode == GFXXENAKIOS && xenplugin)
+            xenplugin->prepare(sampleRate, ablockSize);
     }
-    
+
     void prepareBlock()
     {
         if (mainmode == GFXSSTFILTER)

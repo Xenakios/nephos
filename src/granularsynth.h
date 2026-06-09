@@ -276,7 +276,11 @@ class GranulatorModMatrix
             m_lfos[i]->attack(0);
         }
     }
-
+    void set_sample_rate(double hz)
+    {
+        samplerate = hz;
+        initTables();
+    }
     void initTables()
     {
         double dsamplerate_os = samplerate * 2;
@@ -494,6 +498,7 @@ class GranulatorVoice
     int phase = 0;
     int grain_end_phase = 0;
     double sr = 0.0;
+    bool samplerate_was_changed = false;
     bool active = false;
     float tail_len = 0.005;
     float tail_fade_len = 0.005;
@@ -542,6 +547,7 @@ class GranulatorVoice
         sr = hz;
         for (auto &fx : insert_fx)
             fx.prepareInstance(sr, granul_block_size);
+        samplerate_was_changed = true;
     }
     void set_insert_type(size_t filtindex, uint8_t mainmode, uint8_t awtype,
                          sfpp::FilterModel model, sfpp::ModelConfig config)
@@ -607,6 +613,16 @@ class GranulatorVoice
                 theoscillator = FMOsc();
             else if (newosctype == 6)
                 theoscillator = NoiseGen();
+            std::visit(
+                [this](auto &q) {
+                    q.setSampleRate(sr);
+                    q.setFrequencySmoothingRateMS(5.0);
+                },
+                theoscillator);
+        }
+        if (samplerate_was_changed)
+        {
+            samplerate_was_changed = false;
             std::visit(
                 [this](auto &q) {
                     q.setSampleRate(sr);
@@ -2035,8 +2051,8 @@ class ToneGranulator
                 // changes we may need to do some initing of the insert fx
                 if (prepare_count == 0)
                 {
-                    v->set_insert_type(0, 0, 0, {}, {});
-                    v->set_insert_type(1, 0, 0, {}, {});
+                    // v->set_insert_type(0, 0, 0, {}, {});
+                    // v->set_insert_type(1, 0, 0, {}, {});
                 }
             }
             ++prepare_count;
@@ -2048,6 +2064,7 @@ class ToneGranulator
             gainlag.snapTo(0.0);
             graingen_phase = 0.0;
             graingen_phase_prior = 2.0;
+            modmatrix.set_sample_rate(samplerate);
             modmatrix.m.prepare(modmatrix.rt, samplerate, granul_block_size);
         }
     }
