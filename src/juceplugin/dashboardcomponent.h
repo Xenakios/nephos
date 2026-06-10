@@ -5,6 +5,7 @@
 class DashBoardComponent : public juce::Component
 {
   public:
+    AudioPluginAudioProcessor &processorRef;
     ToneGranulator *gr = nullptr;
     std::vector<ToneGranulator::GrainVisualizerMessage> persisted_events;
     HammerAitovGrid haGrid;
@@ -25,7 +26,7 @@ class DashBoardComponent : public juce::Component
     std::unique_ptr<juce::VBlankAttachment> vblankAttachment;
     std::function<double()> GetCPULoad;
     std::function<void(void)> OnMacroKnobsLoadRequested;
-    DashBoardComponent(ToneGranulator *g) : gr(g)
+    DashBoardComponent(AudioPluginAudioProcessor &p) : processorRef(p), gr(&p.granulator)
     {
         // addAndMakeVisible(haGrid);
         paramHistoryPath.preallocateSpace(2048);

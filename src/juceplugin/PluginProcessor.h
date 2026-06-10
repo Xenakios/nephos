@@ -127,6 +127,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     void loadMacroKnobs(std::string filename);
     std::string presetsPath;
     std::string macroKnobsPath;
+    double currentSampleRate = 0.0;
     // usually we would not have gui components as audioprocessor members
     // but in this case easier to just do it this way
     juce::AudioVisualiserComponent avisComponent;

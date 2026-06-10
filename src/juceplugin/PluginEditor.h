@@ -568,7 +568,7 @@ class MainPageComponent final : public juce::Component
 class DashPage : public juce::Component
 {
   public:
-    DashPage(AudioPluginAudioProcessor &p) : processorRef(p), dashBoardComponent(&p.granulator)
+    DashPage(AudioPluginAudioProcessor &p) : processorRef(p), dashBoardComponent(p)
     {
         presetsComponent.OnSave = [this](int index) { saveSnapShot(index); };
         presetsComponent.OnLoad = [this](int index) { loadSnapShot(index); };

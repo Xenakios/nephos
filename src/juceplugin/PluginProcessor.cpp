@@ -272,12 +272,13 @@ void AudioPluginAudioProcessor::changeProgramName(int index, const juce::String 
 //==============================================================================
 void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-    DBG("prepareToPlay");
+    DBG("prepareToPlay " << sampleRate << " Hz, " << samplesPerBlock << " max samples per block");
     avisComponent.setNumChannels(getTotalNumOutputChannels());
     perfMeasurer.reset(sampleRate, samplesPerBlock);
     // workBuffer.resize(samplesPerBlock * 64);
     workBuffer.resize(granul_block_size * 64);
     granulator.prepare(sampleRate, GranulatorVoice::FR_ALLSERIAL, 0.002f, 0.002f);
+    currentSampleRate = sampleRate;
 }
 
 void AudioPluginAudioProcessor::releaseResources() {}

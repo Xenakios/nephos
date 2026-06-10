@@ -1,4 +1,5 @@
 #include "dashboardcomponent.h"
+#include "juce_core/juce_core.h"
 #include "juce_graphics/juce_graphics.h"
 
 void drawRotatedText(juce::Graphics &g, const juce::String &text, float x, float y,
@@ -319,8 +320,10 @@ void DashBoardComponent::paint(juce::Graphics &g)
     // timeText += " " + juce::String(gr->parmetadatas.size()) + " parameters";
     timeText += " [snapshot : " + juce::String(gr->currentSnapShot) + "]";
     timeText += " [ambisonic ord " + juce::String(gr->current_ambisonic_order) + "]";
-    timeText += " [" + juce::String(gr->num_out_chans) + " eng channels]";
-    
+    timeText += " [" + juce::String(gr->num_out_chans) + " eng channels ";
+    timeText += juce::String(processorRef.getTotalNumInputChannels()) + "/" +
+                juce::String(processorRef.getTotalNumOutputChannels()) + "]";
+    timeText += " [" + juce::String(gr->m_sr) + " Hz]";
     g.setFont(18.0f);
     g.drawText(timeText, cloudArea.getX(), 1.0f, cloudArea.getWidth(), 25,
                juce::Justification::left);
