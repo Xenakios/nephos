@@ -3,6 +3,7 @@
 #include "grainfx.h"
 #include "granularsynth.h"
 #include "audio/choc_AudioFileFormat_WAV.h"
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <random>
@@ -333,9 +334,110 @@ inline void test_routing(std::vector<std::tuple<int, int, int>> routings)
     writer->appendFrames(outbuf.getView());
 }
 
+struct DegradeEngine
+{
+    enum DistortMode
+    {
+        DM_CLIP,
+        DM_FOLD,
+        DM_WRAP
+    };
+    float sr = 0.0f;
+    float inputgain = 1.0f;
+    float bias = 0.0f;
+    float outputgain = 1.0f;
+    DistortMode dmode{DM_FOLD};
+    void prepare(double samplerate, int blocksize) { sr = samplerate; }
+    void process(float &sample)
+    {
+        sample += bias;
+        sample *= inputgain;
+        if (dmode == DM_FOLD)
+        {
+            sample = reflect_value(-1.0f, sample, 1.0f);
+        }
+        else if (dmode == DM_CLIP)
+        {
+            sample = std::clamp(sample, -1.0f, 1.0f);
+        }
+        sample *= outputgain;
+    }
+};
+
+inline float linpol(std::span<float> table, float inputvalue)
+{
+    int ind0 = inputvalue;
+    int ind1 = ind0 + 1;
+    if (ind1 >= table.size())
+        ind1 = table.size() - 1;
+    float frac = inputvalue - (int)inputvalue;
+    float y0 = table[ind0];
+    float y1 = table[ind1];
+    return y0 + (y1 - y0) * frac;
+}
+
+inline void test_degrade()
+{
+    std::array<DegradeEngine, 2> engines;
+    float sr = 44100.0f;
+    for (auto &e : engines)
+    {
+        e.prepare(sr, granul_block_size);
+        e.outputgain = 0.75;
+    }
+    std::array<float, 512> inputgainseps;
+    xenakios::Xoroshiro128Plus rng;
+    float x = 0.0f;
+    for (auto &e : inputgainseps)
+    {
+        e = x;
+        x += rng.nextHypCos(0.0, 2.0);
+        x = std::clamp(x, -12.0f, 12.0f);
+    }
+    unsigned int numoutframes = 5.0 * sr;
+    choc::buffer::ChannelArrayBuffer<float> buf(2, numoutframes);
+    buf.clear();
+    choc::audio::AudioFileProperties props;
+    props.numChannels = 2;
+    props.bitDepth = choc::audio::BitDepth::float32;
+    props.sampleRate = sr;
+    choc::audio::WAVAudioFileFormat<true> wavformat;
+    auto writer = wavformat.createWriter("degrade.wav", props);
+    xenakios::Envelope inputgain_env{{{0.0, -12.0}, {2.5, 48.0}, {5.0, 0.0}}};
+    xenakios::Envelope channelsep_env{{{0.0, 0.0}, {2.5, 1.0}, {5.0, 0.0}}};
+    xenakios::Envelope bias_env{{{0.0, 0.0}, {4.0, 12.0}, {5.0, 0.0}}};
+    for (int i = 0; i < numoutframes; ++i)
+    {
+        if (i % 32 == 0)
+        {
+            double tpos = i / sr;
+            auto ingain = inputgain_env.getValueAtPosition(tpos);
+            // ingain = 12.0;
+            float ingainsep = 0.0f; //channelsep_env.getValueAtPosition(tpos);
+            ingainsep = linpol(inputgainseps, ingainsep * (inputgainseps.size() + 0));
+            float ingainleft = std::clamp(ingain + ingainsep, -96.0, 96.0);
+            engines[0].inputgain = xenakios::decibelsToGain(ingainleft);
+            float ingainright = std::clamp(ingain - ingainsep, -96.0, 96.0);
+            engines[1].inputgain = xenakios::decibelsToGain(ingainright);
+            float bias = bias_env.getValueAtPosition(tpos);
+            engines[0].bias = xenakios::decibelsToGain(bias);
+            engines[1].bias = xenakios::decibelsToGain(bias);
+        }
+        float sample = std::sin(2 * M_PI / sr * i * 64.0);
+        float outsample = sample;
+        engines[0].process(outsample);
+        buf.getSample(0, i) = outsample;
+        outsample = sample;
+        engines[1].process(outsample);
+        buf.getSample(1, i) = outsample;
+    }
+    writer->appendFrames(buf.getView());
+}
+
 int main(int argc, char **argv)
 {
-    test_nephos_render();
+    test_degrade();
+    // test_nephos_render();
     return 0;
     if (argc > 1)
     {
