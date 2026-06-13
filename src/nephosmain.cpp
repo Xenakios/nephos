@@ -334,6 +334,20 @@ inline void test_routing(std::vector<std::tuple<int, int, int>> routings)
     writer->appendFrames(outbuf.getView());
 }
 
+template <typename T> inline T reflect_value_no_loop(const T minval, const T val, const T maxval)
+{
+    assert(maxval > minval);
+    const T range = maxval - minval;
+    const T doubled = range * T(2);
+
+    // Normalize val into [0, 2*range), then reflect
+    T temp = std::fmod(val - minval, doubled);
+    if (temp < T(0))
+        temp += doubled;
+
+    return (temp <= range) ? minval + temp : maxval - (temp - range);
+}
+
 struct DegradeEngine
 {
     enum DistortMode
@@ -354,7 +368,7 @@ struct DegradeEngine
         sample *= inputgain;
         if (dmode == DM_FOLD)
         {
-            sample = reflect_value(-1.0f, sample, 1.0f);
+            sample = reflect_value_no_loop(-1.0f, sample, 1.0f);
         }
         else if (dmode == DM_CLIP)
         {
@@ -413,7 +427,7 @@ inline void test_degrade()
             double tpos = i / sr;
             auto ingain = inputgain_env.getValueAtPosition(tpos);
             // ingain = 12.0;
-            float ingainsep = 0.0f; //channelsep_env.getValueAtPosition(tpos);
+            float ingainsep = 0.0f; // channelsep_env.getValueAtPosition(tpos);
             ingainsep = linpol(inputgainseps, ingainsep * (inputgainseps.size() + 0));
             float ingainleft = std::clamp(ingain + ingainsep, -96.0, 96.0);
             engines[0].inputgain = xenakios::decibelsToGain(ingainleft);
