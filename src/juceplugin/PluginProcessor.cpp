@@ -6,8 +6,6 @@
 #include <exception>
 #include <float.h>
 
-// .withInput("Input", juce::AudioChannelSet::stereo(), true)
-
 void AudioPluginAudioProcessor::loadMacroKnobs(std::string filename)
 {
     try
