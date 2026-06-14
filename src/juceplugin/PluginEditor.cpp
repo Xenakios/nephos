@@ -66,7 +66,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
     addChildSlidersFrom(mainPage.stackModuleComponent);
     addChildSlidersFrom(mainPage.mainOutModuleComponent);
 #if JUCE_MAC
-    setScaleFactor(0.75);
+    // setScaleFactor(0.75);
 #else
     // setScaleFactor(0.90);
 #endif
@@ -80,7 +80,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
             }
         };
     }
-    setSize(1500, 780);
+    setSize(1500, 720);
     startTimer(50);
 }
 

@@ -1534,7 +1534,7 @@ class ToneGranulator
         auto initssfunc = [](StepModSource &sms, std::initializer_list<float> values) {
             for (int i = 0; i < values.size(); ++i)
             {
-                sms.steps[i] = *values.begin() + i;
+                sms.steps[i] = *(values.begin() + i);
             }
             sms.numactivesteps = StepModSource::maxSteps;
             sms.loopstartstep = 0;
