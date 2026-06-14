@@ -8,4 +8,4 @@ cmake .. \
   -DCMAKE_OSX_SYSROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk \
   -DCMAKE_BUILD_TYPE=Release
 
-cmake --build . --target NephosCLI
+cmake --build . --target NephosPlugin_VST3

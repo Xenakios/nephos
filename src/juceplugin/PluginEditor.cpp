@@ -66,7 +66,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
     addChildSlidersFrom(mainPage.stackModuleComponent);
     addChildSlidersFrom(mainPage.mainOutModuleComponent);
 #if JUCE_MAC
-    // setScaleFactor(0.75);
+    setScaleFactor(0.80);
 #else
     // setScaleFactor(0.90);
 #endif
