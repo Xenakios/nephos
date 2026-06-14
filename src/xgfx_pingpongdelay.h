@@ -1,5 +1,4 @@
 #include "xenfxbase.h"
-#include <corecrt_math.h>
 #include <vector>
 #include <cassert>
 #include <algorithm>
