@@ -450,8 +450,8 @@ inline void test_degrade()
 
 int main(int argc, char **argv)
 {
-    test_degrade();
-    // test_nephos_render();
+    // test_degrade();
+    test_nephos_render();
     return 0;
     if (argc > 1)
     {
