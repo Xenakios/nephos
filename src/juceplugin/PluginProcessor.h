@@ -5,6 +5,7 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "../granularsynth.h"
 #include "containers/choc_SingleReaderSingleWriterFIFO.h"
+#include "juce_audio_basics/juce_audio_basics.h"
 #include "threading/choc_SpinLock.h"
 
 inline bool is_debug()
@@ -131,6 +132,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     // usually we would not have gui components as audioprocessor members
     // but in this case easier to just do it this way
     juce::AudioVisualiserComponent avisComponent;
+    juce::AudioBuffer<float> visualizerAudioBuffer;
   private:
     alignas(32) std::vector<float> workBuffer;
     alignas(32) choc::fifo::SingleReaderSingleWriterFIFO<

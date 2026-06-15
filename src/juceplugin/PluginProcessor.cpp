@@ -271,7 +271,12 @@ void AudioPluginAudioProcessor::changeProgramName(int index, const juce::String 
 void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     DBG("prepareToPlay " << sampleRate << " Hz, " << samplesPerBlock << " max samples per block");
-    avisComponent.setNumChannels(getTotalNumOutputChannels());
+    int avisnumchannels = getTotalNumOutputChannels();
+    if (getTotalNumOutputChannels() > 2)
+        avisnumchannels = 1;
+    visualizerAudioBuffer.setSize(avisnumchannels, samplesPerBlock);
+    visualizerAudioBuffer.clear();
+    avisComponent.setNumChannels(avisnumchannels);
     perfMeasurer.reset(sampleRate, samplesPerBlock);
     // workBuffer.resize(samplesPerBlock * 64);
     workBuffer.resize(granul_block_size * 64);
@@ -552,8 +557,10 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         {
             threadedWriter->write(recordDatas, buffer.getNumSamples());
         }
+        // for convenience stereo output, visualize the MS decoded stereo
+        avisComponent.pushBuffer(buffer);
     }
-    if (totalNumOutputChannels >= procnumoutchs)
+    else if (totalNumOutputChannels >= procnumoutchs)
     {
         for (int j = 0; j < buffer.getNumSamples(); ++j)
         {
@@ -565,8 +572,14 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 channelDatas[i][j] = std::clamp(s, -1.0f, 1.0f);
             }
         }
+        // for ambisonic output, just show the W channel because with increasing ambisonic orders
+        // the number of channels explodes and we have just a tiny waveform visualizer at the moment
+        jassert(visualizerAudioBuffer.getNumChannels() == 1);
+        visualizerAudioBuffer.copyFrom(0, 0, buffer, 0, 0, buffer.getNumSamples());
+        avisComponent.pushBuffer(visualizerAudioBuffer);
     }
-    avisComponent.pushBuffer(buffer);
+    else
+        jassert(false);
     jassert(buffer.getNumSamples() > 0);
     double cpu_bench_t1 = juce::Time::getMillisecondCounterHiRes();
     double elapsed_secs = (cpu_bench_t1 - cpu_bench_t0) / 1000.0;
