@@ -168,7 +168,10 @@ struct GranulatorModConfig
         case CURVE_CUBE:
             return [](auto x) { return x * x * x; };
         case CURVE_TOPOWER16:
-            return [](auto x) { return std::pow(x, 16) * sgn(x); };
+            return [](auto x) {
+                x = std::clamp(x, -1.0f, 1.0f);
+                return std::pow(x, 16) * sgn(x);
+            };
         case CURVE_EXPSIN1:
             return [](auto x) { return expsin(x, 1, 8.0f); };
         case CURVE_EXPSIN2:
@@ -315,7 +318,7 @@ struct GrainEvent
         MD_ELE,
         MD_NUMDESTS
     };
-    GrainEvent() {  };
+    GrainEvent() {};
     GrainEvent(double tpos, float dur, float pitch, float vol)
         : time_position(tpos), duration(dur), pitch_semitones(pitch), volume(vol)
     {
