@@ -158,10 +158,7 @@ class XapSlider : public juce::Component
     {
         if (!isEnabled())
             return;
-        m_value = m_default_value;
-        if (OnValueChanged)
-            OnValueChanged();
-        repaint();
+        setValue(m_default_value, true);
     }
     std::optional<std::string> valueToString(float v)
     {
@@ -181,6 +178,7 @@ class XapSlider : public juce::Component
         else
             m_ed.setText(juce::String(m_value));
         m_ed.selectAll();
+        m_ed.onEscapeKey = [this]() { m_ed.setVisible(false); };
         m_ed.onReturnKey = [this]() {
             std::string err;
             ParamDesc::FeatureState fs;
@@ -216,13 +214,21 @@ class XapSlider : public juce::Component
                 setValue(0.0, true);
             else
                 setValue(1.0, true);
-
             return;
         }
         if (m_pardesc.displayScale == ParamDesc::UNORDERED_MAP && m_style != SS_Knob)
         {
             juce::PopupMenu menu;
+            // we could cache the ordered entries but that would likely introduce
+            // cache invalidation problems at some point...
+            std::vector<std::pair<int, std::string>> ordered_entries;
             for (auto &e : m_pardesc.discreteValues)
+            {
+                ordered_entries.push_back(e);
+            }
+            std::sort(ordered_entries.begin(), ordered_entries.end(),
+                      [](auto &lhs, auto &rhs) { return lhs.first < rhs.first; });
+            for (auto &e : ordered_entries)
             {
                 menu.addItem(e.second, true, e.first == (int)m_value,
                              [e, this]() { setValue(e.first, true); });
