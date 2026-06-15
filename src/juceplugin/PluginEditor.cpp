@@ -234,7 +234,7 @@ void MainPageComponent::resized()
     insertComponents[1]->setBounds(insertComponents[0]->getRight() + 1,
                                    spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 125);
 
-    stackModuleComponent.setBounds(timeModuleComponent.getRight() + 2, 0, 500, 125);
+    stackModuleComponent.setBounds(timeModuleComponent.getRight() + 2, 0, 490, 125);
     // processorRef.avisComponent.setBounds(0, getHeight() - 150, getWidth(), 149);
 }
 

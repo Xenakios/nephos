@@ -90,10 +90,17 @@ class XapSlider : public juce::Component
         if (!isEnabled() || m_ed.isVisible())
             return;
         double delta = 0.0;
-        if (wheel.deltaY < 0)
-            delta = -m_param_step;
+        if (wheel.isSmooth)
+        {
+            delta = wheel.deltaY * m_param_step;
+        }
         else
-            delta = m_param_step;
+        {
+            if (wheel.deltaY < 0)
+                delta = -m_param_step;
+            else
+                delta = m_param_step;
+        }
         if (event.mods.isShiftDown())
         {
             if (event.mods.isCommandDown())
@@ -101,6 +108,8 @@ class XapSlider : public juce::Component
             else
                 delta *= 0.1;
         }
+        if (wheel.isReversed)
+            delta = -delta;
         setValue(m_value + delta, true);
     }
     bool keyPressed(const juce::KeyPress &key) override
