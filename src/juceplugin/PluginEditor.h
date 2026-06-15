@@ -3,6 +3,7 @@
 #include "PluginProcessor.h"
 #include "containers/choc_Value.h"
 #include "juce_core/juce_core.h"
+#include "juce_events/juce_events.h"
 #include "juce_graphics/juce_graphics.h"
 #include "juce_gui_basics/juce_gui_basics.h"
 #include "xap_slider.h"
@@ -16,6 +17,7 @@
 class JSEntryComponent : public juce::Component
 {
   public:
+    juce::Label titleLabel;
     std::vector<std::unique_ptr<juce::Label>> labels;
     std::vector<std::unique_ptr<juce::TextEditor>> editors;
     juce::TextButton runButton;
@@ -26,6 +28,8 @@ class JSEntryComponent : public juce::Component
     choc::value::Value infos;
     JSEntryComponent(choc::value::ValueView info) : infos(info)
     {
+        addAndMakeVisible(titleLabel);
+        titleLabel.setFont(juce::Font(juce::FontOptions{}.withStyle("Bold").withHeight(16.0f)));
         addAndMakeVisible(runButton);
         addAndMakeVisible(hideButton);
         runButton.setButtonText("RUN");
@@ -42,7 +46,7 @@ class JSEntryComponent : public juce::Component
         };
         if (info.hasObjectMember("title"))
         {
-            setTitle(info["title"].get<std::string>());
+            titleLabel.setText(info["title"].get<std::string>(), juce::dontSendNotification);
         }
         if (info.hasObjectMember("parameters"))
         {
@@ -65,13 +69,14 @@ class JSEntryComponent : public juce::Component
     }
     void resized() override
     {
+        titleLabel.setBounds(0, 0, getWidth(), 25);
         const int rowHeight = 25;
         const int padding = 4;
         const int w = getWidth();
 
         for (int i = 0; i < (int)labels.size(); ++i)
         {
-            int y = i * (rowHeight + padding);
+            int y = i * (rowHeight + padding) + 26;
             labels[i]->setBounds(0, y, w / 2, rowHeight);
             editors[i]->setBounds(w / 2, y, w / 2, rowHeight);
         }

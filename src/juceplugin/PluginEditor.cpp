@@ -486,7 +486,7 @@ void StepSeqComponent::runJSInThread()
         };
         jsSettingsComponent->OnHide = [this]() { jsSettingsComponent->setVisible(false); };
         getParentComponent()->getParentComponent()->addAndMakeVisible(*jsSettingsComponent);
-        int h = jsSettingsComponent->labels.size() * 30 + 30;
+        int h = jsSettingsComponent->labels.size() * 30 + 60;
         jsSettingsComponent->setBounds(0, 0, 500, h);
         return;
     }

@@ -579,7 +579,10 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         avisComponent.pushBuffer(visualizerAudioBuffer);
     }
     else
+    {
         jassert(false);
+    }
+
     jassert(buffer.getNumSamples() > 0);
     double cpu_bench_t1 = juce::Time::getMillisecondCounterHiRes();
     double elapsed_secs = (cpu_bench_t1 - cpu_bench_t0) / 1000.0;
