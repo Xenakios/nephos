@@ -291,13 +291,14 @@ struct StepSeqComponent : public juce::Component
         menu.addSectionHeader("Play mode");
         for (int i = 0; i < StepModSource::NUMPLAYMODES; ++i)
         {
-            menu.addItem(StepModSource::getPlayModeName(i), [i, this]() {
-                StepModSource::Message msg;
-                msg.opcode = StepModSource::Message::OP_PLAYMODE;
-                msg.dest = sindex;
-                msg.ival0 = i;
-                gr->fifo.push(msg);
-            });
+            menu.addItem(StepModSource::getPlayModeName(i), true,
+                         gr->stepModSources[sindex].playmode == i, [i, this]() {
+                             StepModSource::Message msg;
+                             msg.opcode = StepModSource::Message::OP_PLAYMODE;
+                             msg.dest = sindex;
+                             msg.ival0 = i;
+                             gr->fifo.push(msg);
+                         });
         }
         menu.showMenuAsync(juce::PopupMenu::Options{});
     }
