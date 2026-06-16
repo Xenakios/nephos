@@ -488,6 +488,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         if (parmsg.id > 0)
         {
             *granulator.idtoparvalptr[parmsg.id] = parmsg.value;
+            setStateDirtyHack();
         }
     }
 
