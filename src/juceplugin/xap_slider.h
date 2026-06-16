@@ -92,7 +92,7 @@ class XapSlider : public juce::Component
         double delta = 0.0;
         if (wheel.isSmooth)
         {
-            delta = wheel.deltaY * m_param_step;
+            delta = wheel.deltaY * m_param_step * 10.0f;
         }
         else
         {
