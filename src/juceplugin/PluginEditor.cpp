@@ -164,7 +164,38 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
     : processorRef(p), oscModuleComponent(p), timeModuleComponent(p), spatModuleComponent(p),
       volumeModuleComponent(p), stackModuleComponent(p), mainOutModuleComponent(p)
 {
-    // addAndMakeVisible(p.avisComponent);
+    /*
+    addAndMakeVisible(testTree);
+    testRootItem.containsSubItems = true;
+    std::map<std::string, MyTreeItem *> groups;
+    for (auto &e : p.granulator.modSources)
+    {
+        if (!e.groupname.empty() && groups.count(e.groupname) == 0)
+        {
+            auto item = new MyTreeItem;
+            item->itemText = e.groupname;
+            item->containsSubItems = true;
+            testRootItem.addSubItem(item, -1);
+            groups[e.groupname] = item;
+        }
+
+        {
+            auto item = new MyTreeItem;
+            item->itemText = e.name;
+            item->containsSubItems = false;
+            if (groups.count(e.groupname))
+            {
+                auto gitem = groups[e.groupname];
+                gitem->addSubItem(item, -1);
+            }
+            else
+            {
+                testRootItem.addSubItem(item);
+            }
+        }
+    }
+    testTree.setRootItem(&testRootItem);
+    */
     mainOutModuleComponent.perfComponent.RequestData = [this](int &maxvoices, int &usedvoices,
                                                               float &cpu) {
         maxvoices = processorRef.granulator.voices.size();
@@ -235,7 +266,7 @@ void MainPageComponent::resized()
                                    spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 125);
 
     stackModuleComponent.setBounds(timeModuleComponent.getRight() + 2, 0, 490, 125);
-    // processorRef.avisComponent.setBounds(0, getHeight() - 150, getWidth(), 149);
+    // testTree.setBounds(getWidth() - 299, timeModuleComponent.getBottom() + 2, 300, 300);
 }
 
 void StepSeqComponent::paint(juce::Graphics &g)

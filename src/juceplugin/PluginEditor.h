@@ -567,7 +567,23 @@ class MainPageComponent final : public juce::Component
     std::vector<std::unique_ptr<InsertModuleComponent>> insertComponents;
 
     std::unique_ptr<juce::TextButton> recordButton;
-
+    // juce::TreeView testTree;
+    struct MyTreeItem : public juce::TreeViewItem
+    {
+        juce::String itemText;
+        bool containsSubItems = false;
+        bool is_selected = false;
+        bool mightContainSubItems() override { return containsSubItems; }
+        void itemClicked(const juce::MouseEvent &ev) override { is_selected = true; }
+        void paintItem(juce::Graphics &g, int width, int height) override
+        {
+            if (is_selected)
+                g.fillAll(juce::Colours::lightblue);
+            g.setColour(juce::Colours::white);
+            g.drawText(itemText, 0, 0, width, height, juce::Justification::centredLeft);
+        }
+    };
+    // MyTreeItem testRootItem;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainPageComponent)
 };
 
@@ -734,5 +750,6 @@ class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor,
     juce::TabbedComponent mainTabs;
     std::unordered_map<uint32_t, XapSlider *> idToSlider;
     void addChildSlidersFrom(juce::Component &c);
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioPluginAudioProcessorEditor)
 };
