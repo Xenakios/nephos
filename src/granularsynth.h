@@ -1,6 +1,7 @@
 #pragma once
 #include <initializer_list>
 #include <mutex>
+#include <unordered_map>
 #include <vector>
 #include <span>
 // #include "sst/basic-blocks/dsp/CorrelatedNoise.h"
@@ -1487,7 +1488,7 @@ class ToneGranulator
         bool is_active() const { return pos >= 0; }
     };
     RampDownUp fadeForLargeStateChange;
-    
+
     void set_oscillator_type_mapping(std::span<int> mapping)
     {
         std::lock_guard<choc::threading::SpinLock> locker(spinLock);
@@ -1516,8 +1517,11 @@ class ToneGranulator
             voices.push_back(std::move(v));
         }
     }
+    std::unordered_map<int, std::string> oscTypeToStringMap;
     ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
     {
+        oscTypeToStringMap = {{0, "SINE"},   {1, "SEMISINE"}, {2, "TRIANGLE"}, {3, "SAW"},
+                              {4, "SQUARE"}, {5, "FM"},       {6, "NOISE"}};
         visualizer_fifo.reset(2048);
 
         shapeParToActualShape[0] = GranulatorModMatrix::lfo_t::SINE;
@@ -1592,14 +1596,7 @@ class ToneGranulator
                                    .withGroupName("Spatialization")
                                    .withID(PAR_AMBORDER));
         parmetadatas.push_back(pmd()
-                                   .withUnorderedMapFormatting({{0, "SINE"},
-                                                                {1, "SEMISINE"},
-                                                                {2, "TRIANGLE"},
-                                                                {3, "SAW"},
-                                                                {4, "SQUARE"},
-                                                                {5, "FM"},
-                                                                {6, "NOISE"}},
-                                                               true)
+                                   .withUnorderedMapFormatting(oscTypeToStringMap, true)
                                    .withDefault(0)
                                    .withName("Oscillator type")
                                    .withGroupName("Oscillator")

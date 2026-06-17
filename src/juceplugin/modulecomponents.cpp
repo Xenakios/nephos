@@ -8,6 +8,48 @@
 #include <exception>
 #include <stdexcept>
 
+void OscillatorModuleComponent::mouseDown(const juce::MouseEvent &ev)
+{
+    if (ev.mods.isRightButtonDown())
+    {
+        juce::PopupMenu menu;
+        menu.addItem("Enter custom oscillator type mapping...", [this, x = ev.x, y = ev.y]() {
+            oscTypeEditor.setVisible(true);
+            juce::String txt;
+            for (auto &e : processorRef.granulator.osctypemapping)
+            {
+                txt += juce::String(e) + " ";
+            }
+            txt = txt.trimCharactersAtEnd(" ");
+            oscTypeEditor.setText(txt, juce::dontSendNotification);
+            oscTypeEditor.setBounds(x, y, 200, 25);
+            oscTypeEditor.grabKeyboardFocus();
+            oscTypeEditor.onEscapeKey = [this]() { oscTypeEditor.setVisible(false); };
+            oscTypeEditor.onReturnKey = [this]() {
+                oscTypeEditor.setVisible(false);
+                std::array<int, 7> mapping = processorRef.granulator.osctypemapping;
+                auto tokens = juce::StringArray::fromTokens(oscTypeEditor.getText(), false);
+                for (size_t i = 0; i < mapping.size(); ++i)
+                {
+                    if (i < tokens.size())
+                    {
+                        double v = tokens[i].getDoubleValue();
+                        mapping[i] = v;
+                    }
+                }
+                processorRef.granulator.set_oscillator_type_mapping(mapping);
+                auto md = oscTypeDrop.getParameterMetaData();
+                for (size_t i = 0; i < 7; ++i)
+                {
+                    md.discreteValues[i] = processorRef.granulator.oscTypeToStringMap[mapping[i]];
+                }
+                oscTypeDrop.setParameterMetaData(md, false);
+            };
+        });
+        menu.showMenuAsync(juce::PopupMenu::Options{});
+    }
+}
+
 void VolumeEnvelopeComponent::paint(juce::Graphics &g)
 {
     g.fillAll(juce::Colours::black);
