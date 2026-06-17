@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "containers/choc_Value.h"
 #include "juce_audio_utils/juce_audio_utils.h"
 #include "text/choc_Files.h"
 #include "text/choc_JSON.h"
@@ -650,6 +651,13 @@ choc::value::Value AudioPluginAudioProcessor::getState()
     }
     state.setMember("stepseqstates", stepseqstates);
 
+    auto osctypemap = choc::value::createEmptyArray();
+    for (int i = 0; i < granulator.osctypemapping.size(); ++i)
+    {
+        osctypemap.addArrayElement(granulator.osctypemapping[i]);
+    }
+    state.setMember("osctypemapping", osctypemap);
+
     auto auxenvstate = granulator.voiceaux_envelope.getState();
     state.setMember("auxenvstate", auxenvstate);
 
@@ -682,6 +690,20 @@ void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
     if (!state[StateIgnoreStrings::dashboardsettings].getWithDefault(false))
     {
         granulator.gvsettings.timespantoshow = state["gvs_timespan"].getWithDefault(8.0);
+    }
+    if (state.hasObjectMember("osctypemapping"))
+    {
+        auto osctypemap = state["osctypemapping"];
+        if (osctypemap.isArray())
+        {
+            for (int i = 0; i < osctypemap.size(); ++i)
+            {
+                if (i < granulator.osctypemapping.size())
+                {
+                    granulator.osctypemapping[i] = osctypemap[i].getWithDefault(i);
+                }
+            }
+        }
     }
     if (state.hasObjectMember("auxenvstate"))
     {

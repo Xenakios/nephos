@@ -128,9 +128,10 @@ class OscTypeComponent : public juce::Component, public juce::Timer
     OscTypeComponent(AudioPluginAudioProcessor &p) : processorRef(p) { startTimerHz(25); }
     void timerCallback() override
     {
-        if (priorOscType != processorRef.granulator.modulatedOscType)
+        int curotype = processorRef.granulator.modulatedOscType;
+        if (priorOscType != curotype)
         {
-            priorOscType = processorRef.granulator.modulatedOscType;
+            priorOscType = curotype;
             repaint();
         }
     }
@@ -242,12 +243,9 @@ class OscillatorModuleComponent : public juce::GroupComponent
         oscNoiseModeDrop.dropdownXpercent = 0.3;
         initSlider(p, *this, oscNoiseCorrelationKnob);
         addAndMakeVisible(pitchEnvelopeComponent);
-        setInterceptsMouseClicks(true, true);
         addChildComponent(oscTypeEditor);
         oscTypeEditor.setBounds(2, 2, 200, 25);
     }
-    void mouseDown(const juce::MouseEvent &ev) override;
-
     void resized() override
     {
         oscTypeComponent.setBounds(7, 17, 350, 50);
