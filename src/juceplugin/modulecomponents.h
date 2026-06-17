@@ -124,6 +124,7 @@ class OscTypeComponent : public juce::Component, public juce::Timer
   public:
     AudioPluginAudioProcessor &processorRef;
     int priorOscType = -1;
+    std::vector<std::string> waveshortnames{{"SIN", "SEMI", "TRI", "SAW", "SQR", "FM", "NOIS"}};
     OscTypeComponent(AudioPluginAudioProcessor &p) : processorRef(p) { startTimerHz(25); }
     void timerCallback() override
     {
@@ -141,13 +142,20 @@ class OscTypeComponent : public juce::Component, public juce::Timer
         for (int i = 0; i < 7; ++i)
         {
             if (i == otypebase)
-                g.setColour(juce::Colours::yellow);
-            else if (i == priorOscType)
-                g.setColour(juce::Colours::green);
+                g.setColour(juce::Colours::yellow.darker());
             else
-                g.setColour(juce::Colours::lightgrey);
+                g.setColour(juce::Colours::darkgrey);
             juce::Rectangle<float> r{cellw * i + 2.0f, 2.0f, cellw - 4.0f, cellw - 4.0f};
             g.fillRect(r);
+            if (i == priorOscType)
+            {
+                g.setColour(juce::Colours::green);
+                g.fillRect(cellw * i + 4.0f, 4.0f, 8.0f, 8.0f);
+            }
+
+            g.setColour(juce::Colours::white);
+            g.drawFittedText(waveshortnames[i], r.getX(), r.getY(), r.getWidth(), r.getHeight(),
+                             juce::Justification::centred, 1);
         }
     }
     void mouseDown(const juce::MouseEvent &ev) override
@@ -226,7 +234,7 @@ class OscillatorModuleComponent : public juce::GroupComponent
 
     void resized() override
     {
-        oscTypeComponent.setBounds(7, 17, 360, 50);
+        oscTypeComponent.setBounds(7, 17, 350, 50);
         oscPitchKnob.setBounds(7, oscTypeComponent.getBottom() + 1, 80, 100);
         pitchEnvKnob.setBounds(oscPitchKnob.getRight() + 2, oscTypeComponent.getBottom() + 1, 80,
                                50);
