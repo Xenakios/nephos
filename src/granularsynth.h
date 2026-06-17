@@ -1229,7 +1229,7 @@ class ToneGranulator
     const int numvoices = 64;
     double m_sr = 0.0;
     int graincount = 0;
-
+    std::atomic<int> modulatedOscType{-1};
     std::vector<std::unique_ptr<GranulatorVoice>> voices;
     events_t events;
     events_t scheduledGrains;
@@ -2369,6 +2369,7 @@ class ToneGranulator
 
                         visualizer_fifo.push(vmsg);
                     }
+                    modulatedOscType = ev->generator_type;
                     ++graincount;
                     break;
                 }

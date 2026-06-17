@@ -119,11 +119,56 @@ inline void initSlider(AudioPluginAudioProcessor &processor, juce::Component &pa
     };
 }
 
+class OscTypeComponent : public juce::Component, public juce::Timer
+{
+  public:
+    AudioPluginAudioProcessor &processorRef;
+    int priorOscType = -1;
+    OscTypeComponent(AudioPluginAudioProcessor &p) : processorRef(p) { startTimerHz(25); }
+    void timerCallback() override
+    {
+        if (priorOscType != processorRef.granulator.modulatedOscType)
+        {
+            priorOscType = processorRef.granulator.modulatedOscType;
+            repaint();
+        }
+    }
+    void paint(juce::Graphics &g) override
+    {
+        g.fillAll(juce::Colours::black);
+        int otypebase = *processorRef.granulator.idtoparvalptr[ToneGranulator::PAR_OSCTYPE];
+        float cellw = 50.0f;
+        for (int i = 0; i < 7; ++i)
+        {
+            if (i == otypebase)
+                g.setColour(juce::Colours::yellow);
+            else if (i == priorOscType)
+                g.setColour(juce::Colours::green);
+            else
+                g.setColour(juce::Colours::lightgrey);
+            juce::Rectangle<float> r{cellw * i + 2.0f, 2.0f, cellw - 4.0f, cellw - 4.0f};
+            g.fillRect(r);
+        }
+    }
+    void mouseDown(const juce::MouseEvent &ev) override
+    {
+        int otype = ev.x / 50.0;
+        if (otype >= 0 && otype < 7)
+        {
+            ParameterMessage msg;
+            msg.id = ToneGranulator::PAR_OSCTYPE;
+            msg.value = otype;
+            processorRef.params_from_gui_fifo.push(msg);
+        }
+        repaint();
+    }
+};
+
 class OscillatorModuleComponent : public juce::GroupComponent
 {
   public:
     AudioPluginAudioProcessor &processorRef;
-    XapSlider oscTypeDrop;
+    OscTypeComponent oscTypeComponent;
     XapSlider oscPitchKnob;
     XapSlider pitchEnvKnob;
     XapSlider pitchEnvWarpKnob;
@@ -137,9 +182,7 @@ class OscillatorModuleComponent : public juce::GroupComponent
     VolumeEnvelopeComponent pitchEnvelopeComponent;
     juce::TextEditor oscTypeEditor;
     OscillatorModuleComponent(AudioPluginAudioProcessor &p)
-        : juce::GroupComponent("", "Oscillator"), processorRef(p),
-          oscTypeDrop(XapSlider::SS_HorizontalSlider,
-                      *p.granulator.idtoparmetadata[ToneGranulator::PAR_OSCTYPE]),
+        : juce::GroupComponent("", "Oscillator"), processorRef(p), oscTypeComponent(p),
           oscPitchKnob(XapSlider::SS_Knob,
                        *p.granulator.idtoparmetadata[ToneGranulator::PAR_PITCH]),
           pitchEnvKnob(XapSlider::SS_Knob,
@@ -162,7 +205,7 @@ class OscillatorModuleComponent : public juce::GroupComponent
               *p.granulator.idtoparmetadata[ToneGranulator::PAR_NOISECORRELATION]),
           pitchEnvelopeComponent(&p.granulator, true)
     {
-        initSlider(p, *this, oscTypeDrop);
+        addAndMakeVisible(oscTypeComponent);
         initSlider(p, *this, oscPitchKnob);
         initSlider(p, *this, pitchEnvKnob);
         initSlider(p, *this, pitchEnvWarpKnob);
@@ -183,22 +226,24 @@ class OscillatorModuleComponent : public juce::GroupComponent
 
     void resized() override
     {
-        oscTypeDrop.setBounds(7, 17, 200, 25);
-        oscPitchKnob.setBounds(7, oscTypeDrop.getBottom() + 1, 80, 100);
-        pitchEnvKnob.setBounds(oscPitchKnob.getRight() + 2, oscTypeDrop.getBottom() + 1, 80, 50);
+        oscTypeComponent.setBounds(7, 17, 360, 50);
+        oscPitchKnob.setBounds(7, oscTypeComponent.getBottom() + 1, 80, 100);
+        pitchEnvKnob.setBounds(oscPitchKnob.getRight() + 2, oscTypeComponent.getBottom() + 1, 80,
+                               50);
         pitchEnvWarpKnob.setBounds(oscPitchKnob.getRight() + 2, pitchEnvKnob.getBottom() + 1, 80,
                                    50);
-        pitchEnvelopeComponent.setBounds(pitchEnvKnob.getRight() + 2, oscTypeDrop.getBottom(), 150,
-                                         150);
-        oscSyncKnob.setBounds(pitchEnvelopeComponent.getRight() + 2, oscTypeDrop.getBottom() + 1,
-                              80, 50);
+        pitchEnvelopeComponent.setBounds(pitchEnvKnob.getRight() + 2, oscTypeComponent.getBottom(),
+                                         150, 150);
+        oscSyncKnob.setBounds(pitchEnvelopeComponent.getRight() + 2,
+                              oscTypeComponent.getBottom() + 1, 80, 50);
         oscPWKnob.setBounds(pitchEnvelopeComponent.getRight() + 2, oscSyncKnob.getBottom() + 1, 80,
                             50);
-        oscFMPitchKnob.setBounds(oscSyncKnob.getRight() + 2, oscTypeDrop.getBottom() + 1, 80, 50);
-        oscFMDepthKnob.setBounds(oscFMPitchKnob.getRight() + 2, oscTypeDrop.getBottom() + 1, 80,
+        oscFMPitchKnob.setBounds(oscSyncKnob.getRight() + 2, oscTypeComponent.getBottom() + 1, 80,
                                  50);
-        oscFMFeedbackKnob.setBounds(oscFMDepthKnob.getRight() + 2, oscTypeDrop.getBottom() + 1, 80,
-                                    50);
+        oscFMDepthKnob.setBounds(oscFMPitchKnob.getRight() + 2, oscTypeComponent.getBottom() + 1,
+                                 80, 50);
+        oscFMFeedbackKnob.setBounds(oscFMDepthKnob.getRight() + 2, oscTypeComponent.getBottom() + 1,
+                                    80, 50);
         oscNoiseModeDrop.setBounds(oscSyncKnob.getRight() + 2, oscFMPitchKnob.getBottom() + 1, 250,
                                    25);
         oscNoiseCorrelationKnob.setBounds(oscSyncKnob.getRight() + 2,

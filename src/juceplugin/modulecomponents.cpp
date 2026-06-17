@@ -38,6 +38,7 @@ void OscillatorModuleComponent::mouseDown(const juce::MouseEvent &ev)
                     }
                 }
                 processorRef.granulator.set_oscillator_type_mapping(mapping);
+                /*
                 auto md = oscTypeDrop.getParameterMetaData();
                 for (size_t i = 0; i < 7; ++i)
                 {
@@ -45,6 +46,7 @@ void OscillatorModuleComponent::mouseDown(const juce::MouseEvent &ev)
                         processorRef.granulator.oscTypeToStringMap.at(mapping[i]);
                 }
                 oscTypeDrop.setParameterMetaData(md, false);
+                */
             };
         });
         menu.showMenuAsync(juce::PopupMenu::Options{});
