@@ -9,6 +9,7 @@
 #include "xap_slider.h"
 #include "dropdowncomponent.h"
 #include <exception>
+#include <random>
 
 class VolumeEnvelopeComponent : public juce::Component
 {
@@ -125,7 +126,60 @@ class OscTypeComponent : public juce::Component, public juce::Timer
     AudioPluginAudioProcessor &processorRef;
     int priorOscType = -1;
     std::vector<std::string> waveshortnames{{"SIN", "SEMI", "TRI", "SAW", "SQR", "FM", "NOIS"}};
-    OscTypeComponent(AudioPluginAudioProcessor &p) : processorRef(p) { startTimerHz(25); }
+    std::vector<juce::Image> waveimages;
+    juce::Image drawWaveImage(std::function<float(float)> func)
+    {
+        juce::Image img{juce::Image::ARGB, 50, 50, true};
+        juce::Graphics g(img);
+        g.fillAll(juce::Colours::transparentWhite);
+        juce::Path p;
+        for (int i = 0; i < img.getWidth(); ++i)
+        {
+            float x = juce::jmap<float>(i, 0, img.getWidth() - 1, 0.0f, 1.0f);
+            float y = (1.0 - func(x)) * 0.95 + 0.025;
+            y = y * img.getHeight();
+            if (i == 0)
+            {
+                p.startNewSubPath(0.0f, y);
+            }
+            else
+            {
+                p.lineTo(i, y);
+            }
+        }
+        g.setColour(juce::Colours::white);
+        g.strokePath(p, juce::PathStrokeType(2.0f));
+        return img;
+    }
+    OscTypeComponent(AudioPluginAudioProcessor &p) : processorRef(p)
+    {
+        waveimages.push_back(
+            drawWaveImage([](float x) { return 0.5 + 0.5 * std::sin(M_PI * 2 * x); }));
+        waveimages.push_back(
+            drawWaveImage([](float x) { return 0.5 + 0.5 * std::sin(M_PI * 1 * x); }));
+        waveimages.push_back(drawWaveImage([](float x) {
+            if (x < 0.25)
+                return juce::jmap<float>(x, 0.0, 0.25, 0.5, 1.0);
+            else if (x >= 0.25 && x < 0.75)
+                return juce::jmap<float>(x, 0.25, 0.75, 1.0, 0.0);
+            return juce::jmap<float>(x, 0.75, 1.0, 0.0, 0.5);
+        }));
+        waveimages.push_back(drawWaveImage([](float x) { return x; }));
+        waveimages.push_back(drawWaveImage([](float x) {
+            if (x < 0.5)
+                return 0.0;
+            return 1.0;
+        }));
+        waveimages.push_back(drawWaveImage([](float x) {
+            float modulator = 2.0 + 1.0 * std::sin(M_PI * 2 * 1.2 * x);
+            return 0.5 + 0.5 * std::sin(2 * M_PI * modulator);
+        }));
+        std::minstd_rand0 rng;
+        std::normal_distribution<float> dist{0.5f, 0.2f};
+        waveimages.push_back(
+            drawWaveImage([&dist, &rng](float x) { return std::clamp(dist(rng), 0.0f, 1.0f); }));
+        startTimerHz(25);
+    }
     void timerCallback() override
     {
         int curotype = processorRef.granulator.modulatedOscType;
@@ -148,16 +202,21 @@ class OscTypeComponent : public juce::Component, public juce::Timer
                 g.setColour(juce::Colours::darkgrey);
             juce::Rectangle<float> r{cellw * i + 2.0f, 2.0f, cellw - 4.0f, cellw - 4.0f};
             g.fillRect(r);
+
+            g.setColour(juce::Colours::white);
+            int mappedtype = processorRef.granulator.osctypemapping[i];
+            if (mappedtype >= 0 && mappedtype < waveimages.size())
+            {
+                g.drawImage(waveimages[mappedtype], cellw * i + 2.0, 2.0f, cellw - 4.0f,
+                            cellw - 4.0f, 0, 0, 50, 50);
+            }
             if (i == priorOscType)
             {
                 g.setColour(juce::Colours::green);
                 g.fillRect(cellw * i + 4.0f, 4.0f, 8.0f, 8.0f);
             }
-
-            g.setColour(juce::Colours::white);
-            int mappedtype = processorRef.granulator.osctypemapping[i];
-            g.drawFittedText(waveshortnames[mappedtype], r.getX(), r.getY(), r.getWidth(),
-                             r.getHeight(), juce::Justification::centred, 1);
+            // g.drawFittedText(waveshortnames[mappedtype], r.getX(), r.getY(), r.getWidth(),
+            //                  r.getHeight(), juce::Justification::centred, 1);
         }
     }
     void mouseDown(const juce::MouseEvent &ev) override
