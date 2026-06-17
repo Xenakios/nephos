@@ -1,6 +1,180 @@
 #include "xap_slider.h"
 #include "juce_graphics/juce_graphics.h"
 
+void XapSlider::mouseWheelMove(const juce::MouseEvent &event, const juce::MouseWheelDetails &wheel)
+{
+    if (!isEnabled() || m_ed.isVisible())
+        return;
+    double delta = 0.0;
+    if (wheel.isSmooth)
+    {
+        delta = wheel.deltaY * m_param_step * 10.0f;
+    }
+    else
+    {
+        if (wheel.deltaY < 0)
+            delta = -m_param_step;
+        else
+            delta = m_param_step;
+    }
+    if (event.mods.isShiftDown())
+    {
+        if (event.mods.isCommandDown())
+            delta *= 2.0;
+        else
+            delta *= 0.1;
+    }
+    if (wheel.isReversed)
+        delta = -delta;
+    setValue(m_value + delta, true);
+}
+
+bool XapSlider::keyPressed(const juce::KeyPress &key)
+{
+    if (!isEnabled())
+        return false;
+    auto c = key.getTextCharacter();
+    std::optional<double> val;
+    if (c >= '1' && c <= '9')
+    {
+        int slot = c - 49;
+        val = m_snap_positions[slot];
+    }
+    if (c == '0')
+        val = m_default_value;
+
+    for (auto &e : keypress_to_step)
+    {
+        if (e.first == key)
+        {
+            val = m_value + e.second;
+            break;
+        }
+    }
+    if (val)
+    {
+        setValue(*val, true);
+        return true;
+    }
+    return false;
+}
+
+void XapSlider::mouseDown(const juce::MouseEvent &ev)
+{
+    if (!isEnabled())
+        return;
+    if (m_pardesc.displayScale == ParamDesc::UNORDERED_MAP && m_pardesc.discreteValues.size() == 2)
+    {
+        if (m_value >= 0.5)
+            setValue(0.0, true);
+        else
+            setValue(1.0, true);
+        return;
+    }
+    if (m_pardesc.displayScale == ParamDesc::UNORDERED_MAP && m_style != SS_Knob)
+    {
+        juce::PopupMenu menu;
+        // we could cache the ordered entries but that would likely introduce
+        // cache invalidation problems at some point...
+        std::vector<std::pair<int, std::string>> ordered_entries;
+        for (auto &e : m_pardesc.discreteValues)
+        {
+            ordered_entries.push_back(e);
+        }
+        std::sort(ordered_entries.begin(), ordered_entries.end(),
+                  [](auto &lhs, auto &rhs) { return lhs.first < rhs.first; });
+        for (auto &e : ordered_entries)
+        {
+            menu.addItem(e.second, true, e.first == (int)m_value,
+                         [e, this]() { setValue(e.first, true); });
+        }
+        menu.showMenuAsync(
+            juce::PopupMenu::Options{}.withTargetComponent(this).withMousePosition());
+        return;
+    }
+    if (ev.mods.isMiddleButtonDown())
+    {
+        showTextEditor();
+        return;
+    }
+    if (ev.mods.isRightButtonDown())
+    {
+        juce::PopupMenu menu;
+        menu.addItem("Edit value...", [this]() { showTextEditor(); });
+        if (m_fstate)
+        {
+            menu.addItem("Extend range", true, m_fstate->isExtended, [this]() {
+                m_fstate->isExtended = !m_fstate->isExtended;
+                repaint();
+            });
+        }
+        /*
+        juce::PopupMenu storemenu;
+        for (int i = 0; i < m_snap_positions.size(); ++i)
+        {
+            storemenu.addItem(juce::String(i),
+                              [i, this]() { m_snap_positions[i] = getValue(); });
+        }
+        menu.addSubMenu("Store to", storemenu);
+        juce::PopupMenu loadmenu;
+        for (int i = 0; i < m_snap_positions.size(); ++i)
+        {
+            loadmenu.addItem(juce::String(i),
+                             [i, this]() { setValue(m_snap_positions[i], true); });
+        }
+        menu.addSubMenu("Load from", loadmenu);
+        */
+        menu.showMenuAsync({});
+        return;
+    }
+    m_mousedown = true;
+    was_started_in_fine_mode = ev.mods.isShiftDown();
+    m_drag_start_pos = m_pardesc.naturalToNormalized01(m_value);
+    mouseDragPos = ev.getPosition();
+    repaint();
+}
+
+void XapSlider::mouseDrag(const juce::MouseEvent &ev)
+{
+    if (!isEnabled())
+        return;
+    if (m_style == SS_Knob)
+    {
+        ev.source.enableUnboundedMouseMovement(true);
+        // setMouseCursor (juce::MouseCursor::NoCursor);
+        float delta = (ev.y - mouseDragPos.y) * 0.005;
+        if (was_started_in_fine_mode)
+            delta *= 0.1;
+        float newvalnormalized = juce::jlimit<float>(0.0f, 1.0f, m_drag_start_pos - delta);
+        m_value = m_pardesc.normalized01ToNatural(newvalnormalized);
+        if (OnValueChanged)
+            OnValueChanged();
+        repaint();
+        return;
+    }
+    m_value = juce::jmap<double>(ev.x, 2, getWidth() - 4, m_min_value, m_max_value);
+    m_value = juce::jlimit(m_min_value, m_max_value, m_value);
+
+    if (OnValueChanged)
+        OnValueChanged();
+    repaint();
+    return;
+    double diff = juce::jmap<double>(ev.getDistanceFromDragStartX(), 2, getWidth() - 4, m_min_value,
+                                     m_max_value);
+    m_value = m_drag_start_pos + diff;
+    m_value = juce::jlimit(m_min_value, m_max_value, m_value);
+    repaint();
+}
+
+void XapSlider::mouseUp(const juce::MouseEvent &ev)
+{
+    setMouseCursor(juce::MouseCursor::NormalCursor);
+    if (!isEnabled())
+        return;
+    m_mousedown = false;
+    repaint();
+}
+
 void XapSlider::paint(juce::Graphics &g)
 {
     if (m_style == SS_Knob)

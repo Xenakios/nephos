@@ -8,13 +8,14 @@ class XPingPongFX : public XenFXBase
 {
   public:
     XPingPongFX() {}
+    void clear_delay_line() { std::fill(delayBuf.begin(), delayBuf.end(), 0.0f); }
     void prepare(double samplerate, size_t maxblocksize) override
     {
         sample_rate = samplerate;
         delayBuf.resize(maxDelayLen * samplerate * 2);
-        std::fill(delayBuf.begin(), delayBuf.end(), 0.0f);
+        clear_delay_line();
     }
-    void reset() override { std::fill(delayBuf.begin(), delayBuf.end(), 0.0f); }
+    void reset() override { clear_delay_line(); }
     size_t num_params() override { return 3; }
     std::string get_param_name(size_t paramindex) override
     {
@@ -111,6 +112,5 @@ class XPingPongFX : public XenFXBase
     alignas(16) int delay_read_pos = 0;
     alignas(16) int delay_write_pos = 0;
     alignas(16) float feedbacks[2] = {0.0f, 0.0f};
-
     std::vector<float> delayBuf;
 };
