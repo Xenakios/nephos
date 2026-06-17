@@ -2,24 +2,34 @@
     {
         "knob": 0,
         "desttype": 0,
-        "dest": 500,
-        "min": -12.0,
-        "max": 12.0
+        "dest": 600
     },
     {
         "knob": 1,
         "desttype": 0,
-        "dest": 400
+        "dest": 700,
+        "min": -30.0,
+        "max": 150.0
     },
     {
         "knob": 2,
         "desttype": 0,
-        "dest": 600
+        "dest": 500
     },
     {
         "knob": 3,
         "desttype": 0,
-        "dest": 700
+        "dest": 400
+    },
+    {
+        "knob": 7,
+        "desttype": 0,
+        "dest": 100
+    },
+    {
+        "knob": 4,
+        "desttype": 0,
+        "dest": 800
     },
     {
         "knob": 8,
@@ -30,5 +40,35 @@
         "knob": 9,
         "desttype": 1,
         "dest": 1
+    },
+    {
+        "knob": 10,
+        "desttype": 1,
+        "dest": 2
+    },
+    {
+        "knob": 11,
+        "desttype": 1,
+        "dest": 3
+    },
+    {
+        "knob": 12,
+        "desttype": 1,
+        "dest": 4
+    },
+    {
+        "knob": 13,
+        "desttype": 1,
+        "dest": 5
+    },
+    {
+        "knob": 14,
+        "desttype": 1,
+        "dest": 6
+    },
+    {
+        "knob": 15,
+        "desttype": 1,
+        "dest": 7
     }
 ]
