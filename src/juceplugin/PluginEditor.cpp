@@ -254,7 +254,7 @@ void MainPageComponent::paint(juce::Graphics &g) { g.fillAll(juce::Colours::dark
 
 void MainPageComponent::resized()
 {
-    oscModuleComponent.setBounds(0, 0, 700, 200);
+    oscModuleComponent.setBounds(0, 0, 700, 225);
     volumeModuleComponent.setBounds(0, oscModuleComponent.getBottom() + 1, 700, 150);
     timeModuleComponent.setBounds(oscModuleComponent.getRight() + 2, 0, 300, 125);
 
