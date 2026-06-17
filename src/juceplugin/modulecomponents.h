@@ -154,8 +154,9 @@ class OscTypeComponent : public juce::Component, public juce::Timer
             }
 
             g.setColour(juce::Colours::white);
-            g.drawFittedText(waveshortnames[i], r.getX(), r.getY(), r.getWidth(), r.getHeight(),
-                             juce::Justification::centred, 1);
+            int mappedtype = processorRef.granulator.osctypemapping[i];
+            g.drawFittedText(waveshortnames[mappedtype], r.getX(), r.getY(), r.getWidth(),
+                             r.getHeight(), juce::Justification::centred, 1);
         }
     }
     void mouseDown(const juce::MouseEvent &ev) override
@@ -163,10 +164,25 @@ class OscTypeComponent : public juce::Component, public juce::Timer
         int otype = ev.x / 50.0;
         if (otype >= 0 && otype < 7)
         {
-            ParameterMessage msg;
-            msg.id = ToneGranulator::PAR_OSCTYPE;
-            msg.value = otype;
-            processorRef.params_from_gui_fifo.push(msg);
+            if (!ev.mods.isRightButtonDown())
+            {
+                ParameterMessage msg;
+                msg.id = ToneGranulator::PAR_OSCTYPE;
+                msg.value = otype;
+                processorRef.params_from_gui_fifo.push(msg);
+            }
+            else
+            {
+                juce::PopupMenu menu;
+                for (int i = 0; i < 7; ++i)
+                {
+                    menu.addItem(waveshortnames[i], [this, otype, i]() {
+                        processorRef.granulator.osctypemapping[otype] = i;
+                        repaint();
+                    });
+                }
+                menu.showMenuAsync({});
+            }
         }
         repaint();
     }
