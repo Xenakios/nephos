@@ -1517,11 +1517,11 @@ class ToneGranulator
             voices.push_back(std::move(v));
         }
     }
-    std::unordered_map<int, std::string> oscTypeToStringMap;
+    const std::unordered_map<int, std::string> oscTypeToStringMap{
+        {0, "SINE"},   {1, "SEMISINE"}, {2, "TRIANGLE"}, {3, "SAW"},
+        {4, "SQUARE"}, {5, "FM"},       {6, "NOISE"}};
     ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
     {
-        oscTypeToStringMap = {{0, "SINE"},   {1, "SEMISINE"}, {2, "TRIANGLE"}, {3, "SAW"},
-                              {4, "SQUARE"}, {5, "FM"},       {6, "NOISE"}};
         visualizer_fifo.reset(2048);
 
         shapeParToActualShape[0] = GranulatorModMatrix::lfo_t::SINE;

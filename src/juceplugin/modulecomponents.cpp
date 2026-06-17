@@ -33,7 +33,7 @@ void OscillatorModuleComponent::mouseDown(const juce::MouseEvent &ev)
                 {
                     if (i < tokens.size())
                     {
-                        double v = tokens[i].getDoubleValue();
+                        int v = std::clamp(tokens[i].getIntValue(), 0, 6);
                         mapping[i] = v;
                     }
                 }
@@ -41,7 +41,8 @@ void OscillatorModuleComponent::mouseDown(const juce::MouseEvent &ev)
                 auto md = oscTypeDrop.getParameterMetaData();
                 for (size_t i = 0; i < 7; ++i)
                 {
-                    md.discreteValues[i] = processorRef.granulator.oscTypeToStringMap[mapping[i]];
+                    md.discreteValues[i] =
+                        processorRef.granulator.oscTypeToStringMap.at(mapping[i]);
                 }
                 oscTypeDrop.setParameterMetaData(md, false);
             };
