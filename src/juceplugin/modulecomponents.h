@@ -2,6 +2,7 @@
 
 #include "PluginProcessor.h"
 #include "juce_core/juce_core.h"
+#include "juce_events/juce_events.h"
 #include "juce_graphics/juce_graphics.h"
 #include "juce_gui_basics/juce_gui_basics.h"
 #include "text/choc_JSON.h"
@@ -134,6 +135,7 @@ class OscillatorModuleComponent : public juce::GroupComponent
     XapSlider oscNoiseCorrelationKnob;
     XapSlider oscNoiseModeDrop;
     VolumeEnvelopeComponent pitchEnvelopeComponent;
+    juce::TextEditor oscTypeEditor;
     OscillatorModuleComponent(AudioPluginAudioProcessor &p)
         : juce::GroupComponent("", "Oscillator"), processorRef(p),
           oscTypeDrop(XapSlider::SS_HorizontalSlider,
@@ -173,8 +175,45 @@ class OscillatorModuleComponent : public juce::GroupComponent
         oscNoiseModeDrop.dropdownXpercent = 0.3;
         initSlider(p, *this, oscNoiseCorrelationKnob);
         addAndMakeVisible(pitchEnvelopeComponent);
+        setInterceptsMouseClicks(true, true);
+        addChildComponent(oscTypeEditor);
+        oscTypeEditor.setBounds(2, 2, 200, 25);
     }
-
+    void mouseDown(const juce::MouseEvent &ev) override
+    {
+        if (ev.mods.isRightButtonDown())
+        {
+            juce::PopupMenu menu;
+            menu.addItem("Enter custom oscillator type mapping...", [this, x = ev.x, y = ev.y]() {
+                oscTypeEditor.setVisible(true);
+                juce::String txt;
+                for (auto &e : processorRef.granulator.osctypemapping)
+                {
+                    txt += juce::String(e) + " ";
+                }
+                txt = txt.trimCharactersAtEnd(" ");
+                oscTypeEditor.setText(txt, juce::dontSendNotification);
+                oscTypeEditor.setBounds(x, y, 200, 25);
+                oscTypeEditor.grabKeyboardFocus();
+                oscTypeEditor.onEscapeKey = [this]() { oscTypeEditor.setVisible(false); };
+                oscTypeEditor.onReturnKey = [this]() {
+                    oscTypeEditor.setVisible(false);
+                    std::array<int, 7> mapping = processorRef.granulator.osctypemapping;
+                    auto tokens = juce::StringArray::fromTokens(oscTypeEditor.getText(), false);
+                    for (size_t i = 0; i < mapping.size(); ++i)
+                    {
+                        if (i < tokens.size())
+                        {
+                            double v = tokens[i].getDoubleValue();
+                            mapping[i] = v;
+                        }
+                    }
+                    processorRef.granulator.set_oscillator_type_mapping(mapping);
+                };
+            });
+            menu.showMenuAsync(juce::PopupMenu::Options{});
+        }
+    }
     void resized() override
     {
         oscTypeDrop.setBounds(7, 17, 200, 25);

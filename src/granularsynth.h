@@ -1487,14 +1487,14 @@ class ToneGranulator
         bool is_active() const { return pos >= 0; }
     };
     RampDownUp fadeForLargeStateChange;
-    void set_osc_type_mapping(std::vector<int> mapping)
+    
+    void set_oscillator_type_mapping(std::span<int> mapping)
     {
+        std::lock_guard<choc::threading::SpinLock> locker(spinLock);
         for (size_t i = 0; i < osctypemapping.size(); ++i)
         {
             if (i < mapping.size())
-            {
                 osctypemapping[i] = mapping[i];
-            }
         }
     }
     void create_voices()
@@ -2472,9 +2472,8 @@ class ToneGranulator
     void process_block(std::span<float> outputbuffer)
     {
         assert(outputbuffer.size() == granul_block_size * 64);
-        // this will be contended only when prepare is called, which should be infrequently,
-        // and is probably a bug in the host application anyway...
-        // we should not depend on this lock for anything else, ideally...
+        // this will be contended only infrequently,
+        // but we should not generally depend on being able to use this lock...
         std::lock_guard<choc::threading::SpinLock> locker(spinLock);
         set_ambisonics_order(1 + *idtoparvalptr[PAR_AMBORDER]);
 
