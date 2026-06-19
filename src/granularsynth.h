@@ -2346,6 +2346,33 @@ class ToneGranulator
                 graingen_phase -= 1.0;
         }
     }
+    // if triggered by MIDI, the MIDI key is the effective id
+    void start_cloud(int cloudindex, int with_id)
+    {
+        if (cloudindex >= 0 && cloudindex < clouds.size())
+        {
+            for (auto &p : cloudPlayers)
+            {
+                if (!p.active)
+                {
+                    p.start(playposframes / m_sr, with_id, &clouds[cloudindex]);
+                    break;
+                }
+            }
+        }
+    }
+    void stop_cloud(int id)
+    {
+        for (auto &p : cloudPlayers)
+        {
+            if (p.id == id)
+            {
+                p.active = false;
+                p.event_index = -1;
+                p.id = -1;
+            }
+        }
+    }
     void advanceCloudPlayers()
     {
         int i = 0;
@@ -2354,7 +2381,7 @@ class ToneGranulator
             if (p.active)
             {
                 CloudEvent *ev = nullptr;
-                if (p.event_index < p.cloud->events.size())
+                if (p.event_index >= 0 && p.event_index < p.cloud->events.size())
                     ev = &p.cloud->events[p.event_index];
                 while (ev && std::floor((ev->time_position + p.start_time) * m_sr) <
                                  playposframes + granul_block_size)
@@ -2594,8 +2621,8 @@ class ToneGranulator
         taillen = 0.002 + 0.998 * std::pow(taillen, 3.0);
         handleStepSequencerMessages();
         bool self_generate = false;
-        if (events.size() == 0)
-            self_generate = true;
+        //if (events.size() == 0)
+        //    self_generate = true;
         // bool doambcoeffsnormalization = *idtoparvalptr[PAR_AMBUSENORMALIZATION];
         process_modulations();
         auxenvwarpmodulated =

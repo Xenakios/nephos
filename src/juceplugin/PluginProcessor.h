@@ -138,7 +138,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     alignas(32) choc::fifo::SingleReaderSingleWriterFIFO<
         std::array<float, ambisonicOrderNumChannels(maxAmbiSonicOrder)>> buffer_adapter;
     void setStateDirtyHack();
-
+    void init_clouds(ToneGranulator & g);
     std::unordered_map<juce::AudioProcessorParameter *, int> jucepartoindex;
     juce::AudioParameterFloat *dirtyStateParam = nullptr;
 

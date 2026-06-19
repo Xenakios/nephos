@@ -186,11 +186,11 @@ inline int test_nephos_render()
         {
             if (ev->opcode == 0)
             {
-                std::cout << "starting cloud with " << ev->cloud->events.size() << " evemts\n";
                 for (auto &player : g->cloudPlayers)
                 {
                     if (!player.active)
                     {
+                        std::cout << tpos << " starting cloud with " << ev->cloud->events.size() << " evemts\n";
                         player.start(ev->timepos, ev->id, ev->cloud);
                         // std::cout << "started cloud with "
                         break;

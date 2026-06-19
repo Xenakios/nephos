@@ -7,6 +7,83 @@
 #include <exception>
 #include <float.h>
 
+void AudioPluginAudioProcessor::init_clouds(ToneGranulator &g)
+{
+    xenakios::Xoroshiro128Plus rng;
+    
+    std::vector<float> rates{0.5f, 0.25f, 0.125f, 0.05f, 0.025f};
+    for (auto &r : rates)
+    {
+        Cloud c;
+        double t = 0.0;
+        while (t < 10.0)
+        {
+            CloudEvent e;
+            e.time_position = t;
+            e.param_modulations[0].id = ToneGranulator::PAR_PITCH;
+            e.param_modulations[0].value = rng.nextFloatInRange(-12.0f, 12.0f);
+            e.param_modulations[1] = {ToneGranulator::PAR_OSCTYPE, 3};
+            e.param_modulations[2] = {ToneGranulator::PAR_DURATION, 0.5};
+            c.events.push_back(e);
+            t += r;
+        }
+        g.clouds.push_back(c);
+    }
+    Cloud c;
+    c.duration = 10.0;
+    c.events.clear();
+    c.duration = 1.0;
+    double t = 0.0;
+    int i = 0;
+    while (t < 10.0)
+    {
+        CloudEvent e;
+        e.time_position = t;
+        e.param_modulations[0].id = ToneGranulator::PAR_PITCH;
+        e.param_modulations[0].value = rng.nextFloatInRange(36.0, 48.0);
+        e.param_modulations[1] = {ToneGranulator::PAR_OSCTYPE, 0};
+        e.param_modulations[2] = {ToneGranulator::PAR_DURATION, 0.15};
+        e.param_modulations[3] = {ToneGranulator::PAR_AZIMUTH, rng.nextFloatInRange(-90.0f, 90.0f)};
+        c.events.push_back(e);
+
+        t += 0.025;
+    }
+    g.clouds.push_back(c);
+
+    c.events.clear();
+    c.duration = 1.0;
+    t = 0.0;
+    while (t < 10.0)
+    {
+        if (i % 7 == 0 || i % 13 == 0)
+        {
+            CloudEvent e;
+            e.time_position = t;
+            e.param_modulations[0].id = ToneGranulator::PAR_PITCH;
+            if (rng.nextFloat() < 0.5)
+            {
+                e.param_modulations[0].value = 35.0f;
+                e.param_modulations[2] = {ToneGranulator::PAR_DURATION, 0.19};
+            }
+            else
+            {
+                e.param_modulations[0].value = -11.0f;
+                e.param_modulations[4] = {ToneGranulator::PAR_OSC_SYNC, 1.53f};
+                e.param_modulations[2] = {ToneGranulator::PAR_DURATION, 0.6};
+            }
+
+            e.param_modulations[1] = {ToneGranulator::PAR_OSCTYPE, 2};
+
+            e.param_modulations[3] = {ToneGranulator::PAR_AZIMUTH,
+                                      rng.nextFloatInRange(-90.0f, 90.0f)};
+            c.events.push_back(e);
+        }
+        ++i;
+        t = i * 0.01;
+    }
+    g.clouds.push_back(c);
+}
+
 void AudioPluginAudioProcessor::loadMacroKnobs(std::string filename)
 {
     try
@@ -85,6 +162,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                          .withOutput("Output", juce::AudioChannelSet::ambisonic(3), true)),
       avisComponent(2)
 {
+    init_clouds(granulator);
     macroBindings.resize(16);
 #ifdef JUCE_MAC
     macroKnobsPath = R"(/Users/teemu/codeprojects/2026/nephos/src/macroknobs.json)";
@@ -411,15 +489,31 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         {
             granulator.midiNoteModSource.set_sustain(false);
         }
-        if (msg.isNoteOn())
+        bool midinotesaremodulation = false;
+        if (midinotesaremodulation)
         {
-            granulator.midiNoteModSource.activate_note(msg.getNoteNumber(), msg.getVelocity());
-            DBG(granulator.midiNoteModSource.getDebugString());
+            if (msg.isNoteOn())
+            {
+                granulator.midiNoteModSource.activate_note(msg.getNoteNumber(), msg.getVelocity());
+                DBG(granulator.midiNoteModSource.getDebugString());
+            }
+            if (msg.isNoteOff())
+            {
+                granulator.midiNoteModSource.deactivate_note(msg.getNoteNumber());
+                DBG(granulator.midiNoteModSource.getDebugString());
+            }
         }
-        if (msg.isNoteOff())
+        else
         {
-            granulator.midiNoteModSource.deactivate_note(msg.getNoteNumber());
-            DBG(granulator.midiNoteModSource.getDebugString());
+            int notenumber = msg.getNoteNumber();
+            if (msg.isNoteOn())
+            {
+                granulator.start_cloud(notenumber - 60, notenumber);
+            }
+            if (msg.isNoteOff())
+            {
+                granulator.stop_cloud(notenumber);
+            }
         }
     }
     bool statechanged = false;
