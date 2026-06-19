@@ -2412,6 +2412,8 @@ class ToneGranulator
                             // std::print("starting voice {} for event {}\n", j, evindex);
                             voices[j]->grainid = graincount;
                             GrainEvent gev{0.0, 0.1, 0.0, 1.0};
+                            gev.azimuth = modmatrix.m.getTargetValue(
+                                GranulatorModConfig::TargetIdentifier{PAR_AZIMUTH});
                             for (auto &pc : ev->param_modulations)
                             {
                                 if (pc.id == CLAP_INVALID_ID)
@@ -2453,6 +2455,19 @@ class ToneGranulator
                                     p.after_touch_amount;
                             }
                             voices[j]->start(gev);
+                            if (gatherGrainVisData)
+                            {
+                                GrainVisualizerMessage vmsg;
+                                vmsg.timepos = playposframes/m_sr;
+                                vmsg.pitch = voices[j]->pitch_base;
+                                vmsg.duration = voices[j]->grain_end_phase / m_sr;
+                                vmsg.gain = voices[j]->graingain;
+                                vmsg.azimuth0degrees = voices[j]->used_azi0;
+                                vmsg.azimuth1degrees = voices[j]->used_azi1;
+                                vmsg.elevation0degrees = voices[j]->used_ele0;
+                                vmsg.elevation1degrees = voices[j]->used_ele1;
+                                visualizer_fifo.push(vmsg);
+                            }
                             wasfound = true;
                             // std::cout << "grain " << graincount << " started on voice " << j
                             //           << "\n";
