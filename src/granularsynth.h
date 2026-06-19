@@ -1244,6 +1244,7 @@ struct Cloud
     double time_position = 0.0;
     double duration = 0.0;
     bool looping = false;
+    uint32_t after_touch_dest = CLAP_INVALID_ID;
     std::vector<CloudEvent> events;
 };
 
@@ -1254,6 +1255,7 @@ struct CloudPlayer
     int event_index = -1;
     double start_time = 0.0;
     int id = -1;
+    float after_touch_amount = 0.0f;
     void start(double time, int idarg, Cloud *c)
     {
         cloud = c;
@@ -1261,7 +1263,7 @@ struct CloudPlayer
             return;
         id = idarg;
         start_time = time;
-        std::cout << "starting cloud " << (void *)c << "\n";
+        // std::cout << "starting cloud " << (void *)c << "\n";
         active = true;
         event_index = 0;
     }
@@ -2361,6 +2363,19 @@ class ToneGranulator
             }
         }
     }
+    void handle_cloud_aftertouch(int id, float value)
+    {
+        for (auto &p : cloudPlayers)
+        {
+            if (p.id == id)
+            {
+                p.after_touch_amount = value;
+                // we should not be having the same id in the cloud players,
+                // but may need to revisit this
+                break;
+            }
+        }
+    }
     void stop_cloud(int id)
     {
         for (auto &p : cloudPlayers)
@@ -2415,6 +2430,27 @@ class ToneGranulator
                                     gev.azimuth = pc.value;
                                 else if (pc.id == PAR_OSC_SYNC)
                                     gev.sync_ratio = pc.value;
+                            }
+                            if (p.cloud->after_touch_dest == PAR_GRAINVOLUME)
+                            {
+                                // for testing, absolute value but probably will be modulation later
+                                gev.volume = p.after_touch_amount;
+                            }
+                            for (size_t j = 0; j < GranulatorVoice::numInsertSlots; ++j)
+                            {
+                                auto numpars = voices.front()->insert_fx[j].numParams;
+                                for (size_t k = 0; k < numpars; ++k)
+                                {
+                                    int insparid = PAR_INSERTAFIRST + 32 * j + k;
+                                    gev.insertparams[j][k] = modmatrix.m.getTargetValue(
+                                        GranulatorModConfig::TargetIdentifier{insparid});
+                                }
+                            }
+                            if (p.cloud->after_touch_dest >= PAR_INSERTAFIRST &&
+                                p.cloud->after_touch_dest < PAR_INSERTAFIRST + 10)
+                            {
+                                gev.insertparams[0][p.cloud->after_touch_dest - PAR_INSERTAFIRST] =
+                                    p.after_touch_amount;
                             }
                             voices[j]->start(gev);
                             wasfound = true;
@@ -2621,9 +2657,9 @@ class ToneGranulator
         taillen = 0.002 + 0.998 * std::pow(taillen, 3.0);
         handleStepSequencerMessages();
         bool self_generate = false;
-        //if (events.size() == 0)
-        //    self_generate = true;
-        // bool doambcoeffsnormalization = *idtoparvalptr[PAR_AMBUSENORMALIZATION];
+        // if (events.size() == 0)
+        //     self_generate = true;
+        //  bool doambcoeffsnormalization = *idtoparvalptr[PAR_AMBUSENORMALIZATION];
         process_modulations();
         auxenvwarpmodulated =
             modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_AUXENVTIMEWARP});

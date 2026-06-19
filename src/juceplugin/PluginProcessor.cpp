@@ -10,7 +10,7 @@
 void AudioPluginAudioProcessor::init_clouds(ToneGranulator &g)
 {
     xenakios::Xoroshiro128Plus rng;
-    
+
     std::vector<float> rates{0.5f, 0.25f, 0.125f, 0.05f, 0.025f};
     for (auto &r : rates)
     {
@@ -82,6 +82,10 @@ void AudioPluginAudioProcessor::init_clouds(ToneGranulator &g)
         t = i * 0.01;
     }
     g.clouds.push_back(c);
+    for (auto &e : g.clouds)
+    {
+        e.after_touch_dest = ToneGranulator::PAR_INSERTAFIRST + 0;
+    }
 }
 
 void AudioPluginAudioProcessor::loadMacroKnobs(std::string filename)
@@ -513,6 +517,11 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             if (msg.isNoteOff())
             {
                 granulator.stop_cloud(notenumber);
+            }
+            if (msg.isAftertouch())
+            {
+                float at = juce::jmap<float>(msg.getAfterTouchValue(), 0, 127, 0.0f, 1.0f);
+                granulator.handle_cloud_aftertouch(msg.getNoteNumber(), at);
             }
         }
     }
