@@ -2376,6 +2376,8 @@ class ToneGranulator
                                     break;
                                 if (pc.id == PAR_PITCH)
                                     gev.pitch_semitones = pc.value;
+                                else if (pc.id == PAR_GRAINVOLUME)
+                                    gev.volume = pc.value;
                                 else if (pc.id == PAR_DURATION)
                                     gev.duration = pc.value;
                                 else if (pc.id == PAR_GRAINVOLUME)
@@ -2384,6 +2386,8 @@ class ToneGranulator
                                     gev.generator_type = pc.value;
                                 else if (pc.id == PAR_AZIMUTH)
                                     gev.azimuth = pc.value;
+                                else if (pc.id == PAR_OSC_SYNC)
+                                    gev.sync_ratio = pc.value;
                             }
                             voices[j]->start(gev);
                             wasfound = true;

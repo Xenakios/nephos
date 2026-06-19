@@ -35,20 +35,56 @@ inline void init_clouds(ToneGranulator &g)
         t += 0.5;
     }
     g.clouds.push_back(c);
+
     c.events.clear();
     c.duration = 1.0;
     t = 0.0;
-    while (t < 2.0)
+    int i = 0;
+    while (t < 10.0)
     {
         CloudEvent e;
         e.time_position = t;
         e.param_modulations[0].id = ToneGranulator::PAR_PITCH;
-        e.param_modulations[0].value = rng.nextFloatInRange(36.0f, 48.0f);
+        e.param_modulations[0].value = rng.nextFloatInRange(36.0, 48.0);
         e.param_modulations[1] = {ToneGranulator::PAR_OSCTYPE, 0};
-        e.param_modulations[2] = {ToneGranulator::PAR_DURATION, 0.25};
+        e.param_modulations[2] = {ToneGranulator::PAR_DURATION, 0.15};
         e.param_modulations[3] = {ToneGranulator::PAR_AZIMUTH, rng.nextFloatInRange(-90.0f, 90.0f)};
         c.events.push_back(e);
-        t += 0.051;
+
+        t += 0.025;
+    }
+    g.clouds.push_back(c);
+
+    c.events.clear();
+    c.duration = 1.0;
+    t = 0.0;
+    while (t < 10.0)
+    {
+        if (i % 7 == 0 || i % 13 == 0)
+        {
+            CloudEvent e;
+            e.time_position = t;
+            e.param_modulations[0].id = ToneGranulator::PAR_PITCH;
+            if (rng.nextFloat() < 0.5)
+            {
+                e.param_modulations[0].value = 35.0f;
+                e.param_modulations[2] = {ToneGranulator::PAR_DURATION, 0.19};
+            }
+            else
+            {
+                e.param_modulations[0].value = -11.0f;
+                e.param_modulations[4] = {ToneGranulator::PAR_OSC_SYNC, 1.53f};
+                e.param_modulations[2] = {ToneGranulator::PAR_DURATION, 0.6};
+            }
+
+            e.param_modulations[1] = {ToneGranulator::PAR_OSCTYPE, 2};
+
+            e.param_modulations[3] = {ToneGranulator::PAR_AZIMUTH,
+                                      rng.nextFloatInRange(-90.0f, 90.0f)};
+            c.events.push_back(e);
+        }
+        ++i;
+        t = i * 0.01;
     }
     g.clouds.push_back(c);
 }
@@ -71,12 +107,18 @@ inline int test_nephos_render()
     std::vector<CloudPlayerEvent> player_events;
     player_events.emplace_back(0, 0, 0.0, &g->clouds[0]);
     player_events.emplace_back(1, 0, 9.0, &g->clouds[0]);
+    player_events.emplace_back(0, 4, 3.4, &g->clouds[0]);
+    player_events.emplace_back(1, 4, 7.5, &g->clouds[0]);
     player_events.emplace_back(0, 1, 2.0, &g->clouds[1]);
     player_events.emplace_back(1, 1, 3.0, &g->clouds[1]);
     player_events.emplace_back(0, 2, 6.0, &g->clouds[1]);
     player_events.emplace_back(1, 2, 6.4, &g->clouds[1]);
     player_events.emplace_back(0, 3, 9.2, &g->clouds[1]);
     player_events.emplace_back(1, 3, 9.9, &g->clouds[1]);
+    player_events.emplace_back(0, 5, 5.1, &g->clouds[2]);
+    player_events.emplace_back(1, 5, 6.4, &g->clouds[2]);
+    player_events.emplace_back(0, 6, 8.2, &g->clouds[2]);
+    player_events.emplace_back(1, 6, 9.5, &g->clouds[2]);
     choc::sorting::stable_sort(player_events.begin(), player_events.end());
     int player_event_index = 0;
     events_t events;
@@ -144,6 +186,7 @@ inline int test_nephos_render()
         {
             if (ev->opcode == 0)
             {
+                std::cout << "starting cloud with " << ev->cloud->events.size() << " evemts\n";
                 for (auto &player : g->cloudPlayers)
                 {
                     if (!player.active)
