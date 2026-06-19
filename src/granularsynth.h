@@ -1,10 +1,12 @@
 #pragma once
+#include <cstdint>
 #include <initializer_list>
 #include <mutex>
 #include <unordered_map>
 #include <vector>
 #include <span>
 // #include "sst/basic-blocks/dsp/CorrelatedNoise.h"
+#include "clap/id.h"
 #include "sst/basic-blocks/dsp/EllipticBlepOscillators.h"
 #include <variant>
 #include "../Common/xen_ambisonics.h"
@@ -1223,6 +1225,48 @@ inline double calculate_inverse(double y, double a, double b, double d)
     return pow(val, 1.0 / d);
 }
 
+struct CloudEvent
+{
+    double time_position = 0.0;
+    struct ParamChange
+    {
+        uint32_t id = CLAP_INVALID_ID;
+        float value = 0.0f;
+    };
+    static constexpr size_t max_param_changes = 16;
+    std::array<ParamChange, max_param_changes> param_modulations;
+    bool operator<(const CloudEvent &other) const { return time_position < other.time_position; }
+};
+
+struct Cloud
+{
+    Cloud() { events.reserve(128); }
+    double time_position = 0.0;
+    double duration = 0.0;
+    bool looping = false;
+    std::vector<CloudEvent> events;
+};
+
+struct CloudPlayer
+{
+    Cloud *cloud = nullptr;
+    bool active = false;
+    int event_index = -1;
+    double start_time = 0.0;
+    int id = -1;
+    void start(double time, int idarg, Cloud *c)
+    {
+        cloud = c;
+        if (cloud->events.size() == 0)
+            return;
+        id = idarg;
+        start_time = time;
+        std::cout << "starting cloud " << (void *)c << "\n";
+        active = true;
+        event_index = 0;
+    }
+};
+
 class ToneGranulator
 {
   public:
@@ -1233,6 +1277,8 @@ class ToneGranulator
     std::vector<std::unique_ptr<GranulatorVoice>> voices;
     events_t events;
     events_t scheduledGrains;
+    std::vector<Cloud> clouds;
+    std::array<CloudPlayer, 8> cloudPlayers;
     alignas(16) int scheduledIndex = 0;
     int evindex = 0;
     int playposframes = 0;
@@ -2300,6 +2346,71 @@ class ToneGranulator
                 graingen_phase -= 1.0;
         }
     }
+    void advanceCloudPlayers()
+    {
+        int i = 0;
+        for (auto &p : cloudPlayers)
+        {
+            if (p.active)
+            {
+                CloudEvent *ev = nullptr;
+                if (p.event_index < p.cloud->events.size())
+                    ev = &p.cloud->events[p.event_index];
+                while (ev && std::floor((ev->time_position + p.start_time) * m_sr) <
+                                 playposframes + granul_block_size)
+                {
+                    // std::cout << playposframes << " cloud player " << i
+                    //           << " wants to start event with timepos " << ev->time_position <<
+                    //           "\n";
+                    bool wasfound = false;
+                    for (int j = 0; j < voices.size(); ++j)
+                    {
+                        if (!voices[j]->active)
+                        {
+                            // std::print("starting voice {} for event {}\n", j, evindex);
+                            voices[j]->grainid = graincount;
+                            GrainEvent gev{0.0, 0.1, 0.0, 1.0};
+                            for (auto &pc : ev->param_modulations)
+                            {
+                                if (pc.id == CLAP_INVALID_ID)
+                                    break;
+                                if (pc.id == PAR_PITCH)
+                                    gev.pitch_semitones = pc.value;
+                                else if (pc.id == PAR_DURATION)
+                                    gev.duration = pc.value;
+                                else if (pc.id == PAR_GRAINVOLUME)
+                                    gev.volume = pc.value;
+                                else if (pc.id == PAR_OSCTYPE)
+                                    gev.generator_type = pc.value;
+                                else if (pc.id == PAR_AZIMUTH)
+                                    gev.azimuth = pc.value;
+                            }
+                            voices[j]->start(gev);
+                            wasfound = true;
+                            // std::cout << "grain " << graincount << " started on voice " << j
+                            //           << "\n";
+                            ++graincount;
+                            break;
+                        }
+                    }
+                    if (!wasfound)
+                    {
+                        ++missedgrains;
+                    }
+                    ++p.event_index;
+                    if (p.event_index >= p.cloud->events.size())
+                    {
+                        ev = nullptr;
+                        p.active = false;
+                        std::cout << playposframes << " cloudplayer " << i << " reached end\n";
+                    }
+                    else
+                        ev = &p.cloud->events[p.event_index];
+                }
+            }
+            ++i;
+        }
+    }
     void advanceFullEventList()
     {
         GrainEvent *ev = nullptr;
@@ -2499,7 +2610,8 @@ class ToneGranulator
 
         if (!self_generate)
         {
-            advanceFullEventList();
+            advanceCloudPlayers();
+            // advanceFullEventList();
         }
         else
         {
