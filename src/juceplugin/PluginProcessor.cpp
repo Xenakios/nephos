@@ -16,7 +16,7 @@ void AudioPluginAudioProcessor::init_clouds(ToneGranulator &g)
     {
         Cloud c;
         double t = 0.0;
-        while (t < 10.0)
+        while (t < 1.0)
         {
             CloudEvent e;
             e.time_position = t;

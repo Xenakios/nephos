@@ -2458,7 +2458,7 @@ class ToneGranulator
                             if (gatherGrainVisData)
                             {
                                 GrainVisualizerMessage vmsg;
-                                vmsg.timepos = playposframes/m_sr;
+                                vmsg.timepos = playposframes / m_sr;
                                 vmsg.pitch = voices[j]->pitch_base;
                                 vmsg.duration = voices[j]->grain_end_phase / m_sr;
                                 vmsg.gain = voices[j]->graingain;
@@ -2488,6 +2488,12 @@ class ToneGranulator
                     }
                     else
                         ev = &p.cloud->events[p.event_index];
+                }
+                if (p.event_index >= p.cloud->events.size())
+                {
+                    p.event_index = 0;
+                    p.active = true;
+                    p.start_time = playposframes / m_sr;
                 }
             }
             ++i;
