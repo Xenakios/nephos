@@ -2418,6 +2418,11 @@ class ToneGranulator
                                 GranulatorModConfig::TargetIdentifier{PAR_AZIMUTH});
                             gev.generator_type = modmatrix.m.getTargetValue(
                                 GranulatorModConfig::TargetIdentifier{PAR_OSCTYPE});
+                            float syncsemitones = modmatrix.m.getTargetValue(
+                                GranulatorModConfig::TargetIdentifier{PAR_OSC_SYNC});
+                            gev.sync_ratio = std::pow(2.0, syncsemitones / 12.0);
+                            gev.pulse_width = modmatrix.m.getTargetValue(
+                                GranulatorModConfig::TargetIdentifier{PAR_OSC_PW});
                             for (auto &pc : ev->param_modulations)
                             {
                                 if (pc.id == CLAP_INVALID_ID)

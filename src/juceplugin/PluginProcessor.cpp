@@ -46,7 +46,7 @@ void AudioPluginAudioProcessor::init_clouds(ToneGranulator &g)
                 e.param_modulations[0] = {ToneGranulator::PAR_PITCH,
                                           rng.nextFloatInRange(pitchlo, pitchhi)};
                 c.events.push_back(e);
-                t += 1.0 / 64;
+                t += -std::log(rng.nextFloat()) * (1.0 / 32.0);
             }
             g.clouds.push_back(c);
         }
