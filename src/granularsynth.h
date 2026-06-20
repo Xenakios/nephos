@@ -2412,8 +2412,12 @@ class ToneGranulator
                             // std::print("starting voice {} for event {}\n", j, evindex);
                             voices[j]->grainid = graincount;
                             GrainEvent gev{0.0, 0.1, 0.0, 1.0};
+                            gev.duration = modmatrix.m.getTargetValue(
+                                GranulatorModConfig::TargetIdentifier{PAR_DURATION});
                             gev.azimuth = modmatrix.m.getTargetValue(
                                 GranulatorModConfig::TargetIdentifier{PAR_AZIMUTH});
+                            gev.generator_type = modmatrix.m.getTargetValue(
+                                GranulatorModConfig::TargetIdentifier{PAR_OSCTYPE});
                             for (auto &pc : ev->param_modulations)
                             {
                                 if (pc.id == CLAP_INVALID_ID)
@@ -2491,9 +2495,9 @@ class ToneGranulator
                 }
                 if (p.event_index >= p.cloud->events.size())
                 {
-                    p.event_index = 0;
-                    p.active = true;
-                    p.start_time = playposframes / m_sr;
+                    // p.event_index = 0;
+                    // p.active = true;
+                    // p.start_time = playposframes / m_sr;
                 }
             }
             ++i;

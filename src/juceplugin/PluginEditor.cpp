@@ -1,6 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include "containers/choc_Value.h"
+#include "juce_audio_utils/juce_audio_utils.h"
 #include "juce_core/juce_core.h"
 #include "juce_events/juce_events.h"
 #include "juce_graphics/juce_graphics.h"
@@ -162,7 +163,8 @@ void AudioPluginAudioProcessorEditor::resized()
 
 MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
     : processorRef(p), oscModuleComponent(p), timeModuleComponent(p), spatModuleComponent(p),
-      volumeModuleComponent(p), stackModuleComponent(p), mainOutModuleComponent(p)
+      volumeModuleComponent(p), stackModuleComponent(p), mainOutModuleComponent(p),
+      keyboardComponent(p.keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard)
 {
     /*
     addAndMakeVisible(testTree);
@@ -203,6 +205,8 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
         cpu = processorRef.perfMeasurer.getLoadAsProportion();
     };
     init_step_sequencer_js();
+
+    addAndMakeVisible(keyboardComponent);
 
     addAndMakeVisible(oscModuleComponent);
     addAndMakeVisible(spatModuleComponent);
@@ -266,6 +270,7 @@ void MainPageComponent::resized()
                                    spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 125);
 
     stackModuleComponent.setBounds(timeModuleComponent.getRight() + 2, 0, 490, 125);
+    keyboardComponent.setBounds(0, getHeight() - 50, getWidth(), 49);
     // testTree.setBounds(getWidth() - 299, timeModuleComponent.getBottom() + 2, 300, 300);
 }
 

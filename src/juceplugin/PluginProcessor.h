@@ -133,6 +133,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     // but in this case easier to just do it this way
     juce::AudioVisualiserComponent avisComponent;
     juce::AudioBuffer<float> visualizerAudioBuffer;
+    juce::MidiKeyboardState keyboardState;
   private:
     alignas(32) std::vector<float> workBuffer;
     alignas(32) choc::fifo::SingleReaderSingleWriterFIFO<

@@ -345,7 +345,7 @@ class Envelope
         double m_currentTimePos = 0.0;
     };
     // convenience iterator instance for use with Python etc
-    Iterator defaultIterator{*this};
+    //Iterator defaultIterator{*this};
 
   private:
     std::vector<EnvelopePoint> m_points;

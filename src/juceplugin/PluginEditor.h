@@ -2,6 +2,7 @@
 
 #include "PluginProcessor.h"
 #include "containers/choc_Value.h"
+#include "juce_audio_utils/juce_audio_utils.h"
 #include "juce_core/juce_core.h"
 #include "juce_events/juce_events.h"
 #include "juce_graphics/juce_graphics.h"
@@ -567,6 +568,7 @@ class MainPageComponent final : public juce::Component
     std::vector<std::unique_ptr<InsertModuleComponent>> insertComponents;
 
     std::unique_ptr<juce::TextButton> recordButton;
+    juce::MidiKeyboardComponent keyboardComponent;
     // juce::TreeView testTree;
     struct MyTreeItem : public juce::TreeViewItem
     {

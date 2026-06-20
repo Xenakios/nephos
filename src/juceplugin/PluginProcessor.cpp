@@ -6,11 +6,52 @@
 #include "text/choc_JSON.h"
 #include <exception>
 #include <float.h>
+#include "../../Common/xap_breakpoint_envelope.h"
 
 void AudioPluginAudioProcessor::init_clouds(ToneGranulator &g)
 {
     xenakios::Xoroshiro128Plus rng;
-
+    std::array<xenakios::Envelope, 8> lopitchlimits;
+    std::array<xenakios::Envelope, 8> hipitchlimits;
+    // static limits
+    lopitchlimits[0] = xenakios::Envelope{{{0.0, 0.0}}};
+    hipitchlimits[0] = xenakios::Envelope{{{0.0, 1.0}}};
+    lopitchlimits[1] = xenakios::Envelope{{{0.0, 0.0}, {1.0, 1.0}}};
+    hipitchlimits[1] = xenakios::Envelope{{{0.0, 1.0}}};
+    lopitchlimits[2] = xenakios::Envelope{{{0.0, 0.0}}};
+    hipitchlimits[2] = xenakios::Envelope{{{0.0, 1.0}, {1.0, 0.0}}};
+    lopitchlimits[3] = xenakios::Envelope{{{0.0, 0.5}, {1.0, 0.0}}};
+    hipitchlimits[3] = xenakios::Envelope{{{0.0, 0.5}, {1.0, 1.0}}};
+    lopitchlimits[4] = xenakios::Envelope{{{0.0, 0.0}, {1.0, 0.5}}};
+    hipitchlimits[4] = xenakios::Envelope{{{0.0, 1.0}, {1.0, 0.5}}};
+    lopitchlimits[5] = xenakios::Envelope{{{0.0, 0.5}, {0.5, 0.0}, {1.0, 0.5}}};
+    hipitchlimits[5] = xenakios::Envelope{{{0.0, 0.5}, {0.5, 1.0}, {1.0, 0.5}}};
+    lopitchlimits[6] = xenakios::Envelope{{{0.0, 0.0}, {0.5, 0.5}, {1.0, 0.0}}};
+    hipitchlimits[6] = xenakios::Envelope{{{0.0, 1.0}, {0.5, 0.5}, {1.0, 1.0}}};
+    lopitchlimits[7] = xenakios::Envelope{{{0.0, 0.0}}};
+    hipitchlimits[7] = xenakios::Envelope{{{0.0, 1.0}, {0.5, 0.0}, {1.0, 1.0}}};
+    {
+        for (int i = 0; i < 8; ++i)
+        {
+            Cloud c;
+            double clouddur = 4.0;
+            double t = 0.0;
+            while (t < clouddur)
+            {
+                double envtimepos = 1.0 / clouddur * t;
+                CloudEvent e;
+                e.time_position = t;
+                double pitchlo = -24.0 + 48.0 * lopitchlimits[i].getValueAtPosition(envtimepos);
+                double pitchhi = -24.0 + 48.0 * hipitchlimits[i].getValueAtPosition(envtimepos);
+                e.param_modulations[0] = {ToneGranulator::PAR_PITCH,
+                                          rng.nextFloatInRange(pitchlo, pitchhi)};
+                c.events.push_back(e);
+                t += 1.0 / 64;
+            }
+            g.clouds.push_back(c);
+        }
+    }
+    return;
     std::vector<float> rates{0.5f, 0.25f, 0.125f, 0.05f, 0.025f};
     for (auto &r : rates)
     {
@@ -448,7 +489,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
 
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
-
+    keyboardState.processNextMidiBuffer(midiMessages, 0, buffer.getNumSamples(), true);
     for (const auto mm : midiMessages)
     {
         const auto msg = mm.getMessage();
