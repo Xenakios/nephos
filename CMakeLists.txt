@@ -16,6 +16,7 @@ include_directories(
     libs/clap-helpers/include
     libs/choc/choc
     libs/sst-basic-blocks/include
+    libs/sst-cpputils/include
     libs/fmt/include
     libs/sst-filters/include
     # libs/sst-effects/include

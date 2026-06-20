@@ -2418,9 +2418,9 @@ class ToneGranulator
                                 GranulatorModConfig::TargetIdentifier{PAR_AZIMUTH});
                             gev.generator_type = modmatrix.m.getTargetValue(
                                 GranulatorModConfig::TargetIdentifier{PAR_OSCTYPE});
-                            float syncsemitones = modmatrix.m.getTargetValue(
+                            float syncoctaves = modmatrix.m.getTargetValue(
                                 GranulatorModConfig::TargetIdentifier{PAR_OSC_SYNC});
-                            gev.sync_ratio = std::pow(2.0, syncsemitones / 12.0);
+                            gev.sync_ratio = std::pow(2.0, syncoctaves);
                             gev.pulse_width = modmatrix.m.getTargetValue(
                                 GranulatorModConfig::TargetIdentifier{PAR_OSC_PW});
                             for (auto &pc : ev->param_modulations)
@@ -2686,7 +2686,7 @@ class ToneGranulator
         float taillen = *idtoparvalptr[PAR_GRAINTAIL];
         taillen = 0.002 + 0.998 * std::pow(taillen, 3.0);
         handleStepSequencerMessages();
-        bool self_generate = false;
+        bool self_generate = true;
         // if (events.size() == 0)
         //     self_generate = true;
         //  bool doambcoeffsnormalization = *idtoparvalptr[PAR_AMBUSENORMALIZATION];
