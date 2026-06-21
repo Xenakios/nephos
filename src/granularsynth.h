@@ -99,7 +99,8 @@ struct GranulatorModConfig
         CURVE_PEAKING5,
         CURVE_PEAKING6,
         CURVE_ABS,
-        CURVE_POPCORN
+        CURVE_POPCORN,
+        CURVE_BUTTERFLY
     };
     static float peaking_curve(float x, float y)
     {
@@ -218,11 +219,53 @@ struct GranulatorModConfig
             return [](auto x) { return peaking_curve(x, 4.0f); };
         case CURVE_POPCORN:
             return [](auto x) { return std::floor(std::tanh(x * 5.0) * 10.0) / 10.0; };
-        }
+        case CURVE_BUTTERFLY:
+            return [](auto x) {
+                if (x != 0.0f)
+                    return std::sin(x * 10.0f) * std::cos(1.0f / x + 0.001f);
+                return 0.0f;
+            };
+        };
 
         return [](auto x) { return x; };
     }
-
+    struct CurveMetadata
+    {
+        int id = 0;
+        std::string groupname;
+        std::string name;
+    };
+    static std::vector<CurveMetadata> get_curve_metadata()
+    {
+        std::vector<CurveMetadata> result;
+        result.emplace_back(CURVE_LINEAR, "", "-Linear-");
+        result.emplace_back(CURVE_ABS, "UTILITY", "Absolute value");
+        result.emplace_back(CURVE_BIPOLARTOUNIPOLAR, "UTILITY", "Bipolar to Unipolar");
+        result.emplace_back(CURVE_UNIPOLARTOBIPOLAR, "UTILITY", "Unipolar to Bipolar");
+        result.emplace_back(CURVE_SQUARE, "POWER", "x^2");
+        result.emplace_back(CURVE_CUBE, "POWER", "x^3");
+        result.emplace_back(CURVE_TOPOWER16, "POWER", "x^16");
+        for (int i = 0; i < 16; ++i)
+        {
+            int actnumsteps = i + 2;
+            result.emplace_back(CURVE_STEPS1 + i, "STEPS", fmt::format("{} Steps", actnumsteps));
+        }
+        for (int i = 0; i < 4; ++i)
+        {
+            result.emplace_back(CURVE_XOR1 + i, "XOR", fmt::format("XOR {}", i + 1));
+        }
+        for (int i = 0; i < 4; ++i)
+        {
+            result.emplace_back(CURVE_PEAKING1 + i, "PEAKING", fmt::format("Peaking {}", i + 1));
+        }
+        result.emplace_back(CURVE_HARMONICSERIES3OCTAVES, "HARMONIC SERIES", "3 Octaves");
+        result.emplace_back(CURVE_HARMONICSERIES4OCTAVES, "HARMONIC SERIES", "4 Octaves");
+        result.emplace_back(CURVE_HARMONICSERIES5OCTAVES, "HARMONIC SERIES", "5 Octaves");
+        result.emplace_back(CURVE_BITMIRROR, "STRANGE", "Bit Mirror");
+        result.emplace_back(CURVE_POPCORN, "STRANGE", "Popcorn");
+        result.emplace_back(CURVE_BUTTERFLY, "STRANGE", "Butterfly");
+        return result;
+    }
     static constexpr bool IsFixedMatrix{true};
     static constexpr size_t FixedMatrixSize{16};
     static constexpr bool ProvidesNonZeroTargetBases{true};

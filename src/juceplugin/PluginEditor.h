@@ -330,6 +330,38 @@ struct StepSeqComponent : public juce::Component
 
 struct ModulationRowComponent : public juce::Component
 {
+    void fillDropWithCurves(DropDownComponent &drop, std::string roottext)
+    {
+        auto curves = GranulatorModConfig::get_curve_metadata();
+        drop.rootNode.text = roottext;
+        std::map<std::string, DropDownComponent::Node *> nodemap;
+        drop.rootNode.children.reserve(16);
+        for (int i = 0; i < curves.size(); ++i)
+        {
+            auto &md = curves[i];
+            if (!md.groupname.empty())
+            {
+                if (nodemap.count(md.groupname) == 0)
+                {
+                    drop.rootNode.children.push_back({md.groupname, -1});
+                    nodemap[md.groupname] = &drop.rootNode.children.back();
+                }
+            }
+        }
+        for (int i = 0; i < curves.size(); ++i)
+        {
+            auto &md = curves[i];
+            if (md.groupname.empty())
+            {
+                drop.rootNode.children.push_back({md.name, (int)md.id});
+            }
+            else
+            {
+                nodemap[md.groupname]->children.push_back({md.name, (int)md.id});
+            }
+        }
+        drop.setSelectedId(0);
+    }
     void fillDropWithSources(DropDownComponent &drop, std::string roottext)
     {
         drop.rootNode.text = roottext;
@@ -395,8 +427,11 @@ struct ModulationRowComponent : public juce::Component
         };
 
         addAndMakeVisible(curveDrop);
+        
         using mcf = GranulatorModConfig;
-
+        fillDropWithCurves(curveDrop, "Curve");
+        curveDrop.OnItemSelected = updatfunc;
+        /*
         curveDrop.rootNode.text = "Curve";
         curveDrop.rootNode.children.push_back(Node{"Linear", GranulatorModConfig::CURVE_LINEAR});
         curveDrop.rootNode.children.push_back(
@@ -441,9 +476,11 @@ struct ModulationRowComponent : public juce::Component
         curveDrop.rootNode.children.push_back(
             Node{"BIT MIRROR", GranulatorModConfig::CURVE_BITMIRROR});
         curveDrop.rootNode.children.push_back(Node{"POPCORN", GranulatorModConfig::CURVE_POPCORN});
+        curveDrop.rootNode.children.push_back(Node{"BUTTERFLY",
+        GranulatorModConfig::CURVE_BUTTERFLY});
         curveDrop.setSelectedId(GranulatorModConfig::CURVE_LINEAR);
         curveDrop.OnItemSelected = updatfunc;
-
+        */
         addAndMakeVisible(destDrop);
         initDestinationDrop();
         destDrop.setSelectedId(1);
