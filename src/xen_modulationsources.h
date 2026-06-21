@@ -1,9 +1,12 @@
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <vector>
+#include <array>
 #include <string>
 #include "../Common/xap_utils.h"
+#include "sst/basic-blocks/params/ParamMetadata.h"
 
 class MidiNoteModSource
 {
@@ -216,3 +219,87 @@ class StepModSource
         return result;
     }
 };
+
+struct TriggeredRandomSource
+{
+    xenakios::Xoroshiro128Plus rng;
+    enum Distribution
+    {
+        D_NONE,
+        D_BERNOUILLI,
+        D_HYPCOS,
+        D_CAUCHY,
+        D_ARCSIN
+    };
+    std::array<float, 4> parameter_values = {0.0f};
+    size_t num_params = 0;
+    using PMD = sst::basic_blocks::params::ParamMetaData;
+    std::array<PMD, 4> param_metadatas;
+    Distribution rand_dist = D_NONE;
+    TriggeredRandomSource(uint64_t seed) : rng(seed, 12345)
+    {
+        for (auto &pmd : param_metadatas)
+        {
+            pmd = PMD().withName("NO PARAMETER");
+        }
+        set_distribution(D_BERNOUILLI);
+    }
+    void set_distribution(Distribution d)
+    {
+        if (rand_dist == d)
+            return;
+        rand_dist = d;
+        if (rand_dist == D_BERNOUILLI)
+        {
+            num_params = 1;
+            parameter_values[0] = 0.5f;
+            param_metadatas[0] =
+                PMD().withName("Probability").asFloat().withRange(0.0f, 1.0f).withDefault(0.5);
+        }
+        if (rand_dist == D_HYPCOS || rand_dist == D_CAUCHY)
+        {
+            num_params = 2;
+            parameter_values[0] = 0.0f;
+            parameter_values[1] = 0.1f;
+            param_metadatas[0] = PMD()
+                                     .withName("Center")
+                                     .asFloat()
+                                     .withRange(-1.0f, 1.0f)
+                                     .withDefault(0.0)
+                                     .withLinearScaleFormatting("");
+            param_metadatas[1] = PMD()
+                                     .withName("Spread")
+                                     .asFloat()
+                                     .withRange(0.0f, 1.0f)
+                                     .withDefault(0.1)
+                                     .withLinearScaleFormatting("");
+        }
+    }
+    float next()
+    {
+        float result = 0.0f;
+        if (rand_dist == D_BERNOUILLI)
+        {
+            if (rng.nextFloat() < parameter_values[0])
+                result = -1.0f;
+            else
+                result = 1.0f;
+        }
+        else if (rand_dist == D_HYPCOS)
+        {
+            result = rng.nextHypCos(parameter_values[0], parameter_values[1]);
+            result = std::clamp(result, -1.0f, 1.0f);
+        }
+        else if (rand_dist == D_CAUCHY)
+        {
+            result = rng.nextCauchy(parameter_values[0], parameter_values[1]);
+            result = std::clamp(result, -1.0f, 1.0f);
+        }
+        return result;
+    }
+};
+
+
+
+
+
