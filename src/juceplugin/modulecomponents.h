@@ -236,12 +236,16 @@ class OscTypeComponent : public juce::Component, public juce::Timer
                 juce::PopupMenu menu;
                 for (int i = 0; i < 7; ++i)
                 {
-                    menu.addItem(waveshortnames[i], [this, otype, i]() {
-                        processorRef.granulator.osctypemapping[otype] = i;
-                        repaint();
-                    });
+                    auto dr = std::make_unique<juce::DrawableImage>(waveimages[i]);
+                    menu.addItem(juce::PopupMenu::Item(waveshortnames[i])
+                                     .setImage(std::move(dr))
+                                     .setID(i + 1)
+                                     .setAction([this, otype, i] {
+                                         processorRef.granulator.osctypemapping[otype] = i;
+                                         repaint();
+                                     }));
                 }
-                menu.showMenuAsync({});
+                menu.showMenuAsync(juce::PopupMenu::Options{}.withStandardItemHeight(50));
             }
         }
         repaint();
