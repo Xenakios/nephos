@@ -370,7 +370,7 @@ inline void test_routing(std::vector<std::tuple<int, int, int>> routings)
     {
         for (int j = 0; j < 4; ++j)
         {
-            std::cout << fmt::format("{:3}", matrix[i][j]);
+            // std::cout << fmt::format("{:3}", matrix[i][j]);
         }
         std::cout << "\n";
     }
@@ -609,8 +609,8 @@ int main(int argc, char **argv)
             }
             for (auto &e : routings)
             {
-                std::cout << fmt::format("{} -> {},{}\n", std::get<0>(e), std::get<1>(e),
-                                         std::get<2>(e));
+                //std::cout << fmt::format("{} -> {},{}\n", std::get<0>(e), std::get<1>(e),
+                //                         std::get<2>(e));
             }
         }
         test_routing(routings);
