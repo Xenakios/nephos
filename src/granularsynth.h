@@ -98,7 +98,8 @@ struct GranulatorModConfig
         CURVE_PEAKING4,
         CURVE_PEAKING5,
         CURVE_PEAKING6,
-        CURVE_ABS
+        CURVE_ABS,
+        CURVE_POPCORN
     };
     static float peaking_curve(float x, float y)
     {
@@ -215,6 +216,8 @@ struct GranulatorModConfig
             return [](auto x) { return peaking_curve(x, 3.0f); };
         case CURVE_PEAKING6:
             return [](auto x) { return peaking_curve(x, 4.0f); };
+        case CURVE_POPCORN:
+            return [](auto x) { return std::floor(std::tanh(x * 5.0) * 10.0) / 10.0; };
         }
 
         return [](auto x) { return x; };

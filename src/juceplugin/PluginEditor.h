@@ -440,6 +440,7 @@ struct ModulationRowComponent : public juce::Component
         curveDrop.rootNode.children.emplace_back(stepnode);
         curveDrop.rootNode.children.push_back(
             Node{"BIT MIRROR", GranulatorModConfig::CURVE_BITMIRROR});
+        curveDrop.rootNode.children.push_back(Node{"POPCORN", GranulatorModConfig::CURVE_POPCORN});
         curveDrop.setSelectedId(GranulatorModConfig::CURVE_LINEAR);
         curveDrop.OnItemSelected = updatfunc;
 
