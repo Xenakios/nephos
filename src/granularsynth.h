@@ -1180,6 +1180,8 @@ class ToneGranulator
         STEPS5,
         STEPS6,
         STEPS7,
+        RANDOM0,
+        RANDOM1,
         HOSTPARAMSTART,
         MIDINOTE = HOSTPARAMSTART + 16,
         MIDIVELO,
@@ -1192,6 +1194,8 @@ class ToneGranulator
 
     alignas(32) std::array<float, 8> stepModValues;
     alignas(32) std::array<StepModSource, 8> stepModSources;
+    alignas(32) std::array<float, 8> randomModValues;
+    alignas(32) std::array<TriggeredRandomSource, 2> randomModSources{1001, 1007};
     alignas(32) MidiNoteModSource midiNoteModSource;
     float midiNoteModValue = 0.0f;
     // we can share this between voices as we don't need it stateful, at least for now
@@ -1374,7 +1378,12 @@ class ToneGranulator
         scheduledGrains.reserve(2048);
         for (auto &v : stepModValues)
             v = 0.0f;
-
+        for (auto &v : randomModValues)
+            v = 0.0f;
+        randomModSources[0] = TriggeredRandomSource{1001};
+        randomModSources[1].set_distribution(TriggeredRandomSource::D_CAUCHY);
+        randomModSources[1].parameter_values[1] = 0.01;
+        
         auto initssfunc = [](StepModSource &sms, std::initializer_list<float> values) {
             for (int i = 0; i < values.size(); ++i)
             {
@@ -1784,6 +1793,11 @@ class ToneGranulator
             modSources.emplace_back(fmt::format("StepSeq {}", i + 1), "Step Sequencer",
                                     GranulatorModConfig::SourceIdentifier{STEPS0 + i});
         }
+        for (uint32_t i = 0; i < 2; ++i)
+        {
+            modSources.emplace_back(fmt::format("Random {}", i + 1), "Random",
+                                    GranulatorModConfig::SourceIdentifier{RANDOM0 + i});
+        }
         for (uint32_t i = 0; i < 16; ++i)
         {
             modSources.emplace_back(fmt::format("Host Parameter {}", i + 1), "Host Parameter",
@@ -1963,6 +1977,8 @@ class ToneGranulator
         }
         for (size_t i = 0; i < stepModSources.size(); ++i)
             modSourceValues[STEPS0 + i] = stepModValues[i];
+        for (size_t i = 0; i < randomModSources.size(); ++i)
+            modSourceValues[RANDOM0 + i] = randomModValues[i];
         modSourceValues[MIDINOTE] = midiNoteModValue;
         modmatrix.m.process();
     }
@@ -2094,6 +2110,10 @@ class ToneGranulator
                 for (size_t sm = 0; sm < stepModSources.size(); ++sm)
                 {
                     stepModValues[sm] = stepModSources[sm].next();
+                }
+                for (size_t rm = 0; rm < randomModSources.size(); ++rm)
+                {
+                    randomModValues[rm] = randomModSources[rm].next();
                 }
                 midiNoteModValue = midiNoteModSource.next();
                 scheduledIndex = 0;

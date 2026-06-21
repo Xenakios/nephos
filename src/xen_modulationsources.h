@@ -227,6 +227,7 @@ struct TriggeredRandomSource
     {
         D_NONE,
         D_BERNOUILLI,
+        D_UNIFORM,
         D_HYPCOS,
         D_CAUCHY,
         D_ARCSIN
@@ -256,6 +257,10 @@ struct TriggeredRandomSource
         if (rand_dist == d)
             return;
         rand_dist = d;
+        if (rand_dist == D_UNIFORM)
+        {
+            num_params = 0;
+        }
         if (rand_dist == D_BERNOUILLI)
         {
             num_params = 1;
@@ -293,6 +298,10 @@ struct TriggeredRandomSource
                 result = 1.0f;
             return result;
         }
+        else if (rand_dist == D_UNIFORM)
+        {
+            return -1.0f + 2.0f * rng.nextFloat();
+        }
         else if (rand_dist == D_HYPCOS)
         {
             result = rng.nextHypCos(parameter_values[0], parameter_values[1]);
@@ -302,7 +311,7 @@ struct TriggeredRandomSource
             result = rng.nextCauchy(parameter_values[0], parameter_values[1]);
         }
         if (limit_mode == L_CLIP)
-            result = std::clamp(result,-1.0f,1.0f);
+            result = std::clamp(result, -1.0f, 1.0f);
         return result;
     }
 };
