@@ -403,6 +403,7 @@ struct ModulationRowComponent : public juce::Component
             Node{"UNIPOL TO BIPOL", GranulatorModConfig::CURVE_UNIPOLARTOBIPOLAR});
         curveDrop.rootNode.children.push_back(
             Node{"BIPOL TO UNIPOL", GranulatorModConfig::CURVE_BIPOLARTOUNIPOLAR});
+        curveDrop.rootNode.children.push_back(Node{"ABS", GranulatorModConfig::CURVE_ABS});
         curveDrop.rootNode.children.push_back(Node{"x^2", GranulatorModConfig::CURVE_SQUARE});
         curveDrop.rootNode.children.push_back(Node{"x^3", GranulatorModConfig::CURVE_CUBE});
         curveDrop.rootNode.children.push_back(Node{"x^16", GranulatorModConfig::CURVE_TOPOWER16});

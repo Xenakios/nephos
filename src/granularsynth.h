@@ -98,6 +98,7 @@ struct GranulatorModConfig
         CURVE_PEAKING4,
         CURVE_PEAKING5,
         CURVE_PEAKING6,
+        CURVE_ABS
     };
     static float peaking_curve(float x, float y)
     {
@@ -171,6 +172,8 @@ struct GranulatorModConfig
             return [](auto x) { return std::abs(x) * x; };
         case CURVE_CUBE:
             return [](auto x) { return x * x * x; };
+        case CURVE_ABS:
+            return [](auto x) { return std::abs(x); };
         case CURVE_TOPOWER16:
             return [](auto x) {
                 x = std::clamp(x, -1.0f, 1.0f);
@@ -1382,8 +1385,8 @@ class ToneGranulator
             v = 0.0f;
         randomModSources[0] = TriggeredRandomSource{1001};
         randomModSources[1].set_distribution(TriggeredRandomSource::D_CAUCHY);
-        randomModSources[1].parameter_values[1] = 0.01;
-        
+        randomModSources[1].parameter_values[1] = 0.02;
+
         auto initssfunc = [](StepModSource &sms, std::initializer_list<float> values) {
             for (int i = 0; i < values.size(); ++i)
             {
