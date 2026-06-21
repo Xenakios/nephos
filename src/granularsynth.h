@@ -261,9 +261,14 @@ struct GranulatorModConfig
         result.emplace_back(CURVE_HARMONICSERIES3OCTAVES, "HARMONIC SERIES", "3 Octaves");
         result.emplace_back(CURVE_HARMONICSERIES4OCTAVES, "HARMONIC SERIES", "4 Octaves");
         result.emplace_back(CURVE_HARMONICSERIES5OCTAVES, "HARMONIC SERIES", "5 Octaves");
+        result.emplace_back(CURVE_EXPSIN1, "EXP SINE", "Exp Sine 1");
+        result.emplace_back(CURVE_EXPSIN2, "EXP SINE", "Exp Sine 2");
         result.emplace_back(CURVE_BITMIRROR, "STRANGE", "Bit Mirror");
         result.emplace_back(CURVE_POPCORN, "STRANGE", "Popcorn");
         result.emplace_back(CURVE_BUTTERFLY, "STRANGE", "Butterfly");
+        std::sort(result.begin(), result.end(), [](auto &lhs, auto &rhs) {
+            return lhs.groupname + "/" + lhs.name < rhs.groupname + "/" + rhs.name;
+        });
         return result;
     }
     static constexpr bool IsFixedMatrix{true};

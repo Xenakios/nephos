@@ -431,56 +431,7 @@ struct ModulationRowComponent : public juce::Component
         using mcf = GranulatorModConfig;
         fillDropWithCurves(curveDrop, "Curve");
         curveDrop.OnItemSelected = updatfunc;
-        /*
-        curveDrop.rootNode.text = "Curve";
-        curveDrop.rootNode.children.push_back(Node{"Linear", GranulatorModConfig::CURVE_LINEAR});
-        curveDrop.rootNode.children.push_back(
-            Node{"UNIPOL TO BIPOL", GranulatorModConfig::CURVE_UNIPOLARTOBIPOLAR});
-        curveDrop.rootNode.children.push_back(
-            Node{"BIPOL TO UNIPOL", GranulatorModConfig::CURVE_BIPOLARTOUNIPOLAR});
-        curveDrop.rootNode.children.push_back(Node{"ABS", GranulatorModConfig::CURVE_ABS});
-        curveDrop.rootNode.children.push_back(Node{"x^2", GranulatorModConfig::CURVE_SQUARE});
-        curveDrop.rootNode.children.push_back(Node{"x^3", GranulatorModConfig::CURVE_CUBE});
-        curveDrop.rootNode.children.push_back(Node{"x^16", GranulatorModConfig::CURVE_TOPOWER16});
-
-        curveDrop.rootNode.children.push_back(Node{"EXPSIN 1", GranulatorModConfig::CURVE_EXPSIN1});
-        curveDrop.rootNode.children.push_back(Node{"EXPSIN 2", GranulatorModConfig::CURVE_EXPSIN2});
-        curveDrop.rootNode.children.push_back(
-            Node{"HARMONICS 3 OCTAVES", GranulatorModConfig::CURVE_HARMONICSERIES3OCTAVES});
-        curveDrop.rootNode.children.push_back(
-            Node{"HARMONICS 4 OCTAVES", GranulatorModConfig::CURVE_HARMONICSERIES4OCTAVES});
-        curveDrop.rootNode.children.push_back(
-            Node{"HARMONICS 5 OCTAVES", GranulatorModConfig::CURVE_HARMONICSERIES5OCTAVES});
-        Node peakingnode{"PEAKING"};
-        for (int i = 0; i < 4; ++i)
-        {
-            peakingnode.children.push_back(
-                Node{fmt::format("PEAKING {}", i + 1), GranulatorModConfig::CURVE_PEAKING1 + i});
-        }
-        curveDrop.rootNode.children.emplace_back(peakingnode);
-        Node xornode{"XOR"};
-        for (int i = 0; i < 4; ++i)
-        {
-            xornode.children.push_back(
-                Node{fmt::format("XOR {}", i + 1), GranulatorModConfig::CURVE_XOR1 + i});
-        }
-        curveDrop.rootNode.children.emplace_back(xornode);
-        Node stepnode{"STEPS"};
-        for (int i = 0; i < 16; ++i)
-        {
-            int actnumsteps = i + 2;
-            stepnode.children.push_back(
-                Node{fmt::format("{} STEPS", actnumsteps), GranulatorModConfig::CURVE_STEPS1 + i});
-        }
-        curveDrop.rootNode.children.emplace_back(stepnode);
-        curveDrop.rootNode.children.push_back(
-            Node{"BIT MIRROR", GranulatorModConfig::CURVE_BITMIRROR});
-        curveDrop.rootNode.children.push_back(Node{"POPCORN", GranulatorModConfig::CURVE_POPCORN});
-        curveDrop.rootNode.children.push_back(Node{"BUTTERFLY",
-        GranulatorModConfig::CURVE_BUTTERFLY});
-        curveDrop.setSelectedId(GranulatorModConfig::CURVE_LINEAR);
-        curveDrop.OnItemSelected = updatfunc;
-        */
+        
         addAndMakeVisible(destDrop);
         initDestinationDrop();
         destDrop.setSelectedId(1);
