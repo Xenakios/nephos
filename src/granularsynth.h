@@ -1998,7 +1998,8 @@ class ToneGranulator
                 float elevation = modmatrix.m.getTargetValue(
                     GranulatorModConfig::TargetIdentifier{PAR_ELEVATION});
                 genev.generator_type =
-                    modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_OSCTYPE});
+                    std::round(0.1f + modmatrix.m.getTargetValue(
+                                          GranulatorModConfig::TargetIdentifier{PAR_OSCTYPE}));
                 float fm_pitch =
                     modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_FMPITCH});
                 genev.fm_frequency_hz = 440.0 * std::pow(2.0, 1.0 / 12 * (fm_pitch - 9.0));

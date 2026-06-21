@@ -231,11 +231,18 @@ struct TriggeredRandomSource
         D_CAUCHY,
         D_ARCSIN
     };
+    enum Limiting
+    {
+        L_CLIP,
+        L_FOLD,
+        L_WRAP
+    };
     std::array<float, 4> parameter_values = {0.0f};
     size_t num_params = 0;
     using PMD = sst::basic_blocks::params::ParamMetaData;
     std::array<PMD, 4> param_metadatas;
     Distribution rand_dist = D_NONE;
+    Limiting limit_mode = L_CLIP;
     TriggeredRandomSource(uint64_t seed) : rng(seed, 12345)
     {
         for (auto &pmd : param_metadatas)
@@ -284,22 +291,18 @@ struct TriggeredRandomSource
                 result = -1.0f;
             else
                 result = 1.0f;
+            return result;
         }
         else if (rand_dist == D_HYPCOS)
         {
             result = rng.nextHypCos(parameter_values[0], parameter_values[1]);
-            result = std::clamp(result, -1.0f, 1.0f);
         }
         else if (rand_dist == D_CAUCHY)
         {
             result = rng.nextCauchy(parameter_values[0], parameter_values[1]);
-            result = std::clamp(result, -1.0f, 1.0f);
         }
+        if (limit_mode == L_CLIP)
+            result = std::clamp(result,-1.0f,1.0f);
         return result;
     }
 };
-
-
-
-
-
