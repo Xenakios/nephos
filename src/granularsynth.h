@@ -1553,9 +1553,10 @@ class ToneGranulator
                                    .withGroupName("Main output")
                                    .withID(PAR_MAINVOLUME));
         parmetadatas.push_back(pmd()
-                                   .withRange(-48.0, 0.0)
-                                   .withDefault(-48.0)
-                                   .withLinearScaleFormatting("")
+                                   .withType(pmd::FLOAT)
+                                   .withRange(-48, 0)
+                                   .withDefault(-48)
+                                   .withSemitoneZeroAt440Formatting()
                                    .withName("Main Highpass Cutoff")
                                    .withFlags(CLAP_PARAM_IS_MODULATABLE)
                                    .withGroupName("Main output")
