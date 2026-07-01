@@ -414,21 +414,28 @@ class MainOutputModule : public juce::GroupComponent
   public:
     AudioPluginAudioProcessor &processorRef;
     XapSlider mainVolumeKnob;
+    XapSlider highPassCutoffKnob;
     PerformanceComponent perfComponent;
     MainOutputModule(AudioPluginAudioProcessor &p)
         : juce::GroupComponent("", "Main Output"), processorRef(p),
           mainVolumeKnob(XapSlider::SS_Knob,
-                         *p.granulator.idtoparmetadata[ToneGranulator::PAR_MAINVOLUME])
+                         *p.granulator.idtoparmetadata[ToneGranulator::PAR_MAINVOLUME]),
+          highPassCutoffKnob(
+              XapSlider::SS_Knob,
+              *p.granulator.idtoparmetadata[ToneGranulator::PAR_MASTERHIGHPASSCUTOFF])
     {
         initSlider(p, *this, mainVolumeKnob);
+        initSlider(p, *this, highPassCutoffKnob);
         addAndMakeVisible(perfComponent);
+        addAndMakeVisible(highPassCutoffKnob);
         addAndMakeVisible(p.avisComponent);
     }
     void resized() override
     {
         mainVolumeKnob.setBounds(7, 17, 100, getHeight() - 25);
-        perfComponent.setBounds(mainVolumeKnob.getRight() + 2, 17, getWidth() - 115, 21);
-        processorRef.avisComponent.setBounds(mainVolumeKnob.getRight() + 2,
+        highPassCutoffKnob.setBounds(mainVolumeKnob.getRight() + 2, 17, 100, getHeight() - 25);
+        perfComponent.setBounds(highPassCutoffKnob.getRight() + 2, 17, getWidth() - 115, 21);
+        processorRef.avisComponent.setBounds(highPassCutoffKnob.getRight() + 2,
                                              perfComponent.getBottom() + 1, getWidth() - 115,
                                              getHeight() - 25 - 21);
     }

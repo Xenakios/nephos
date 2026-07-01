@@ -11,6 +11,9 @@
 #include <variant>
 #include "../Common/xen_ambisonics.h"
 #include "../Common/xap_utils.h"
+#include "sst/filters++/api.h"
+#include "sst/filters++/enums.h"
+#include "sst/filters++/model_config.h"
 #include "xen_modulationsources.h"
 #include "grainoscillators.h"
 #include "grainfx.h"
@@ -32,6 +35,74 @@ inline constexpr uint8_t maxAmbiSonicOrder = 7;
 inline constexpr int ambisonicOrderNumChannels(int order) { return (order + 1) * (order + 1); }
 
 template <typename T> inline int sgn(T val) { return (T(0) < val) - (val < T(0)); }
+
+struct FilterBank
+{
+    // sst filter can do 4 channels, so 16 for up to 64 channels of processing
+    std::array<sst::filtersplusplus::Filter, 16> filters;
+    size_t numactivechannels = 0;
+    void prepare(double samplerate)
+    {
+        for (auto &f : filters)
+        {
+            f.setFilterModel(sst::filtersplusplus::FilterModel::CytomicSVF);
+            f.setModelConfiguration(
+                sst::filtersplusplus::ModelConfig{sst::filtersplusplus::Passband::HP});
+            f.setQuad();
+            f.setSampleRateAndBlockSize(samplerate, granul_block_size);
+            if (!f.prepareInstance())
+            {
+                assert(false);
+            }
+        }
+    }
+    void set_cutoff(float semitones)
+    {
+        assert(numactivechannels > 0);
+        for (size_t i = 0; i < numactivechannels / 4; ++i)
+        {
+            filters[i].makeCoefficients(0, semitones, 0.0f);
+            filters[i].copyCoefficientsFromVoiceToVoice(0, 1);
+            filters[i].copyCoefficientsFromVoiceToVoice(0, 2);
+            filters[i].copyCoefficientsFromVoiceToVoice(0, 3);
+        }
+    }
+    void process(std::span<float> buffer)
+    {
+        assert(numactivechannels > 0);
+        for (size_t i = 0; i < numactivechannels / 4; ++i)
+        {
+            filters[i].prepareBlock();
+        }
+        alignas(16) float insamples[4];
+        alignas(16) float outsamples[4];
+        for (size_t sample = 0; sample < granul_block_size; ++sample)
+        {
+            for (size_t i = 0; i < numactivechannels; i += 4)
+            {
+                for (int j = 0; j < 4; ++j)
+                {
+                    int chan = i + j;
+                    insamples[j] = buffer[sample * numactivechannels + chan];
+                }
+                filters[i].processQuadSample(insamples, outsamples);
+                for (int j = 0; j < 4; ++j)
+                {
+                    int chan = i + j;
+                    buffer[sample * numactivechannels + chan] = outsamples[j];
+                }
+                // for (int chan = 0; chan < num_out_chans; ++chan)
+                //{
+                //     outputbuffer[k * num_out_chans + chan] = mixsum[k][chan] * gain;
+                // }
+            }
+        }
+        for (size_t i = 0; i < numactivechannels / 4; ++i)
+        {
+            filters[i].concludeBlock();
+        }
+    }
+};
 
 struct GranulatorModConfig
 {
@@ -1137,6 +1208,7 @@ class ToneGranulator
     alignas(16) sst::basic_blocks::dsp::OnePoleLag<float, true> gainlag;
     alignas(16) xenakios::Xoroshiro128Plus rng;
     alignas(32) GranulatorModMatrix modmatrix;
+    alignas(16) FilterBank masterHighPassFilter;
     std::atomic<float> compensationgainforgui{0.0f};
     using pmd = sst::basic_blocks::params::ParamMetaData;
     std::vector<pmd> parmetadatas;
@@ -1208,6 +1280,7 @@ class ToneGranulator
         PAR_VOLENVEASINGEND = 2900,
         PAR_AUXENVTOPITCHAMT = 3000,
         PAR_AUXENVTIMEWARP = 3050,
+        PAR_MASTERHIGHPASSCUTOFF = 3100,
         PAR_LFORATES = 100000,
         PAR_LFODEFORMS = 100100,
         PAR_LFOSHIFTS = 100200,
@@ -1482,6 +1555,14 @@ class ToneGranulator
                                    .withFlags(CLAP_PARAM_IS_MODULATABLE)
                                    .withGroupName("Main output")
                                    .withID(PAR_MAINVOLUME));
+        parmetadatas.push_back(pmd()
+                                   .withRange(-48.0, 0.0)
+                                   .withDefault(-48.0)
+                                   .withLinearScaleFormatting("")
+                                   .withName("Main Highpass Cutoff")
+                                   .withFlags(CLAP_PARAM_IS_MODULATABLE)
+                                   .withGroupName("Main output")
+                                   .withID(PAR_MASTERHIGHPASSCUTOFF));
         parmetadatas.push_back(pmd()
                                    .withUnorderedMapFormatting({{0, "Ambisonic 1st Order"},
                                                                 {1, "Ambisonic 2nd Order"},
@@ -1974,6 +2055,7 @@ class ToneGranulator
             graingen_phase_prior = 2.0;
             modmatrix.set_sample_rate(samplerate);
             modmatrix.m.prepare(modmatrix.rt, samplerate, granul_block_size);
+            masterHighPassFilter.prepare(m_sr);
         }
     }
     void set_ambisonics_order(int order)
@@ -1985,6 +2067,20 @@ class ToneGranulator
         fadeForLargeStateChange.start(m_sr, 500.0f, [this]() {
             current_ambisonic_order = pending_ambisonic_order;
             num_out_chans = ambisonicOrderNumChannels(current_ambisonic_order);
+            /*
+            sstfilter.setFilterModel(m.sstmodel);
+            sstfilter.setModelConfiguration(m.sstconfig);
+            sstfilter.setSampleRateAndBlockSize(sr, blockSize);
+            sstfilter.setStereo();
+            sstfilter.provideAllDelayLines(delaylinememory.data());
+            if (!sstfilter.prepareInstance())
+            {
+                // std::print("could not prepare filter {}\n", m.displayname);
+            }
+            */
+
+            masterHighPassFilter.numactivechannels = num_out_chans;
+            masterHighPassFilter.set_cutoff(0.0);
             // std::print(std::cerr, "changed ambisonic order to {}\n", current_ambisonic_order);
             for (auto &vc : voices)
             {
@@ -2579,6 +2675,11 @@ class ToneGranulator
             advanceAutoGeneratedGrains(taillen);
         }
         sum_voices(outputbuffer);
+        if (masterHighPassFilter.numactivechannels > 0)
+        {
+            masterHighPassFilter.set_cutoff(*idtoparvalptr[PAR_MASTERHIGHPASSCUTOFF]);
+            masterHighPassFilter.process(outputbuffer);
+        }
 
         playposframes += granul_block_size;
 
