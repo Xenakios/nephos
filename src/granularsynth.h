@@ -59,6 +59,7 @@ struct FilterBank
     void set_cutoff(float semitones)
     {
         assert(numactivechannels > 0);
+        semitones = std::clamp(semitones, -48.0f, 12.0f);
         for (size_t i = 0; i < numactivechannels / 4; ++i)
         {
             filters[i].makeCoefficients(0, semitones, 0.0f);
@@ -91,10 +92,6 @@ struct FilterBank
                     int chan = i + j;
                     buffer[sample * numactivechannels + chan] = outsamples[j];
                 }
-                // for (int chan = 0; chan < num_out_chans; ++chan)
-                //{
-                //     outputbuffer[k * num_out_chans + chan] = mixsum[k][chan] * gain;
-                // }
             }
         }
         for (size_t i = 0; i < numactivechannels / 4; ++i)
@@ -2067,20 +2064,7 @@ class ToneGranulator
         fadeForLargeStateChange.start(m_sr, 500.0f, [this]() {
             current_ambisonic_order = pending_ambisonic_order;
             num_out_chans = ambisonicOrderNumChannels(current_ambisonic_order);
-            /*
-            sstfilter.setFilterModel(m.sstmodel);
-            sstfilter.setModelConfiguration(m.sstconfig);
-            sstfilter.setSampleRateAndBlockSize(sr, blockSize);
-            sstfilter.setStereo();
-            sstfilter.provideAllDelayLines(delaylinememory.data());
-            if (!sstfilter.prepareInstance())
-            {
-                // std::print("could not prepare filter {}\n", m.displayname);
-            }
-            */
-
             masterHighPassFilter.numactivechannels = num_out_chans;
-            masterHighPassFilter.set_cutoff(0.0);
             // std::print(std::cerr, "changed ambisonic order to {}\n", current_ambisonic_order);
             for (auto &vc : voices)
             {
@@ -2677,7 +2661,8 @@ class ToneGranulator
         sum_voices(outputbuffer);
         if (masterHighPassFilter.numactivechannels > 0)
         {
-            masterHighPassFilter.set_cutoff(*idtoparvalptr[PAR_MASTERHIGHPASSCUTOFF]);
+            masterHighPassFilter.set_cutoff(modmatrix.m.getTargetValue(
+                GranulatorModConfig::TargetIdentifier{PAR_MASTERHIGHPASSCUTOFF}));
             masterHighPassFilter.process(outputbuffer);
         }
 
