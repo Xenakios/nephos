@@ -38,9 +38,20 @@ template <typename T> inline int sgn(T val) { return (T(0) < val) - (val < T(0))
 
 struct FilterBank
 {
+    static constexpr size_t maxfilters = 16;
+    static constexpr size_t maxchannels = 64;
     // sst filter can do 4 channels, so 16 for up to 64 channels of processing
-    std::array<sst::filtersplusplus::Filter, 16> filters;
+    alignas(16) std::array<sst::filtersplusplus::Filter, maxfilters> filters;
     size_t numactivechannels = 0;
+    // which cutoff index is used for each channel
+    alignas(16) std::array<int, maxchannels> cutoffmapping;
+    FilterBank()
+    {
+        for (int i = 0; i < cutoffmapping.size(); ++i)
+        {
+            cutoffmapping[i] = 0;
+        }
+    }
     void prepare(double samplerate)
     {
         for (auto &f : filters)
@@ -53,6 +64,23 @@ struct FilterBank
             if (!f.prepareInstance())
             {
                 assert(false);
+            }
+        }
+    }
+
+    void set_cutoff_mapped(int index, float semitones)
+    {
+        assert(numactivechannels > 0);
+        semitones = std::clamp(semitones, -48.0f, 12.0f);
+        for (size_t i = 0; i < numactivechannels; ++i)
+        {
+            if (cutoffmapping[i] == index)
+            {
+                int filtindex = i / 4;
+                int chanindex = i % 4;
+                // note that this is inefficient if we happen to have duplicated parameter values,
+                // which is likely at least for now...
+                filters[filtindex].makeCoefficients(chanindex, semitones, 0.0f);
             }
         }
     }
@@ -2662,8 +2690,14 @@ class ToneGranulator
         sum_voices(outputbuffer);
         if (masterHighPassFilter.numactivechannels > 0)
         {
-            masterHighPassFilter.set_cutoff(modmatrix.m.getTargetValue(
-                GranulatorModConfig::TargetIdentifier{PAR_MASTERHIGHPASSCUTOFF}));
+            for (int foo = 1; foo < masterHighPassFilter.numactivechannels; ++foo)
+            {
+                // masterHighPassFilter.cutoffmapping[foo] = 1;
+            }
+            // masterHighPassFilter.set_cutoff_mapped(1, -48.0f);
+            masterHighPassFilter.set_cutoff_mapped(
+                0, modmatrix.m.getTargetValue(
+                       GranulatorModConfig::TargetIdentifier{PAR_MASTERHIGHPASSCUTOFF}));
             masterHighPassFilter.process(outputbuffer);
         }
 
