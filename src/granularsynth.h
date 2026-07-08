@@ -344,7 +344,7 @@ struct GranulatorModConfig
         for (int i = 0; i < 16; ++i)
         {
             int actnumsteps = i + 2;
-            result.emplace_back(CURVE_STEPS1 + i, "STEPS", fmt::format("{} Steps", actnumsteps));
+            result.emplace_back(CURVE_STEPS1 + i, "STEPS", fmt::format("{:02d} Steps", actnumsteps));
         }
         for (int i = 0; i < 4; ++i)
         {
@@ -1583,7 +1583,7 @@ class ToneGranulator
         parmetadatas.push_back(pmd()
                                    .withType(pmd::FLOAT)
                                    .withRange(-48, 0)
-                                   .withDefault(-48)
+                                   .withDefault(-36)
                                    .withSemitoneZeroAt440Formatting()
                                    .withName("Main Highpass Cutoff")
                                    .withFlags(CLAP_PARAM_IS_MODULATABLE)
