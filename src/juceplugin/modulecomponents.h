@@ -179,6 +179,39 @@ class OscTypeComponent : public juce::Component, public juce::Timer
         waveimages.push_back(
             drawWaveImage([&dist, &rng](float x) { return std::clamp(dist(rng), 0.0f, 1.0f); }));
         startTimerHz(25);
+        setWantsKeyboardFocus(true);
+    }
+    bool keyPressed(const juce::KeyPress &ev) override
+    {
+        int delta = 0;
+        int otype = -1;
+        if (ev.getKeyCode() == juce::KeyPress::leftKey)
+            delta = -1;
+        if (ev.getKeyCode() == juce::KeyPress::rightKey)
+            delta = 1;
+        if (delta != 0)
+        {
+            otype = *processorRef.granulator.idtoparvalptr[ToneGranulator::PAR_OSCTYPE];
+            otype += delta;
+            if (otype < 0)
+                otype = 6;
+            if (otype > 6)
+                otype = 0;
+        }
+        if (ev.getKeyCode() >= '1' && ev.getKeyCode() < '8')
+        {
+            otype = ev.getKeyCode() - '1';
+            jassert(otype >= 0 && otype < 7);
+        }
+        if (otype >= 0 && otype < 7)
+        {
+            ParameterMessage msg;
+            msg.id = ToneGranulator::PAR_OSCTYPE;
+            msg.value = otype;
+            processorRef.params_from_gui_fifo.push(msg);
+            return true;
+        }
+        return false;
     }
     void timerCallback() override
     {
