@@ -207,7 +207,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                          .withOutput("Output", juce::AudioChannelSet::ambisonic(3), true)),
       avisComponent(2)
 {
-    init_clouds(granulator);
+    // init_clouds(granulator);
     macroBindings.resize(16);
 #ifdef JUCE_MAC
     macroKnobsPath = R"(/Users/teemu/codeprojects/2026/nephos/src/macroknobs.json)";
@@ -534,7 +534,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         {
             granulator.midiNoteModSource.set_sustain(false);
         }
-        bool midinotesaremodulation = false;
+        const bool midinotesaremodulation = true;
         if (midinotesaremodulation)
         {
             if (msg.isNoteOn())
