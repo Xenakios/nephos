@@ -344,7 +344,8 @@ struct GranulatorModConfig
         for (int i = 0; i < 16; ++i)
         {
             int actnumsteps = i + 2;
-            result.emplace_back(CURVE_STEPS1 + i, "STEPS", fmt::format("{:02d} Steps", actnumsteps));
+            result.emplace_back(CURVE_STEPS1 + i, "STEPS",
+                                fmt::format("{:02d} Steps", actnumsteps));
         }
         for (int i = 0; i < 4; ++i)
         {
@@ -1334,6 +1335,8 @@ class ToneGranulator
         STEPS7,
         RANDOM0,
         RANDOM1,
+        RANDOM2,
+        RANDOM3,
         HOSTPARAMSTART,
         MIDINOTE = HOSTPARAMSTART + 16,
         MIDIVELO,
@@ -1347,7 +1350,7 @@ class ToneGranulator
     alignas(32) std::array<float, 8> stepModValues;
     alignas(32) std::array<StepModSource, 8> stepModSources;
     alignas(32) std::array<float, 8> randomModValues;
-    alignas(32) std::array<TriggeredRandomSource, 2> randomModSources{1001, 1007};
+    alignas(32) std::array<TriggeredRandomSource, 4> randomModSources{1001, 1007, 5543, 90001};
     alignas(32) MidiNoteModSource midiNoteModSource;
     float midiNoteModValue = 0.0f;
     // we can share this between voices as we don't need it stateful, at least for now
@@ -1535,7 +1538,8 @@ class ToneGranulator
         randomModSources[0] = TriggeredRandomSource{1001};
         randomModSources[1].set_distribution(TriggeredRandomSource::D_CAUCHY);
         randomModSources[1].parameter_values[1] = 0.02;
-
+        randomModSources[2].set_distribution(TriggeredRandomSource::D_UNIFORM);
+        randomModSources[3].set_distribution(TriggeredRandomSource::D_HYPCOS);
         auto initssfunc = [](StepModSource &sms, std::initializer_list<float> values) {
             for (int i = 0; i < values.size(); ++i)
             {
@@ -1954,7 +1958,7 @@ class ToneGranulator
             modSources.emplace_back(fmt::format("StepSeq {}", i + 1), "Step Sequencer",
                                     GranulatorModConfig::SourceIdentifier{STEPS0 + i});
         }
-        for (uint32_t i = 0; i < 2; ++i)
+        for (uint32_t i = 0; i < 4; ++i)
         {
             modSources.emplace_back(fmt::format("Random {}", i + 1), "Random",
                                     GranulatorModConfig::SourceIdentifier{RANDOM0 + i});
