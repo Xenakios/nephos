@@ -467,9 +467,9 @@ class MainOutputModule : public juce::GroupComponent
     {
         mainVolumeKnob.setBounds(7, 17, 100, getHeight() - 25);
         highPassCutoffKnob.setBounds(mainVolumeKnob.getRight() + 2, 17, 100, getHeight() - 25);
-        perfComponent.setBounds(highPassCutoffKnob.getRight() + 2, 17, getWidth() - 115, 21);
+        perfComponent.setBounds(highPassCutoffKnob.getRight() + 2, 17, getWidth() - 220, 21);
         processorRef.avisComponent.setBounds(highPassCutoffKnob.getRight() + 2,
-                                             perfComponent.getBottom() + 1, getWidth() - 115,
+                                             perfComponent.getBottom() + 1, getWidth() - 220,
                                              getHeight() - 25 - 21);
     }
 };
