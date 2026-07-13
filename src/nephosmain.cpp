@@ -249,7 +249,7 @@ inline void test_colored_noise()
     sst::filters::FastTiltNoiseFilter<Host> tilt_filter{hc};
     alignas(32) float startnoise[16];
     xenakios::Xoroshiro128Plus rng;
-    float noisegain = 1.0;
+    float noisegain = 0.5;
     for (int i = 0; i < 16; ++i)
         startnoise[i] = rng.nextFloatInRange(-noisegain, noisegain);
     tilt_filter.init(startnoise, -0.0f);
@@ -302,7 +302,7 @@ inline void test_colored_noise()
     }
     if (maxsample > 0.0f)
     {
-        choc::buffer::applyGain(diskbuffer, 1.0 / maxsample);
+        // choc::buffer::applyGain(diskbuffer, 1.0 / maxsample);
     }
     writer->appendFrames(diskbuffer.getView());
     std::cout << clipped << " samples clipped, max sample " << maxsample << "\n";
@@ -589,7 +589,8 @@ inline void test_degrade()
 int main(int argc, char **argv)
 {
     // test_degrade();
-    test_nephos_render();
+    // test_nephos_render();
+    test_colored_noise();
     return 0;
     if (argc > 1)
     {

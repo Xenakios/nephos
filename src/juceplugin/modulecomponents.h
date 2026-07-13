@@ -11,6 +11,168 @@
 #include <exception>
 #include <random>
 
+#ifdef CLAUDEGENERATEDRANDOMSOURCEGUI
+/*
+    TriggeredRandomSourceEditor
+    ----------------------------
+    Minimal JUCE editor for TriggeredRandomSource:
+      - a combo box to pick the Distribution
+      - a combo box to pick the Limiting mode
+      - up to 4 sliders, built dynamically from param_metadatas / num_params,
+        rebuilt whenever the distribution changes
+
+    ASSUMPTIONS TO CHECK AGAINST YOUR REAL CODE:
+      1. sst::basic_blocks::params::ParamMetaData is assumed to expose
+         .name / .minVal / .maxVal as readable fields below. That's the
+         common shape in sst-basic-blocks, but rename the accessors in
+         rebuildParameterControls() if yours differ (e.g. pmd.getName()).
+
+      2. THREAD SAFETY: TriggeredRandomSource is not thread-safe as given.
+         rand_dist, limit_mode, num_params and parameter_values are plain
+         fields that next() presumably reads on the audio thread, while
+         this editor writes them from the message thread. In particular,
+         set_distribution() changes num_params *and* param_metadatas
+         together, and next() implicitly assumes parameter_values[0..
+         num_params) all belong to the currently-active rand_dist. If the
+         audio thread reads mid-update you can get a stale/mismatched
+         parameter read for one buffer. For real use, consider either:
+           - building distribution changes on the message thread into a
+             fully-formed struct and swapping it in atomically (e.g. via
+             a small lock-free single-producer queue / double-buffer), or
+           - using std::atomic<float> for parameter_values and gating
+             rand_dist changes through the audio thread itself (GUI posts
+             a "change to X" command, audio thread applies it between
+             blocks).
+         This sketch just writes directly, which is fine to get the GUI
+         wired up and tested off the audio thread, but flagging it before
+         you wire it into a real plugin.
+*/
+
+class TriggeredRandomSourceEditor : public juce::Component,
+                                    private juce::ComboBox::Listener,
+                                    private juce::Slider::Listener
+{
+  public:
+    explicit TriggeredRandomSourceEditor(TriggeredRandomSource &sourceToControl)
+        : source(sourceToControl)
+    {
+        distributionBox.addItem("None", TriggeredRandomSource::D_NONE + 1);
+        distributionBox.addItem("Bernoulli", TriggeredRandomSource::D_BERNOUILLI + 1);
+        distributionBox.addItem("Uniform", TriggeredRandomSource::D_UNIFORM + 1);
+        distributionBox.addItem("Hypcos", TriggeredRandomSource::D_HYPCOS + 1);
+        distributionBox.addItem("Cauchy", TriggeredRandomSource::D_CAUCHY + 1);
+        distributionBox.addItem("Arcsine", TriggeredRandomSource::D_ARCSIN + 1);
+        distributionBox.addListener(this);
+        addAndMakeVisible(distributionBox);
+
+        limitingBox.addItem("Clip", TriggeredRandomSource::L_CLIP + 1);
+        limitingBox.addItem("Fold", TriggeredRandomSource::L_FOLD + 1);
+        limitingBox.addItem("Wrap", TriggeredRandomSource::L_WRAP + 1);
+        limitingBox.addListener(this);
+        addAndMakeVisible(limitingBox);
+
+        for (auto &s : paramSliders)
+        {
+            s.setSliderStyle(juce::Slider::LinearHorizontal);
+            s.setTextBoxStyle(juce::Slider::TextBoxRight, false, 70, 20);
+            s.addListener(this);
+            addAndMakeVisible(s);
+        }
+        for (auto &l : paramLabels)
+        {
+            l.setJustificationType(juce::Justification::centredLeft);
+            addAndMakeVisible(l);
+        }
+
+        // reflect whatever the source is already set to
+        distributionBox.setSelectedId(source.rand_dist + 1, juce::dontSendNotification);
+        limitingBox.setSelectedId(source.limit_mode + 1, juce::dontSendNotification);
+        rebuildParameterControls();
+    }
+
+    void resized() override
+    {
+        auto area = getLocalBounds().reduced(8);
+        auto row = [&](int h) { return area.removeFromTop(h).reduced(0, 2); };
+
+        distributionBox.setBounds(row(24));
+        limitingBox.setBounds(row(24));
+
+        area.removeFromTop(8);
+
+        for (size_t i = 0; i < paramSliders.size(); ++i)
+        {
+            if (!paramSliders[i].isVisible())
+                continue;
+            auto r = row(24);
+            paramLabels[i].setBounds(r.removeFromLeft(80));
+            paramSliders[i].setBounds(r);
+        }
+    }
+
+  private:
+    TriggeredRandomSource &source;
+
+    juce::ComboBox distributionBox;
+    juce::ComboBox limitingBox;
+
+    std::array<juce::Slider, 4> paramSliders;
+    std::array<juce::Label, 4> paramLabels;
+
+    void comboBoxChanged(juce::ComboBox *box) override
+    {
+        if (box == &distributionBox)
+        {
+            auto d = static_cast<TriggeredRandomSource::Distribution>(
+                distributionBox.getSelectedId() - 1);
+            source.set_distribution(d);
+            rebuildParameterControls();
+            resized();
+        }
+        else if (box == &limitingBox)
+        {
+            source.limit_mode =
+                static_cast<TriggeredRandomSource::Limiting>(limitingBox.getSelectedId() - 1);
+        }
+    }
+
+    void sliderValueChanged(juce::Slider *slider) override
+    {
+        for (size_t i = 0; i < paramSliders.size(); ++i)
+        {
+            if (slider == &paramSliders[i])
+            {
+                source.parameter_values[i] = (float)slider->getValue();
+                return;
+            }
+        }
+    }
+
+    // Rebuild the visible sliders/labels to match source.num_params /
+    // source.param_metadatas after a distribution change.
+    void rebuildParameterControls()
+    {
+        for (size_t i = 0; i < paramSliders.size(); ++i)
+        {
+            bool active = i < source.num_params;
+            paramSliders[i].setVisible(active);
+            paramLabels[i].setVisible(active);
+
+            if (!active)
+                continue;
+
+            const auto &pmd = source.param_metadatas[i];
+
+            // --- adjust these three lines to match your real PMD API ---
+            paramLabels[i].setText(pmd.name, juce::dontSendNotification);
+            paramSliders[i].setRange(pmd.minVal, pmd.maxVal, 0.0);
+            paramSliders[i].setValue(source.parameter_values[i], juce::dontSendNotification);
+            // -------------------------------------------------------------
+        }
+    }
+};
+#endif
+
 class VolumeEnvelopeComponent : public juce::Component
 {
   public:

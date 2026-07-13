@@ -505,7 +505,7 @@ struct GrainEvent
     float fm_feedback = 0.0f;
     float noisecorr = 0.0f;
     float noiseimode = 0.0f;
-
+    static constexpr size_t max_grain_mod_slots = 4;
     float modamounts[MD_NUMDESTS] = {0.0f};
     float insertparams[4][10];
 };
