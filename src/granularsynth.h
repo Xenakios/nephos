@@ -464,15 +464,6 @@ class GranulatorModMatrix
 
 struct GrainEvent
 {
-    enum ModDest
-    {
-        MD_FIL0FREQ,
-        MD_FIL0RESO,
-        MD_PITCH,
-        MD_AZI,
-        MD_ELE,
-        MD_NUMDESTS
-    };
     GrainEvent() {};
     GrainEvent(double tpos, float dur, float pitch, float vol)
         : time_position(tpos), duration(dur), pitch_semitones(pitch), volume(vol)
@@ -481,7 +472,7 @@ struct GrainEvent
     }
     void clear_mod_amounts()
     {
-        for (int i = 0; i < MD_NUMDESTS; ++i)
+        for (int i = 0; i < max_grain_mod_slots; ++i)
             modamounts[i] = 0.0f;
     }
     double time_position = 0.0;
@@ -506,7 +497,7 @@ struct GrainEvent
     float noisecorr = 0.0f;
     float noiseimode = 0.0f;
     static constexpr size_t max_grain_mod_slots = 4;
-    float modamounts[MD_NUMDESTS] = {0.0f};
+    float modamounts[max_grain_mod_slots] = {0.0f};
     float insertparams[4][10];
 };
 
@@ -680,7 +671,14 @@ class GranulatorVoice
 
     alignas(32) SimpleEnvelope<true> gain_envelope;
     alignas(32) SimpleEnvelope<false> *aux_envelope = nullptr;
-    alignas(16) float modamounts[GrainEvent::MD_NUMDESTS];
+    struct ModSlot
+    {
+        uint32_t source_id = CLAP_INVALID_ID;
+        float depth = 0.0f;
+        uint32_t target_id = CLAP_INVALID_ID;
+    };
+    alignas(16) ModSlot modulation_slots[GrainEvent::max_grain_mod_slots];
+
     float pitch_base = 0.0f;
     float graingain = 0.0;
     float used_azi0 = 0.0f;
@@ -701,8 +699,8 @@ class GranulatorVoice
     GranulatorVoice()
     {
         std::fill(ambcoeffs.begin(), ambcoeffs.end(), 0.0f);
-        for (int i = 0; i < GrainEvent::MD_NUMDESTS; ++i)
-            modamounts[i] = 0.0f;
+        for (int i = 0; i < GrainEvent::max_grain_mod_slots; ++i)
+            modulation_slots[i] = {0, 0.0f, CLAP_INVALID_ID};
     }
     void set_samplerate(double hz)
     {
@@ -939,8 +937,8 @@ class GranulatorVoice
                 }
             }
         }
-        for (int i = 0; i < GrainEvent::MD_NUMDESTS; ++i)
-            modamounts[i] = evpars.modamounts[i];
+        for (int i = 0; i < GrainEvent::max_grain_mod_slots; ++i)
+            modulation_slots[i].depth = evpars.modamounts[i];
 
         graingain = std::clamp(evpars.volume, 0.0f, 1.0f);
 
@@ -975,7 +973,7 @@ class GranulatorVoice
 
         std::visit(
             [this, aux_env_value](auto &q) {
-                double finalpitch = pitch_base + aux_env_value * modamounts[GrainEvent::MD_PITCH];
+                double finalpitch = pitch_base + aux_env_value * modulation_slots[0].depth;
                 double hz = 440.0 * std::pow(2.0, 1.0 / 12.0 * (finalpitch - 9.0));
                 q.setFrequency(hz);
             },
@@ -983,9 +981,9 @@ class GranulatorVoice
         for (size_t i = 0; i < 2; ++i)
         {
             float cutoffmod = 0.0f;
-            if (i == 0)
-                cutoffmod = modamounts[GrainEvent::MD_FIL0FREQ] * aux_env_value;
-            // filters[i].makeCoefficients(0, cutoffs[i] + cutoffmod, resons[i], filtextpars[i]);
+            // if (i == 0)
+            //     cutoffmod = modamounts[GrainEvent::MD_FIL0FREQ] * aux_env_value;
+            //  filters[i].makeCoefficients(0, cutoffs[i] + cutoffmod, resons[i], filtextpars[i]);
             insert_fx[i].prepareBlock();
         }
         int envpeakpos = envshape * grain_end_phase;
@@ -1304,7 +1302,7 @@ class ToneGranulator
         PAR_STACKTIMECURVE = 2700,
         PAR_VOLENVEASINGSTART = 2800,
         PAR_VOLENVEASINGEND = 2900,
-        PAR_AUXENVTOPITCHAMT = 3000,
+        PAR_GRAINMODSLOTAMOUNT0 = 3000,
         PAR_AUXENVTIMEWARP = 3050,
         PAR_MASTERHIGHPASSCUTOFF = 3100,
         PAR_LFORATES = 100000,
@@ -1702,7 +1700,7 @@ class ToneGranulator
                                    .withLinearScaleFormatting("ST")
                                    .withName("Aux Env To Pitch Amount")
                                    .withGroupName("Oscillator")
-                                   .withID(PAR_AUXENVTOPITCHAMT)
+                                   .withID(PAR_GRAINMODSLOTAMOUNT0)
                                    .withFlags(CLAP_PARAM_IS_MODULATABLE));
         parmetadatas.push_back(pmd()
                                    .withRange(-1.0, 1.0)
@@ -2209,9 +2207,9 @@ class ToneGranulator
                     }
                 }
 
-                genev.modamounts[GrainEvent::MD_PITCH] = modmatrix.m.getTargetValue(
-                    GranulatorModConfig::TargetIdentifier{PAR_AUXENVTOPITCHAMT});
-                auxenvdepthpmodulated = genev.modamounts[GrainEvent::MD_PITCH];
+                genev.modamounts[0] = modmatrix.m.getTargetValue(
+                    GranulatorModConfig::TargetIdentifier{PAR_GRAINMODSLOTAMOUNT0});
+                auxenvdepthpmodulated = genev.modamounts[0];
                 genev.auxenvtimewarp = auxenvwarpmodulated;
 
                 int numToSchedule = std::clamp(*idtoparvalptr[PAR_STACKCOUNT], 1.0f, 16.0f);

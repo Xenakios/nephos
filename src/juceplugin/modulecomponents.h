@@ -469,7 +469,7 @@ class OscillatorModuleComponent : public juce::GroupComponent
           oscPitchKnob(XapSlider::SS_Knob,
                        *p.granulator.idtoparmetadata[ToneGranulator::PAR_PITCH]),
           pitchEnvKnob(XapSlider::SS_Knob,
-                       *p.granulator.idtoparmetadata[ToneGranulator::PAR_AUXENVTOPITCHAMT]),
+                       *p.granulator.idtoparmetadata[ToneGranulator::PAR_GRAINMODSLOTAMOUNT0]),
           pitchEnvWarpKnob(XapSlider::SS_Knob,
                            *p.granulator.idtoparmetadata[ToneGranulator::PAR_AUXENVTIMEWARP]),
           oscSyncKnob(XapSlider::SS_Knob,
