@@ -980,10 +980,12 @@ class GranulatorVoice
             theoscillator);
         for (size_t i = 0; i < 2; ++i)
         {
-            float cutoffmod = 0.0f;
-            // if (i == 0)
-            //     cutoffmod = modamounts[GrainEvent::MD_FIL0FREQ] * aux_env_value;
-            //  filters[i].makeCoefficients(0, cutoffs[i] + cutoffmod, resons[i], filtextpars[i]);
+            if (i == 0 && insert_fx[i].mainmode == GrainInsertFX::GFXSSTFILTER)
+            {
+                float cutoffmod = 0.0f;
+                cutoffmod = modulation_slots[1].depth * aux_env_value * 24.0;
+                insert_fx[i].parammodvalues[0] = cutoffmod;
+            }
             insert_fx[i].prepareBlock();
         }
         int envpeakpos = envshape * grain_end_phase;
@@ -2213,9 +2215,9 @@ class ToneGranulator
                             GranulatorModConfig::TargetIdentifier{insparid});
                     }
                 }
-
-                genev.modamounts[0] = modmatrix.m.getTargetValue(
-                    GranulatorModConfig::TargetIdentifier{PAR_GRAINMODSLOTAMOUNT0});
+                for (int k = 0; k < 4; ++k)
+                    genev.modamounts[k] = modmatrix.m.getTargetValue(
+                        GranulatorModConfig::TargetIdentifier{PAR_GRAINMODSLOTAMOUNT0 + k});
                 auxenvdepthpmodulated = genev.modamounts[0];
                 genev.auxenvtimewarp = auxenvwarpmodulated;
 

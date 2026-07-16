@@ -453,7 +453,7 @@ class OscillatorModuleComponent : public juce::GroupComponent
     AudioPluginAudioProcessor &processorRef;
     OscTypeComponent oscTypeComponent;
     XapSlider oscPitchKnob;
-    XapSlider pitchEnvKnob;
+    std::vector<std::unique_ptr<XapSlider>> modDepthKnobs;
     XapSlider pitchEnvWarpKnob;
     XapSlider oscSyncKnob;
     XapSlider oscPWKnob;
@@ -468,8 +468,6 @@ class OscillatorModuleComponent : public juce::GroupComponent
         : juce::GroupComponent("", "Oscillator"), processorRef(p), oscTypeComponent(p),
           oscPitchKnob(XapSlider::SS_Knob,
                        *p.granulator.idtoparmetadata[ToneGranulator::PAR_PITCH]),
-          pitchEnvKnob(XapSlider::SS_Knob,
-                       *p.granulator.idtoparmetadata[ToneGranulator::PAR_GRAINMODSLOTAMOUNT0]),
           pitchEnvWarpKnob(XapSlider::SS_Knob,
                            *p.granulator.idtoparmetadata[ToneGranulator::PAR_AUXENVTIMEWARP]),
           oscSyncKnob(XapSlider::SS_Knob,
@@ -490,7 +488,15 @@ class OscillatorModuleComponent : public juce::GroupComponent
     {
         addAndMakeVisible(oscTypeComponent);
         initSlider(p, *this, oscPitchKnob);
-        initSlider(p, *this, pitchEnvKnob);
+        for (int i = 0; i < GrainEvent::max_grain_mod_slots; ++i)
+        {
+            auto knob = std::make_unique<XapSlider>(
+                XapSlider::SS_Knob,
+                *p.granulator.idtoparmetadata[ToneGranulator::PAR_GRAINMODSLOTAMOUNT0 + i]);
+            initSlider(p, *this, *knob);
+            modDepthKnobs.push_back(std::move(knob));
+        }
+
         initSlider(p, *this, pitchEnvWarpKnob);
         initSlider(p, *this, oscSyncKnob);
         initSlider(p, *this, oscPWKnob);
@@ -508,11 +514,15 @@ class OscillatorModuleComponent : public juce::GroupComponent
     {
         oscTypeComponent.setBounds(7, 17, 350, 50);
         oscPitchKnob.setBounds(7, oscTypeComponent.getBottom() + 1, 80, 100);
-        pitchEnvKnob.setBounds(oscPitchKnob.getRight() + 2, oscTypeComponent.getBottom() + 1, 80,
-                               50);
-        pitchEnvWarpKnob.setBounds(oscPitchKnob.getRight() + 2, pitchEnvKnob.getBottom() + 1, 80,
-                                   50);
-        pitchEnvelopeComponent.setBounds(pitchEnvKnob.getRight() + 2, oscTypeComponent.getBottom(),
+        for (int i = 0; i < modDepthKnobs.size(); ++i)
+        {
+            modDepthKnobs[i]->setBounds(oscPitchKnob.getRight() + 2,
+                                        oscTypeComponent.getBottom() + 1 + i * 51, 80, 50);
+        }
+
+        //pitchEnvWarpKnob.setBounds(oscPitchKnob.getRight() + 2, pitchEnvKnob.getBottom() + 1, 80,
+        //                           50);
+        pitchEnvelopeComponent.setBounds(modDepthKnobs[0]->getRight() + 2, oscTypeComponent.getBottom(),
                                          150, 150);
         oscSyncKnob.setBounds(pitchEnvelopeComponent.getRight() + 2,
                               oscTypeComponent.getBottom() + 1, 80, 50);
