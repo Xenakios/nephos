@@ -973,7 +973,7 @@ class GranulatorVoice
 
         std::visit(
             [this, aux_env_value](auto &q) {
-                double finalpitch = pitch_base + aux_env_value * modulation_slots[0].depth;
+                double finalpitch = pitch_base + aux_env_value * modulation_slots[0].depth * 12.0f;
                 double hz = 440.0 * std::pow(2.0, 1.0 / 12.0 * (finalpitch - 9.0));
                 q.setFrequency(hz);
             },
@@ -1303,6 +1303,9 @@ class ToneGranulator
         PAR_VOLENVEASINGSTART = 2800,
         PAR_VOLENVEASINGEND = 2900,
         PAR_GRAINMODSLOTAMOUNT0 = 3000,
+        PAR_GRAINMODSLOTAMOUNT1 = 3001,
+        PAR_GRAINMODSLOTAMOUNT2 = 3002,
+        PAR_GRAINMODSLOTAMOUNT3 = 3003,
         PAR_AUXENVTIMEWARP = 3050,
         PAR_MASTERHIGHPASSCUTOFF = 3100,
         PAR_LFORATES = 100000,
@@ -1694,14 +1697,18 @@ class ToneGranulator
                                    .withGroupName("Oscillator")
                                    .withID(PAR_PITCH)
                                    .withFlags(CLAP_PARAM_IS_MODULATABLE));
-        parmetadatas.push_back(pmd()
-                                   .withRange(-12.0, 12.0)
-                                   .withDefault(0.0)
-                                   .withLinearScaleFormatting("ST")
-                                   .withName("Aux Env To Pitch Amount")
-                                   .withGroupName("Oscillator")
-                                   .withID(PAR_GRAINMODSLOTAMOUNT0)
-                                   .withFlags(CLAP_PARAM_IS_MODULATABLE));
+        for (int i = 0; i < 4; ++i)
+        {
+            parmetadatas.push_back(pmd()
+                                       .withRange(-1.0, 1.0)
+                                       .withDefault(0.0)
+                                       .withLinearScaleFormatting("%", 100.0f)
+                                       .withName(fmt::format("Mod Slot {} Depth", i + 1))
+                                       .withGroupName("Oscillator")
+                                       .withID(PAR_GRAINMODSLOTAMOUNT0 + i)
+                                       .withFlags(CLAP_PARAM_IS_MODULATABLE));
+        }
+
         parmetadatas.push_back(pmd()
                                    .withRange(-1.0, 1.0)
                                    .withDefault(0.0)

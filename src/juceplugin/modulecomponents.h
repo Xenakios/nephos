@@ -251,7 +251,7 @@ class VolumeEnvelopeComponent : public juce::Component
         else
         {
             float warp = granul->auxenvwarpmodulated;
-            float depth = granul->auxenvdepthpmodulated / 12.0f;
+            float depth = granul->auxenvdepthpmodulated;
             if (warp != priorauxwarp || depth != priorauxamount)
             {
                 priorauxwarp = warp;
