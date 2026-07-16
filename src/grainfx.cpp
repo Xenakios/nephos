@@ -114,13 +114,14 @@ void GrainInsertFX::setMode(ModeInfo m)
     if (m.mainmode == GFXNONE)
     {
         std::fill(paramvalues.begin(), paramvalues.end(), 0.0f);
+        std::fill(parammodvalues.begin(), parammodvalues.end(), 0.0f);
         mainmode = GFXNONE;
         numParams = 0;
     }
     if (m.mainmode == GFXSSTFILTER)
     {
         numParams = 5;
-
+        std::fill(parammodvalues.begin(), parammodvalues.end(), 0.0f);
         paramvalues[0] = 1.0;
         paramvalues[1] = 0.0;
         paramvalues[2] = 0.0;
@@ -147,6 +148,7 @@ void GrainInsertFX::setMode(ModeInfo m)
     {
         mainmode = GFXNONE;
         numParams = 0;
+        submode = 0;
         if (m.awtype == 0)
         {
             awplugin = make_aw_safe<airwinconsolidated::BezEQ::BezEQ>(0);
@@ -221,10 +223,12 @@ void GrainInsertFX::setMode(ModeInfo m)
         if (awplugin)
         {
             mainmode = GFXAIRWINDOWS;
+            submode = m.awtype;
             awplugin->setNumInputs(2);
             awplugin->setNumOutputs(2);
             awplugin->setSampleRate(sr);
             std::fill(paramvalues.begin(), paramvalues.end(), 0.0f);
+            std::fill(parammodvalues.begin(), parammodvalues.end(), 0.0f);
             for (size_t i = 0; i < numParams; ++i)
             {
                 paramvalues[i] = awplugin->getParameter(i);
@@ -243,6 +247,7 @@ void GrainInsertFX::setMode(ModeInfo m)
         numParams = xenplugin->num_params();
         xenplugin->prepare(sr, 1);
         std::fill(paramvalues.begin(), paramvalues.end(), 0.0f);
+        std::fill(parammodvalues.begin(), parammodvalues.end(), 0.0f);
         for (size_t i = 0; i < numParams; ++i)
         {
             paramvalues[i] = xenplugin->get_parameter(i);

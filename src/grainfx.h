@@ -106,6 +106,7 @@ class GrainInsertFX
         GFXXENAKIOS
     };
     size_t mainmode = GFXNONE;
+    size_t submode = 0;
     double sr = 0.0;
     size_t blockSize = 0;
     size_t numParams = 0;
@@ -168,7 +169,10 @@ class GrainInsertFX
             // variable per setParameter, but we might want to avoid setting all the
             // parameters if not really needed...
             for (size_t i = 0; i < numParams; ++i)
-                awplugin->setParameter(i, std::clamp(paramvalues[i], 0.0f, 1.0f));
+            {
+                awplugin->setParameter(i,
+                                       std::clamp(paramvalues[i] + parammodvalues[i], 0.0f, 1.0f));
+            }
         }
         else if (mainmode == GFXXENAKIOS)
         {

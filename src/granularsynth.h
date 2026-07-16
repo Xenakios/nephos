@@ -964,7 +964,6 @@ class GranulatorVoice
     template <bool GrainModulation = true> void process(float *outputs, int nframes)
     {
         float aux_env_value = 0.0f;
-        // if (std::abs(modamounts[GrainEvent::MD_PITCH]) > 0.0f)
         if constexpr (GrainModulation)
         {
             double normphase = (double)phase / grain_end_phase;
@@ -985,6 +984,12 @@ class GranulatorVoice
                 float cutoffmod = 0.0f;
                 cutoffmod = modulation_slots[1].depth * aux_env_value * 24.0;
                 insert_fx[i].parammodvalues[0] = cutoffmod;
+            }
+            else if (i == 1 && insert_fx[i].mainmode == GrainInsertFX::GFXAIRWINDOWS &&
+                     insert_fx[i].submode == 3)
+            {
+                // for testing purposes using airwindows ringmodulator freq a
+                insert_fx[i].parammodvalues[0] = modulation_slots[2].depth * aux_env_value;
             }
             insert_fx[i].prepareBlock();
         }
