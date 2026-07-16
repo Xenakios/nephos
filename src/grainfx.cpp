@@ -117,9 +117,13 @@ void GrainInsertFX::setMode(ModeInfo m)
         std::fill(parammodvalues.begin(), parammodvalues.end(), 0.0f);
         mainmode = GFXNONE;
         numParams = 0;
+        awplugin = nullptr;
+        xenplugin = nullptr;
     }
     if (m.mainmode == GFXSSTFILTER)
     {
+        awplugin = nullptr;
+        xenplugin = nullptr;
         numParams = 5;
         std::fill(parammodvalues.begin(), parammodvalues.end(), 0.0f);
         paramvalues[0] = 1.0;
@@ -237,6 +241,7 @@ void GrainInsertFX::setMode(ModeInfo m)
     }
     if (m.mainmode == GFXXENAKIOS)
     {
+        awplugin = nullptr;
         mainmode = GFXXENAKIOS;
         if (m.awtype == 0)
         {
