@@ -151,6 +151,7 @@ void VolumeEnvelopeComponent::mouseDown(const juce::MouseEvent &ev)
         menu.addSectionHeader("Generate");
         menu.addItem("Reset to zero", [this]() { generate_steps(GM_RESET); });
         menu.addItem("Ramp up", [this]() { generate_steps(GM_RAMPUP); });
+        menu.addItem("Ramp up/down", [this]() { generate_steps(GM_RAMPUPDOWN); });
         menu.addItem("Random Uniform", [this]() { generate_steps(GM_RANDOM); });
         menu.addItem("Paste from JSON array in clipboard",
                      [this]() { generate_steps(GM_CLIPBOARD); });
@@ -264,6 +265,13 @@ void VolumeEnvelopeComponent::generate_steps(GenMode mode)
             val = rng.nextFloatInRange(-1.0f, 1.0f);
         else if (mode == GM_RAMPUP)
             val = juce::jmap<float>(i, 0, numsteps - 1, -1.0f, 1.0f);
+        else if (mode == GM_RAMPUPDOWN)
+        {
+            if (i < numsteps / 2)
+                val = juce::jmap<float>(i, 0, numsteps / 2 - 1, -1.0f, 1.0f);
+            else
+                val = juce::jmap<float>(i, numsteps / 2, numsteps - 1, 1.0f, -1.0f);
+        }
         StepModSource::Message msg;
         msg.opcode = StepModSource::Message::OP_SETSTEP;
         msg.fval0 = val;

@@ -188,6 +188,7 @@ class VolumeEnvelopeComponent : public juce::Component
         GM_RESET,
         GM_RAMPUP,
         GM_RAMPDOWN,
+        GM_RAMPUPDOWN,
         GM_RANDOM,
         GM_CLIPBOARD
     };

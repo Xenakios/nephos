@@ -529,7 +529,7 @@ inline int osc_name_to_index(std::string name)
 
 template <bool TaperEnabled> struct SimpleEnvelope
 {
-    static constexpr int maxnumsteps = 10;
+    static constexpr int maxnumsteps = 16;
     alignas(32) std::array<float, maxnumsteps + 5> steps;
     alignas(16) int curstep = 0;
     alignas(16) double steplen = 0.0;
