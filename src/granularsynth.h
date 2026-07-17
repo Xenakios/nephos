@@ -2268,7 +2268,6 @@ class ToneGranulator
                     // fading volume for now but should be more adjustable...
                     genev.volume = gvol * (1.0f - (0.5f * normpos));
                     scheduledGrains.push_back(genev);
-                    ++graincount;
                 }
                 // need to sort because we may have previous unstarted events and our
                 // playback scheduling logic needs the events sorted
@@ -2546,6 +2545,8 @@ class ToneGranulator
                         voices[j]->polarity_gain = 1.0f;
                     else
                         voices[j]->polarity_gain = -1.0f;
+                    // std::cout << graincount << " polarity gain " << voices[j]->polarity_gain
+                    //          << std::endl;
                     voices[j]->grainid = graincount;
                     voices[j]->doambnormalization = true;
                     voices[j]->tail_len = taillen;
