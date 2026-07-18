@@ -677,7 +677,7 @@ class GranulatorVoice
         uint32_t target_id = CLAP_INVALID_ID;
     };
     alignas(16) ModSlot modulation_slots[GrainEvent::max_grain_mod_slots];
-
+    alignas(16) sst::basic_blocks::dsp::OnePoleLag<float, true> envgainlag;
     float pitch_base = 0.0f;
     float graingain = 0.0;
     float used_azi0 = 0.0f;
@@ -782,6 +782,7 @@ class GranulatorVoice
         if (samplerate_was_changed)
         {
             samplerate_was_changed = false;
+            envgainlag.setRateInMilliseconds(5.0, sr, 1.0);
             std::visit(
                 [this](auto &q) {
                     q.setSampleRate(sr);
@@ -789,6 +790,7 @@ class GranulatorVoice
                 },
                 theoscillator);
         }
+        envgainlag.snapTo(0.0f);
         pitch_base = evpars.pitch_semitones;
         if (newosctype == 6)
             pitch_base += 12.0;
@@ -990,6 +992,9 @@ class GranulatorVoice
         {
             e = std::clamp(e, -1.0f, 1.0f);
         }
+        float modulatedvolume = std::clamp(1.0f + 1.0f * modulatedvalues[MT_VOLUME], 0.0f, 2.0f);
+        // modulatedvolume = modulatedvolume * modulatedvolume * modulatedvolume;
+        envgainlag.setTarget(modulatedvolume);
         std::visit(
             [this, &modulatedvalues](auto &q) {
                 double finalpitch = pitch_base + modulatedvalues[MT_PITCH] * 12.0f;
@@ -1004,13 +1009,16 @@ class GranulatorVoice
                 // cutoff
                 insert_fx[i].parammodvalues[0] = modulatedvalues[MT_INSERTASTART + i * 10] * 24.0;
                 // resonance
-                insert_fx[i].parammodvalues[1] = modulatedvalues[MT_INSERTASTART + i * 10 + 1];
+                insert_fx[i].parammodvalues[1] =
+                    modulatedvalues[MT_INSERTASTART + i * 10 + 1] * 0.5f;
                 // extra param
-                insert_fx[i].parammodvalues[2] = modulatedvalues[MT_INSERTASTART + i * 10 + 2];
+                insert_fx[i].parammodvalues[2] =
+                    modulatedvalues[MT_INSERTASTART + i * 10 + 2] * 0.5f;
                 // cut off stereo separation
                 // insert_fx[i].parammodvalues[2] = modulatedvalues[MT_INSERTASTART + i * 10 + 2];
                 // drywet mix
-                insert_fx[i].parammodvalues[4] = modulatedvalues[MT_INSERTASTART + i * 10 + 4];
+                insert_fx[i].parammodvalues[4] =
+                    modulatedvalues[MT_INSERTASTART + i * 10 + 4] * 0.5f;
             }
             /*
             else if (i == 1 && insert_fx[i].mainmode == GrainInsertFX::GFXAIRWINDOWS &&
@@ -1036,37 +1044,6 @@ class GranulatorVoice
             {
                 outsample = std::visit([](auto &q) { return q.step(); }, theoscillator);
                 float envgain = 0.0f;
-                /*
-                if (envstarttype == 100)
-                {
-                    envgain = gain_envelope.step();
-                }
-                else if (envtype == 0 || envtype == 1)
-                {
-                    if (phase < envpeakpos)
-                    {
-                        envgain = xenakios::mapvalue<float>(phase, 0.0, envpeakpos, 0.0f, 1.0f);
-                        if (envtype == 1)
-                        {
-                            envgain = 1.0f - envgain;
-                            envgain = 1.0f - (envgain * envgain * envgain);
-                        }
-                    }
-                    else if (phase >= envpeakpos)
-                    {
-                        envgain = xenakios::mapvalue<float>(phase, envpeakpos, grain_end_phase,
-                                                            1.0f, 0.0f);
-                        if (envtype == 1)
-                            envgain = envgain * envgain * envgain;
-                    }
-                }
-                else if (envtype == 2)
-                {
-                    float envfreq = 1.0f + std::floor(15.0f * envshape);
-                    envgain = 0.5f + 0.5f * std::sin(M_PI * 2 / grain_end_phase * phase * envfreq +
-                                                     (1.5f * M_PI));
-                }
-                */
                 if (phase < envpeakpos)
                 {
                     envgain = xenakios::mapvalue<float>(phase, 0.0, envpeakpos, 0.0f, 1.0f);
@@ -1079,7 +1056,8 @@ class GranulatorVoice
                     envgain = eluts->getValueLERP<false>(envendtype, envgain);
                 }
                 // envgain = std::clamp(envgain, 0.0f, 1.0f);
-                outsample *= envgain * graingain * polarity_gain;
+                outsample *= envgain * envgainlag.getValue() * graingain * polarity_gain;
+                envgainlag.process();
             }
             float outsample0 = outsample;
             float outsample1 = outsample;
@@ -1547,7 +1525,7 @@ class ToneGranulator
             auto v = std::make_unique<GranulatorVoice>();
             v->modulation_slots[0] = {0, 0.0f, GranulatorVoice::MT_PITCH};
             v->modulation_slots[1] = {1, 0.0f, GranulatorVoice::MT_PITCH};
-            v->modulation_slots[2] = {2, 0.0f, GranulatorVoice::MT_INSERTBSTART + 4};
+            v->modulation_slots[2] = {2, 0.0f, GranulatorVoice::MT_VOLUME};
             v->aux_envelopes = &voiceaux_envelopes;
             v->pitchBandAttens = pitchBandAttensShared;
             v->osctypemapping = osctypemapping;
