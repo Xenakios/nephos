@@ -258,7 +258,7 @@ void MainPageComponent::paint(juce::Graphics &g) { g.fillAll(juce::Colours::dark
 
 void MainPageComponent::resized()
 {
-    oscModuleComponent.setBounds(0, 0, 700, 225);
+    oscModuleComponent.setBounds(0, 0, 700, 280);
     volumeModuleComponent.setBounds(0, oscModuleComponent.getBottom() + 1, 700, 150);
     timeModuleComponent.setBounds(oscModuleComponent.getRight() + 2, 0, 300, 125);
 
@@ -270,7 +270,7 @@ void MainPageComponent::resized()
                                    spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 125);
 
     stackModuleComponent.setBounds(timeModuleComponent.getRight() + 2, 0, 490, 125);
-    keyboardComponent.setBounds(1, getHeight() - 50, getWidth() - 300, 49);
+    // keyboardComponent.setBounds(1, getHeight() - 50, getWidth() - 300, 49);
     // testTree.setBounds(getWidth() - 299, timeModuleComponent.getBottom() + 2, 300, 300);
 }
 

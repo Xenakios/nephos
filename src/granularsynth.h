@@ -977,7 +977,7 @@ class GranulatorVoice
     };
     void process(float *outputs, int nframes)
     {
-        float aux_env_values[4] = {0.0f};
+        alignas(16) float aux_env_values[4] = {0.0f};
         double normphase = (double)phase / grain_end_phase;
         for (size_t i = 0; i < num_aux_envelopes; ++i)
         {
