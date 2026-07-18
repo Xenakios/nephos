@@ -748,6 +748,9 @@ class GranulatorVoice
         }
         */
     }
+    float fmhz = 1.0f;
+    float fmmodamount = 0.0f;
+    float fmfeedback = 0.0f;
     void start(GrainEvent &evpars)
     {
         active = true;
@@ -797,16 +800,16 @@ class GranulatorVoice
         pitch_base = std::clamp(pitch_base, -48.0f, 64.0f);
         auto syncratio = std::clamp(evpars.sync_ratio, 1.0f, 16.0f);
         auto pw = evpars.pulse_width; // osc implementation clamps itself to 0..1
-        auto fmhz = evpars.fm_frequency_hz;
-        auto fmmodamount = std::clamp(evpars.fm_amount, 0.0f, 1.0f);
+        fmhz = evpars.fm_frequency_hz;
+        fmmodamount = std::clamp(evpars.fm_amount, 0.0f, 1.0f);
+        fmfeedback = std::clamp(evpars.fm_feedback, -1.0f, 1.0f);
+
         auto logisticr = fmmodamount;
-        fmmodamount = std::pow(fmmodamount, 3.0f) * 128.0f;
-        auto fmfeedback = std::clamp(evpars.fm_feedback, -1.0f, 1.0f);
+
         auto noisecorr = std::clamp(evpars.noisecorr, -1.0f, 1.0f);
         auto noisemode = evpars.noiseimode;
         std::visit(
-            [syncratio, pw, fmhz, fmfeedback, fmmodamount, noisecorr, noisemode, logisticr,
-             this](auto &q) {
+            [this, syncratio, pw, noisecorr, noisemode, logisticr](auto &q) {
                 q.reset();
                 q.setSyncRatio(syncratio);
                 // handle extra parameters of osc types
@@ -964,10 +967,11 @@ class GranulatorVoice
     enum MODTARGET
     {
         MT_PITCH = 0,
-        MT_VOLUME = 1,
-        MT_AZIMUTH = 2,
-        MT_ELEVATION = 3,
-        MT_INSERTASTART = 4,
+        MT_VOLUME,
+        MT_FMDEPTH,
+        MT_AZIMUTH,
+        MT_ELEVATION,
+        MT_INSERTASTART,
         MT_INSERTBSTART = MT_INSERTASTART + 10,
         NUMMODTARGETS = MT_INSERTBSTART + 10,
     };
@@ -995,11 +999,21 @@ class GranulatorVoice
             std::clamp(grain_base_volume + modulatedvalues[MT_VOLUME], 0.0f, 1.0f);
         modulatedvolume = modulatedvolume * modulatedvolume * modulatedvolume;
         envgainlag.setTarget(modulatedvolume);
+
         std::visit(
             [this, &modulatedvalues](auto &q) {
                 double finalpitch = pitch_base + modulatedvalues[MT_PITCH] * 12.0f;
                 double hz = 440.0 * std::pow(2.0, 1.0 / 12.0 * (finalpitch - 9.0));
                 q.setFrequency(hz);
+                if constexpr (std::is_same_v<decltype(q), FMOsc &>)
+                {
+                    q.setModulatorFreq(fmhz);
+                    float modulatedfmamount =
+                        std::clamp(fmmodamount + modulatedvalues[MT_FMDEPTH], 0.0f, 1.0f);
+                    modulatedfmamount = std::pow(modulatedfmamount, 3.0f) * 128.0f;
+                    q.setModIndex(modulatedfmamount);
+                    q.setFeedbackAmount(fmfeedback);
+                }
             },
             theoscillator);
         for (size_t i = 0; i < 2; ++i)
@@ -1525,7 +1539,7 @@ class ToneGranulator
             auto v = std::make_unique<GranulatorVoice>();
             v->modulation_slots[0] = {0, 0.0f, GranulatorVoice::MT_PITCH};
             v->modulation_slots[1] = {1, 0.0f, GranulatorVoice::MT_PITCH};
-            v->modulation_slots[2] = {2, 0.0f, GranulatorVoice::MT_VOLUME};
+            v->modulation_slots[2] = {2, 0.0f, GranulatorVoice::MT_FMDEPTH};
             v->aux_envelopes = &voiceaux_envelopes;
             v->pitchBandAttens = pitchBandAttensShared;
             v->osctypemapping = osctypemapping;

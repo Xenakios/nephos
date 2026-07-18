@@ -75,7 +75,7 @@ void VolumeEnvelopeComponent::paint(juce::Graphics &g)
 void VolumeEnvelopeComponent::transform_steps(TransformMode mode)
 {
     auto numsteps = SimpleEnvelope<false>::maxnumsteps;
-    auto oldsteps = granul->voiceaux_envelopes[0].steps;
+    auto oldsteps = granul->voiceaux_envelopes[target_envelope].steps;
     bool waschanged = false;
     if (mode == TM_Reverse)
     {
@@ -119,7 +119,7 @@ void VolumeEnvelopeComponent::transform_steps(TransformMode mode)
             StepModSource::Message msg;
             msg.opcode = StepModSource::Message::OP_SETSTEP;
             msg.fval0 = oldsteps[i];
-            msg.dest = 1000;
+            msg.dest = 1000 + target_envelope;
             msg.ival0 = i;
             granul->fifo.push(msg);
         }
