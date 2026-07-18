@@ -852,7 +852,7 @@ void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
     if (state.hasObjectMember("auxenvstate"))
     {
         auto auxenvstate = state["auxenvstate"];
-        granulator.set_aux_envelope_interpolation_mode(auxenvstate["interpmode"].getWithDefault(0));
+        // granulator.set_aux_envelope_interpolation_mode(auxenvstate["interpmode"].getWithDefault(0));
         auto auxenvsteps = auxenvstate["steps"];
         for (int i = 0; i < auxenvsteps.size(); ++i)
         {

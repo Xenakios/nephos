@@ -53,7 +53,8 @@ void VolumeEnvelopeComponent::paint(juce::Graphics &g)
         else
             curvepath.lineTo({(float)i, ycor});
     }
-    g.strokePath(curvepath, juce::PathStrokeType(1.0f));
+    if (!auxenvmode)
+        g.strokePath(curvepath, juce::PathStrokeType(1.0f));
     if (auxenvmode)
     {
         g.setColour(juce::Colours::white);
@@ -147,7 +148,8 @@ void VolumeEnvelopeComponent::mouseDown(const juce::MouseEvent &ev)
         juce::StringArray modes{"None", "Linear", "Spline"};
         for (int i = 0; i < modes.size(); ++i)
         {
-            menu.addItem(modes[i], true, granul->get_aux_envelope_interpolation_mode() == i,
+            menu.addItem(modes[i], true,
+                         granul->get_aux_envelope_interpolation_mode(target_envelope) == i,
                          [i, this]() { set_interpolation_mode(i); });
         }
         menu.addSectionHeader("Transform");

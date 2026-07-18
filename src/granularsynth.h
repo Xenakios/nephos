@@ -1408,8 +1408,14 @@ class ToneGranulator
     alignas(16) std::array<float, 256> modSourceValues;
     std::unordered_map<int, int> midiCCMap;
     alignas(16) std::atomic<int> numVoicesUsed;
-    void set_aux_envelope_interpolation_mode(int m) { voiceaux_envelopes[0].interpmode = m; }
-    int get_aux_envelope_interpolation_mode() const { return voiceaux_envelopes[0].interpmode; }
+    void set_aux_envelope_interpolation_mode(int envindex, int m)
+    {
+        voiceaux_envelopes[envindex].interpmode = m;
+    }
+    int get_aux_envelope_interpolation_mode(int envindex) const
+    {
+        return voiceaux_envelopes[envindex].interpmode;
+    }
     void handleStepSequencerMessages()
     {
         StepModSource::Message msg;

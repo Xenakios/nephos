@@ -173,6 +173,36 @@ class TriggeredRandomSourceEditor : public juce::Component,
 };
 #endif
 
+class GrainModulationVisualizationComponent : public juce::Component, public juce::Timer
+{
+  public:
+    ToneGranulator *granul = nullptr;
+    int target_to_show = 0;
+    GrainModulationVisualizationComponent(ToneGranulator *gr) : granul(gr) { startTimer(40); }
+    void timerCallback() override { repaint(); }
+    void paint(juce::Graphics &g) override
+    {
+        g.fillAll(juce::Colours::black);
+
+        juce::Path path;
+        for (int i = 0; i < getWidth(); ++i)
+        {
+            float modvalues[30] = {0.0f};
+            double normphase = 1.0 / (getWidth() - 1) * i;
+            GranulatorVoice::process_mod_matrix(normphase, 0.0, granul->voices[0]->modulation_slots,
+                                                granul->voiceaux_envelopes, modvalues);
+            float y = modvalues[target_to_show];
+            y = juce::jmap(y, -1.0f, 1.0f, (float)getHeight(), 0.0f);
+            if (i == 0)
+                path.startNewSubPath(i, y);
+            else
+                path.lineTo(i, y);
+        }
+        g.setColour(juce::Colours::yellow);
+        g.strokePath(path, juce::PathStrokeType(2.0f));
+    }
+};
+
 class VolumeEnvelopeComponent : public juce::Component
 {
   public:
@@ -206,7 +236,7 @@ class VolumeEnvelopeComponent : public juce::Component
     void transform_steps(TransformMode mode);
     void set_interpolation_mode(int m)
     {
-        granul->set_aux_envelope_interpolation_mode(m);
+        granul->set_aux_envelope_interpolation_mode(target_envelope, m);
         juce::Timer::callAfterDelay(100, [this]() { repaint(); });
     }
     void mouseDown(const juce::MouseEvent &ev) override;
@@ -466,6 +496,7 @@ class OscillatorModuleComponent : public juce::GroupComponent
     XapSlider oscNoiseCorrelationKnob;
     XapSlider oscNoiseModeDrop;
     VolumeEnvelopeComponent pitchEnvelopeComponent;
+    GrainModulationVisualizationComponent grainModComponent;
     juce::TextEditor oscTypeEditor;
     OscillatorModuleComponent(AudioPluginAudioProcessor &p)
         : juce::GroupComponent("", "Oscillator"), processorRef(p), oscTypeComponent(p),
@@ -487,8 +518,9 @@ class OscillatorModuleComponent : public juce::GroupComponent
           oscNoiseCorrelationKnob(
               XapSlider::SS_Knob,
               *p.granulator.idtoparmetadata[ToneGranulator::PAR_NOISECORRELATION]),
-          pitchEnvelopeComponent(&p.granulator, true)
+          pitchEnvelopeComponent(&p.granulator, true), grainModComponent(&p.granulator)
     {
+        addAndMakeVisible(grainModComponent);
         addAndMakeVisible(oscTypeComponent);
         initSlider(p, *this, oscPitchKnob);
         for (int i = 0; i < GrainEvent::max_grain_mod_slots; ++i)
@@ -517,16 +549,17 @@ class OscillatorModuleComponent : public juce::GroupComponent
     {
         oscTypeComponent.setBounds(7, 17, 350, 50);
         oscPitchKnob.setBounds(7, oscTypeComponent.getBottom() + 1, 80, 100);
+        grainModComponent.setBounds(7, oscPitchKnob.getBottom() + 2, 80, 80);
         for (int i = 0; i < modDepthKnobs.size(); ++i)
         {
             modDepthKnobs[i]->setBounds(oscPitchKnob.getRight() + 2,
                                         oscTypeComponent.getBottom() + 1 + i * 51, 80, 50);
         }
 
-        //pitchEnvWarpKnob.setBounds(oscPitchKnob.getRight() + 2, pitchEnvKnob.getBottom() + 1, 80,
-        //                           50);
-        pitchEnvelopeComponent.setBounds(modDepthKnobs[0]->getRight() + 2, oscTypeComponent.getBottom(),
-                                         150, 150);
+        // pitchEnvWarpKnob.setBounds(oscPitchKnob.getRight() + 2, pitchEnvKnob.getBottom() + 1, 80,
+        //                            50);
+        pitchEnvelopeComponent.setBounds(modDepthKnobs[0]->getRight() + 2,
+                                         oscTypeComponent.getBottom(), 150, 150);
         oscSyncKnob.setBounds(pitchEnvelopeComponent.getRight() + 2,
                               oscTypeComponent.getBottom() + 1, 80, 50);
         oscPWKnob.setBounds(pitchEnvelopeComponent.getRight() + 2, oscSyncKnob.getBottom() + 1, 80,
