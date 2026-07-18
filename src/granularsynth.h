@@ -668,9 +668,8 @@ class GranulatorVoice
         FR_ALLPARALLEL
     };
     FilterRouting filter_routing = FR_ALLSERIAL;
-
-    alignas(32) SimpleEnvelope<true> gain_envelope;
-    alignas(32) SimpleEnvelope<false> *aux_envelope = nullptr;
+    static constexpr size_t num_aux_envelopes = 4;
+    std::array<SimpleEnvelope<false>, num_aux_envelopes> *aux_envelopes = nullptr;
     struct ModSlot
     {
         uint32_t source_id = CLAP_INVALID_ID;
@@ -903,7 +902,7 @@ class GranulatorVoice
         actdur = actdur * actdur * actdur;
         actdur = 0.002f + 0.498f * actdur;
         grain_end_phase = sr * actdur;
-        gain_envelope.start(grain_end_phase);
+
         // aux_envelope.start(grain_end_phase);
         auxenvtimewarp = evpars.auxenvtimewarp;
 
@@ -961,18 +960,23 @@ class GranulatorVoice
         envendtype = std::clamp<uint8_t>(evpars.envelope_end_type, 0, 30);
         envshape = std::clamp(evpars.envelope_shape, 0.0f, 1.0f);
     }
-    template <bool GrainModulation = true> void process(float *outputs, int nframes)
+    void process(float *outputs, int nframes)
     {
-        float aux_env_value = 0.0f;
-        if constexpr (GrainModulation)
-        {
-            double normphase = (double)phase / grain_end_phase;
-            aux_env_value = aux_envelope->get_value(normphase, auxenvtimewarp);
-        }
+        float aux_env_values[4] = {0.0f};
 
+        double normphase = (double)phase / grain_end_phase;
+        for (size_t i = 0; i < num_aux_envelopes; ++i)
+        {
+            aux_env_values[i] = (*aux_envelopes)[i].get_value(normphase, auxenvtimewarp);
+        }
+        float modulatedvalues[4] = {0.0f};
+        modulatedvalues[0] = aux_env_values[0];
+        modulatedvalues[1] = aux_env_values[0];
+        modulatedvalues[2] = aux_env_values[0];
         std::visit(
-            [this, aux_env_value](auto &q) {
-                double finalpitch = pitch_base + aux_env_value * modulation_slots[0].depth * 12.0f;
+            [this, &modulatedvalues](auto &q) {
+                double finalpitch =
+                    pitch_base + modulatedvalues[0] * modulation_slots[0].depth * 12.0f;
                 double hz = 440.0 * std::pow(2.0, 1.0 / 12.0 * (finalpitch - 9.0));
                 q.setFrequency(hz);
             },
@@ -982,14 +986,14 @@ class GranulatorVoice
             if (i == 0 && insert_fx[i].mainmode == GrainInsertFX::GFXSSTFILTER)
             {
                 float cutoffmod = 0.0f;
-                cutoffmod = modulation_slots[1].depth * aux_env_value * 24.0;
+                cutoffmod = modulation_slots[1].depth * modulatedvalues[1] * 24.0;
                 insert_fx[i].parammodvalues[0] = cutoffmod;
             }
             else if (i == 1 && insert_fx[i].mainmode == GrainInsertFX::GFXAIRWINDOWS &&
                      insert_fx[i].submode == 3)
             {
                 // for testing purposes using airwindows ringmodulator freq a
-                insert_fx[i].parammodvalues[0] = modulation_slots[2].depth * aux_env_value;
+                insert_fx[i].parammodvalues[0] = modulation_slots[2].depth * modulatedvalues[2];
             }
             insert_fx[i].prepareBlock();
         }
@@ -1361,8 +1365,9 @@ class ToneGranulator
     alignas(32) std::array<TriggeredRandomSource, 4> randomModSources{1001, 1007, 5543, 90001};
     alignas(32) MidiNoteModSource midiNoteModSource;
     float midiNoteModValue = 0.0f;
-    // we can share this between voices as we don't need it stateful, at least for now
-    SimpleEnvelope<false> voiceaux_envelope;
+    // we can share these between voices as we don't need it stateful, at least for now
+    alignas(32)
+        std::array<SimpleEnvelope<false>, GranulatorVoice::num_aux_envelopes> voiceaux_envelopes;
     alignas(16) std::array<float, numPitchBandAttens + 5> pitchBandAttensShared;
     alignas(16) std::array<int, 7> osctypemapping;
     struct ModSourceInfo
@@ -1376,8 +1381,8 @@ class ToneGranulator
     alignas(16) std::array<float, 256> modSourceValues;
     std::unordered_map<int, int> midiCCMap;
     alignas(16) std::atomic<int> numVoicesUsed;
-    void set_aux_envelope_interpolation_mode(int m) { voiceaux_envelope.interpmode = m; }
-    int get_aux_envelope_interpolation_mode() const { return voiceaux_envelope.interpmode; }
+    void set_aux_envelope_interpolation_mode(int m) { voiceaux_envelopes[0].interpmode = m; }
+    int get_aux_envelope_interpolation_mode() const { return voiceaux_envelopes[0].interpmode; }
     void handleStepSequencerMessages()
     {
         StepModSource::Message msg;
@@ -1386,14 +1391,13 @@ class ToneGranulator
             if (msg.dest == 1000 && msg.opcode == StepModSource::Message::OP_SETSTEP)
             {
                 const auto numsteps = SimpleEnvelope<false>::maxnumsteps;
-
-                voiceaux_envelope.steps[msg.ival0] = msg.fval0;
+                voiceaux_envelopes[0].steps[msg.ival0] = msg.fval0;
                 if (msg.ival0 == numsteps - 1)
                 {
                     // steps array has extra space for interpolation
-                    voiceaux_envelope.steps[numsteps] = msg.fval0;
-                    voiceaux_envelope.steps[numsteps + 1] = msg.fval0;
-                    voiceaux_envelope.steps[numsteps + 2] = msg.fval0;
+                    voiceaux_envelopes[0].steps[numsteps] = msg.fval0;
+                    voiceaux_envelopes[0].steps[numsteps + 1] = msg.fval0;
+                    voiceaux_envelopes[0].steps[numsteps + 2] = msg.fval0;
                 }
 
                 // voiceaux_envelope.steps[msg.ival0] = msg.fval0;
@@ -1514,7 +1518,7 @@ class ToneGranulator
         for (int i = 0; i < numvoices; ++i)
         {
             auto v = std::make_unique<GranulatorVoice>();
-            v->aux_envelope = &voiceaux_envelope;
+            v->aux_envelopes = &voiceaux_envelopes;
             v->pitchBandAttens = pitchBandAttensShared;
             v->osctypemapping = osctypemapping;
             v->eluts = &eluts;
@@ -2541,6 +2545,8 @@ class ToneGranulator
                 if (!voices[j]->active)
                 {
                     // std::print("starting voice {} for scheduled event {}\n", j, evindex);
+                    // the grain oscillators and/or fx may produce lopsided waveforms
+                    // so have this to counteract
                     if (graincount % 2 == 0)
                         voices[j]->polarity_gain = 1.0f;
                     else
@@ -2632,7 +2638,7 @@ class ToneGranulator
             if (voices[j]->active)
             {
                 ++numactive;
-                voices[j]->process<true>(voiceout, granul_block_size);
+                voices[j]->process(voiceout, granul_block_size);
                 for (int k = 0; k < granul_block_size; ++k)
                 {
                     for (int chan = 0; chan < num_out_chans; ++chan)

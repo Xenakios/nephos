@@ -219,7 +219,7 @@ class VolumeEnvelopeComponent : public juce::Component
         if (stepindex >= 0 && stepindex < numsteps)
         {
             float delta = wheel.deltaY * 0.2;
-            auto &auxenv = granul->voiceaux_envelope;
+            auto &auxenv = granul->voiceaux_envelopes[0];
             float val = std::clamp(auxenv.steps[stepindex] + delta, -1.0f, 1.0f);
             StepModSource::Message msg;
             msg.opcode = StepModSource::Message::OP_SETSTEP;

@@ -18,7 +18,7 @@ void VolumeEnvelopeComponent::paint(juce::Graphics &g)
     auto curveend = priorendcurve;
     float sinfreq = getWidth() / 8.0;
     auto &eluts = granul->eluts;
-    auto &auxenv = granul->voiceaux_envelope;
+    auto &auxenv = granul->voiceaux_envelopes[0];
 
     for (int i = 0; i < getWidth(); ++i)
     {
@@ -74,7 +74,7 @@ void VolumeEnvelopeComponent::paint(juce::Graphics &g)
 void VolumeEnvelopeComponent::transform_steps(TransformMode mode)
 {
     auto numsteps = SimpleEnvelope<false>::maxnumsteps;
-    auto oldsteps = granul->voiceaux_envelope.steps;
+    auto oldsteps = granul->voiceaux_envelopes[0].steps;
     bool waschanged = false;
     if (mode == TM_Reverse)
     {
