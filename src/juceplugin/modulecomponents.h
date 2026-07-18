@@ -187,6 +187,7 @@ class VolumeEnvelopeComponent : public juce::Component
     enum GenMode
     {
         GM_RESET,
+        GM_MAX,
         GM_RAMPUP,
         GM_RAMPDOWN,
         GM_RAMPUPDOWN,

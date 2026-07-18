@@ -993,7 +993,7 @@ class GranulatorVoice
             e = std::clamp(e, -1.0f, 1.0f);
         }
         float modulatedvolume = std::clamp(1.0f + 1.0f * modulatedvalues[MT_VOLUME], 0.0f, 2.0f);
-        // modulatedvolume = modulatedvolume * modulatedvolume * modulatedvolume;
+        modulatedvolume = modulatedvolume * modulatedvolume * modulatedvolume;
         envgainlag.setTarget(modulatedvolume);
         std::visit(
             [this, &modulatedvalues](auto &q) {
