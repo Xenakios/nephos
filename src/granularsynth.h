@@ -676,7 +676,7 @@ class GranulatorVoice
         float depth = 0.0f;
         uint32_t target_id = CLAP_INVALID_ID;
     };
-    alignas(16) ModSlot modulation_slots[GrainEvent::max_grain_mod_slots];
+    alignas(16) std::array<ModSlot, GrainEvent::max_grain_mod_slots> modulation_slots;
     alignas(16) sst::basic_blocks::dsp::OnePoleLag<float, true> envgainlag;
     float pitch_base = 0.0f;
     float grain_base_volume = 0.0;
@@ -975,16 +975,19 @@ class GranulatorVoice
         MT_INSERTBSTART = MT_INSERTASTART + 10,
         NUMMODTARGETS = MT_INSERTBSTART + 10,
     };
-    void process(float *outputs, int nframes)
+    static void process_mod_matrix(
+        double normphase, double auxenvtimewarp,
+        std::array<ModSlot, GrainEvent::max_grain_mod_slots> &mod_slots,
+        std::array<SimpleEnvelope<false>, GranulatorVoice::num_aux_envelopes> &aux_envelopes,
+        std::span<float> modulatedvalues)
     {
         alignas(16) float aux_env_values[4] = {0.0f};
-        double normphase = (double)phase / grain_end_phase;
         for (size_t i = 0; i < num_aux_envelopes; ++i)
         {
-            aux_env_values[i] = (*aux_envelopes)[i].get_value(normphase, auxenvtimewarp);
+            aux_env_values[i] = aux_envelopes[i].get_value(normphase, auxenvtimewarp);
         }
-        alignas(16) float modulatedvalues[NUMMODTARGETS] = {0.0f};
-        for (auto &e : modulation_slots)
+
+        for (const auto &e : mod_slots)
         {
             if (e.source_id < CLAP_INVALID_ID && e.target_id < CLAP_INVALID_ID)
             {
@@ -995,6 +998,13 @@ class GranulatorVoice
         {
             e = std::clamp(e, -1.0f, 1.0f);
         }
+    }
+    void process(float *outputs, int nframes)
+    {
+        double normphase = (double)phase / grain_end_phase;
+        alignas(16) float modulatedvalues[NUMMODTARGETS] = {0.0f};
+        process_mod_matrix(normphase, auxenvtimewarp, modulation_slots, *aux_envelopes,
+                           modulatedvalues);
         float modulatedvolume =
             std::clamp(grain_base_volume + modulatedvalues[MT_VOLUME], 0.0f, 1.0f);
         modulatedvolume = modulatedvolume * modulatedvolume * modulatedvolume;
