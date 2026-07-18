@@ -216,7 +216,7 @@ juce::PopupMenu VolumeEnvelopeComponent::generate_presets_menu()
                             StepModSource::Message msg;
                             msg.opcode = StepModSource::Message::OP_SETSTEP;
                             msg.fval0 = arr[i].getWithDefault(0.0f);
-                            msg.dest = 1000;
+                            msg.dest = 1000 + target_envelope;
                             msg.ival0 = i;
                             granul->fifo.push(msg);
                         }

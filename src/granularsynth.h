@@ -679,7 +679,7 @@ class GranulatorVoice
     alignas(16) ModSlot modulation_slots[GrainEvent::max_grain_mod_slots];
     alignas(16) sst::basic_blocks::dsp::OnePoleLag<float, true> envgainlag;
     float pitch_base = 0.0f;
-    float graingain = 0.0;
+    float grain_base_volume = 0.0;
     float used_azi0 = 0.0f;
     float used_azi1 = 0.0f;
     float used_ele0 = 0.0f;
@@ -941,7 +941,7 @@ class GranulatorVoice
         for (int i = 0; i < GrainEvent::max_grain_mod_slots; ++i)
             modulation_slots[i].depth = evpars.modamounts[i];
 
-        graingain = std::clamp(evpars.volume, 0.0f, 1.0f);
+        grain_base_volume = std::clamp(evpars.volume, 0.0f, 1.0f);
 
         float bandpos =
             xenakios::mapvalue<float>(pitch_base, -48.0f, 64.0f, 0.0f, numPitchBandAttens - 1);
@@ -953,9 +953,8 @@ class GranulatorVoice
         float g1 = pitchBandAttens[ind1];
         float gatten = g0 + (g1 - g0) * frac;
         gatten = std::clamp(gatten, 0.0f, 1.0f);
-        graingain *= gatten;
+        grain_base_volume *= gatten;
 
-        graingain = graingain * graingain * graingain;
         auxsend1 = std::clamp(evpars.auxsend, 0.0f, 1.0f);
 
         envstarttype = std::clamp<uint8_t>(evpars.envelope_start_type, 0, 30);
@@ -992,7 +991,8 @@ class GranulatorVoice
         {
             e = std::clamp(e, -1.0f, 1.0f);
         }
-        float modulatedvolume = std::clamp(1.0f + 1.0f * modulatedvalues[MT_VOLUME], 0.0f, 2.0f);
+        float modulatedvolume =
+            std::clamp(grain_base_volume + modulatedvalues[MT_VOLUME], 0.0f, 1.0f);
         modulatedvolume = modulatedvolume * modulatedvolume * modulatedvolume;
         envgainlag.setTarget(modulatedvolume);
         std::visit(
@@ -1056,7 +1056,7 @@ class GranulatorVoice
                     envgain = eluts->getValueLERP<false>(envendtype, envgain);
                 }
                 // envgain = std::clamp(envgain, 0.0f, 1.0f);
-                outsample *= envgain * envgainlag.getValue() * graingain * polarity_gain;
+                outsample *= envgain * envgainlag.getValue() * polarity_gain;
                 envgainlag.process();
             }
             float outsample0 = outsample;
@@ -2470,7 +2470,7 @@ class ToneGranulator
                                 vmsg.timepos = playposframes / m_sr;
                                 vmsg.pitch = voices[j]->pitch_base;
                                 vmsg.duration = voices[j]->grain_end_phase / m_sr;
-                                vmsg.gain = voices[j]->graingain;
+                                vmsg.gain = voices[j]->grain_base_volume;
                                 vmsg.azimuth0degrees = voices[j]->used_azi0;
                                 vmsg.azimuth1degrees = voices[j]->used_azi1;
                                 vmsg.elevation0degrees = voices[j]->used_ele0;
@@ -2573,7 +2573,7 @@ class ToneGranulator
                         vmsg.timepos = ev->time_position;
                         vmsg.pitch = voices[j]->pitch_base;
                         vmsg.duration = voices[j]->grain_end_phase / m_sr;
-                        vmsg.gain = voices[j]->graingain;
+                        vmsg.gain = voices[j]->grain_base_volume;
                         vmsg.azimuth0degrees = voices[j]->used_azi0;
                         vmsg.azimuth1degrees = voices[j]->used_azi1;
                         vmsg.elevation0degrees = voices[j]->used_ele0;
