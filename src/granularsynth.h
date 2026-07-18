@@ -960,41 +960,66 @@ class GranulatorVoice
         envendtype = std::clamp<uint8_t>(evpars.envelope_end_type, 0, 30);
         envshape = std::clamp(evpars.envelope_shape, 0.0f, 1.0f);
     }
+    enum MODTARGET
+    {
+        MT_PITCH = 0,
+        MT_VOLUME = 1,
+        MT_AZIMUTH = 2,
+        MT_ELEVATION = 3,
+        MT_INSERTASTART = 4,
+        MT_INSERTBSTART = MT_INSERTASTART + 10,
+        NUMMODTARGETS = MT_INSERTBSTART + 10,
+    };
     void process(float *outputs, int nframes)
     {
         float aux_env_values[4] = {0.0f};
-
         double normphase = (double)phase / grain_end_phase;
         for (size_t i = 0; i < num_aux_envelopes; ++i)
         {
             aux_env_values[i] = (*aux_envelopes)[i].get_value(normphase, auxenvtimewarp);
         }
-        float modulatedvalues[4] = {0.0f};
-        modulatedvalues[0] = aux_env_values[0];
-        modulatedvalues[1] = aux_env_values[0];
-        modulatedvalues[2] = aux_env_values[0];
+        alignas(16) float modulatedvalues[NUMMODTARGETS] = {0.0f};
+        for (auto &e : modulation_slots)
+        {
+            if (e.source_id < CLAP_INVALID_ID && e.target_id < CLAP_INVALID_ID)
+            {
+                modulatedvalues[e.target_id] += aux_env_values[e.source_id] * e.depth;
+            }
+        }
+        for (auto &e : modulatedvalues)
+        {
+            e = std::clamp(e, -1.0f, 1.0f);
+        }
         std::visit(
             [this, &modulatedvalues](auto &q) {
-                double finalpitch =
-                    pitch_base + modulatedvalues[0] * modulation_slots[0].depth * 12.0f;
+                double finalpitch = pitch_base + modulatedvalues[MT_PITCH] * 12.0f;
                 double hz = 440.0 * std::pow(2.0, 1.0 / 12.0 * (finalpitch - 9.0));
                 q.setFrequency(hz);
             },
             theoscillator);
         for (size_t i = 0; i < 2; ++i)
         {
-            if (i == 0 && insert_fx[i].mainmode == GrainInsertFX::GFXSSTFILTER)
+            if (insert_fx[i].mainmode == GrainInsertFX::GFXSSTFILTER)
             {
-                float cutoffmod = 0.0f;
-                cutoffmod = modulation_slots[1].depth * modulatedvalues[1] * 24.0;
-                insert_fx[i].parammodvalues[0] = cutoffmod;
+                // cutoff
+                insert_fx[i].parammodvalues[0] = modulatedvalues[MT_INSERTASTART + i * 10] * 24.0;
+                // resonance
+                insert_fx[i].parammodvalues[1] = modulatedvalues[MT_INSERTASTART + i * 10 + 1];
+                // extra param
+                insert_fx[i].parammodvalues[2] = modulatedvalues[MT_INSERTASTART + i * 10 + 2];
+                // cut off stereo separation
+                // insert_fx[i].parammodvalues[2] = modulatedvalues[MT_INSERTASTART + i * 10 + 2];
+                // drywet mix
+                insert_fx[i].parammodvalues[4] = modulatedvalues[MT_INSERTASTART + i * 10 + 4];
             }
+            /*
             else if (i == 1 && insert_fx[i].mainmode == GrainInsertFX::GFXAIRWINDOWS &&
                      insert_fx[i].submode == 3)
             {
                 // for testing purposes using airwindows ringmodulator freq a
                 insert_fx[i].parammodvalues[0] = modulation_slots[2].depth * modulatedvalues[2];
             }
+                */
             insert_fx[i].prepareBlock();
         }
         int envpeakpos = envshape * grain_end_phase;
@@ -1520,6 +1545,9 @@ class ToneGranulator
         for (int i = 0; i < numvoices; ++i)
         {
             auto v = std::make_unique<GranulatorVoice>();
+            v->modulation_slots[0] = {0, 0.0f, GranulatorVoice::MT_PITCH};
+            v->modulation_slots[1] = {1, 0.0f, GranulatorVoice::MT_PITCH};
+            v->modulation_slots[2] = {2, 0.0f, GranulatorVoice::MT_INSERTBSTART + 4};
             v->aux_envelopes = &voiceaux_envelopes;
             v->pitchBandAttens = pitchBandAttensShared;
             v->osctypemapping = osctypemapping;

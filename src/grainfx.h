@@ -159,8 +159,9 @@ class GrainInsertFX
             sstfilter.prepareBlock();
 
             const float pidiv = M_PI / 2;
-            sstmixcoeffs[0] = std::cos(pidiv * paramvalues[4]);
-            sstmixcoeffs[1] = std::sin(pidiv * paramvalues[4]);
+            float modulatedmix = std::clamp(paramvalues[4] + parammodvalues[4], 0.0f, 1.0f);
+            sstmixcoeffs[0] = std::cos(pidiv * modulatedmix);
+            sstmixcoeffs[1] = std::sin(pidiv * modulatedmix);
         }
         else if (mainmode == GFXAIRWINDOWS)
         {
