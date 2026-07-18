@@ -18,7 +18,7 @@ void VolumeEnvelopeComponent::paint(juce::Graphics &g)
     auto curveend = priorendcurve;
     float sinfreq = getWidth() / 8.0;
     auto &eluts = granul->eluts;
-    auto &auxenv = granul->voiceaux_envelopes[0];
+    auto &auxenv = granul->voiceaux_envelopes[target_envelope];
 
     for (int i = 0; i < getWidth(); ++i)
     {
@@ -65,7 +65,8 @@ void VolumeEnvelopeComponent::paint(juce::Graphics &g)
             float y = juce::jmap<float>(auxenv.steps[i], -1.1f, 1.1f, getHeight(), 0);
             g.drawLine(x0, y, x1, y, 2.0f);
         }
-        g.drawText("Pitch Envelope", 1, 1, getWidth() - 2, 20, juce::Justification::centredTop);
+        g.drawText("Envelope " + juce::String(target_envelope + 1), 1, 1, getWidth() - 2, 20,
+                   juce::Justification::centredTop);
         g.drawFittedText(lastError, 1, 20, getWidth() - 2, getHeight() - 2,
                          juce::Justification::topLeft, 8);
     }
@@ -134,6 +135,14 @@ void VolumeEnvelopeComponent::mouseDown(const juce::MouseEvent &ev)
     if (ev.mods.isRightButtonDown())
     {
         juce::PopupMenu menu;
+        menu.addSectionHeader("Target envelope");
+        for (int i = 0; i < GranulatorVoice::num_aux_envelopes; ++i)
+        {
+            menu.addItem(juce::String(i + 1), [this, i]() {
+                target_envelope = i;
+                repaint();
+            });
+        }
         menu.addSectionHeader("Interpolation mode");
         juce::StringArray modes{"None", "Linear", "Spline"};
         for (int i = 0; i < modes.size(); ++i)
@@ -175,7 +184,7 @@ juce::URL("file:///C:/develop/nephos/src/nephos_help.html")
             StepModSource::Message msg;
             msg.opcode = StepModSource::Message::OP_SETSTEP;
             msg.fval0 = val;
-            msg.dest = 1000;
+            msg.dest = 1000 + target_envelope;
             msg.ival0 = stepindex;
             granul->fifo.push(msg);
         }
@@ -241,7 +250,7 @@ void VolumeEnvelopeComponent::generate_steps(GenMode mode)
                     StepModSource::Message msg;
                     msg.opcode = StepModSource::Message::OP_SETSTEP;
                     msg.fval0 = std::clamp(arr[i].getWithDefault(0.0f), -1.0f, 1.0f);
-                    msg.dest = 1000;
+                    msg.dest = 1000 + target_envelope;
                     msg.ival0 = i;
                     granul->fifo.push(msg);
                 }
@@ -275,7 +284,7 @@ void VolumeEnvelopeComponent::generate_steps(GenMode mode)
         StepModSource::Message msg;
         msg.opcode = StepModSource::Message::OP_SETSTEP;
         msg.fval0 = val;
-        msg.dest = 1000;
+        msg.dest = 1000 + target_envelope;
         msg.ival0 = i;
         granul->fifo.push(msg);
     }

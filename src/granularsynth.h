@@ -1388,16 +1388,18 @@ class ToneGranulator
         StepModSource::Message msg;
         while (fifo.pop(msg))
         {
-            if (msg.dest == 1000 && msg.opcode == StepModSource::Message::OP_SETSTEP)
+            if (msg.dest >= 1000 && msg.dest < 1000 + GranulatorVoice::num_aux_envelopes &&
+                msg.opcode == StepModSource::Message::OP_SETSTEP)
             {
                 const auto numsteps = SimpleEnvelope<false>::maxnumsteps;
-                voiceaux_envelopes[0].steps[msg.ival0] = msg.fval0;
+                int envindex = msg.dest - 1000;
+                voiceaux_envelopes[envindex].steps[msg.ival0] = msg.fval0;
                 if (msg.ival0 == numsteps - 1)
                 {
                     // steps array has extra space for interpolation
-                    voiceaux_envelopes[0].steps[numsteps] = msg.fval0;
-                    voiceaux_envelopes[0].steps[numsteps + 1] = msg.fval0;
-                    voiceaux_envelopes[0].steps[numsteps + 2] = msg.fval0;
+                    voiceaux_envelopes[envindex].steps[numsteps] = msg.fval0;
+                    voiceaux_envelopes[envindex].steps[numsteps + 1] = msg.fval0;
+                    voiceaux_envelopes[envindex].steps[numsteps + 2] = msg.fval0;
                 }
 
                 // voiceaux_envelope.steps[msg.ival0] = msg.fval0;
