@@ -1556,6 +1556,7 @@ class ToneGranulator
             v->modulation_slots[0] = {0, 0.0f, GranulatorVoice::MT_PITCH};
             v->modulation_slots[1] = {1, 0.0f, GranulatorVoice::MT_PITCH};
             v->modulation_slots[2] = {2, 0.0f, GranulatorVoice::MT_FMDEPTH};
+            v->modulation_slots[3] = {3, 0.0f, GranulatorVoice::MT_VOLUME};
             v->aux_envelopes = &voiceaux_envelopes;
             v->pitchBandAttens = pitchBandAttensShared;
             v->osctypemapping = osctypemapping;

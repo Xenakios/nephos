@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PluginProcessor.h"
+#include "clap/id.h"
 #include "juce_core/juce_core.h"
 #include "juce_events/juce_events.h"
 #include "juce_graphics/juce_graphics.h"
@@ -180,6 +181,25 @@ class GrainModulationVisualizationComponent : public juce::Component, public juc
     int target_to_show = 0;
     GrainModulationVisualizationComponent(ToneGranulator *gr) : granul(gr) { startTimer(40); }
     void timerCallback() override { repaint(); }
+    void mouseDown(const juce::MouseEvent &ev) override
+    {
+        juce::PopupMenu menu;
+        std::set<uint32_t> targets;
+        for (auto &e : granul->voices[0]->modulation_slots)
+        {
+            if (e.target_id != CLAP_INVALID_ID)
+                targets.insert(e.target_id);
+        }
+        menu.addSectionHeader("Modulation targets");
+        for (auto &e : targets)
+        {
+            menu.addItem(juce::String(e), [this, e]() {
+                target_to_show = e;
+                repaint();
+            });
+        }
+        menu.showMenuAsync({});
+    }
     void paint(juce::Graphics &g) override
     {
         g.fillAll(juce::Colours::black);
