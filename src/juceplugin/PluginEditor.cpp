@@ -100,7 +100,7 @@ AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor() {}
 
 void AudioPluginAudioProcessorEditor::timerCallback()
 {
-    mainPage.volumeModuleComponent.envcomp.updateIfNeeded();
+    
     mainPage.oscModuleComponent.pitchEnvelopeComponent.updateIfNeeded();
 
     for (auto &c : modulationPage.stepcomps)

@@ -8,72 +8,29 @@
 #include <exception>
 #include <stdexcept>
 
-void VolumeEnvelopeComponent::paint(juce::Graphics &g)
+void GrainEnvelopeEditorComponent::paint(juce::Graphics &g)
 {
     g.fillAll(juce::Colours::black);
     g.setColour(juce::Colours::yellow);
     curvepath.clear();
-    auto curvemorph = priormorph;
-    auto curvestart = priorstartcurve;
-    auto curveend = priorendcurve;
-    float sinfreq = getWidth() / 8.0;
-    auto &eluts = granul->eluts;
     auto &auxenv = granul->voiceaux_envelopes[target_envelope];
 
-    for (int i = 0; i < getWidth(); ++i)
+    g.setColour(juce::Colours::white);
+    auto numsteps = SimpleEnvelope<false>::maxnumsteps;
+    for (int i = 0; i < numsteps; ++i)
     {
-        float normx = 1.0 / getWidth() * i;
-        float sinvalue = std::sin(2 * M_PI * normx * sinfreq);
-        float normy = 0.0f;
-        if (!auxenvmode)
-        {
-            if (normx < curvemorph)
-            {
-                normx = xenakios::mapvalue(normx, 0.0f, curvemorph, 0.0f, 1.0f);
-                // normy = easing_table[curvestart].function(normx);
-                normy = eluts.getValueLERP<true>(curvestart, normx);
-            }
-            else
-            {
-                normx = xenakios::mapvalue(normx, curvemorph, 1.0f, 1.0f, 0.0f);
-                // normy = easing_table[curveend].function(normx);
-                normy = eluts.getValueLERP<true>(curveend, normx);
-            }
-            normy *= sinvalue;
-        }
-        else
-        {
-            normy = priorauxamount * auxenv.get_value(normx, priorauxwarp);
-            normy *= 1.0;
-        }
-
-        float ycor = xenakios::mapvalue<float>(normy, -1.1f, 1.1f, getHeight(), 0);
-        if (i == 0)
-            curvepath.startNewSubPath({(float)i, ycor});
-        else
-            curvepath.lineTo({(float)i, ycor});
+        float x0 = (float)getWidth() / numsteps * i;
+        float x1 = (float)getWidth() / numsteps * (i + 1);
+        float y = juce::jmap<float>(auxenv.steps[i], -1.1f, 1.1f, getHeight(), 0);
+        g.drawLine(x0, y, x1, y, 2.0f);
     }
-    if (!auxenvmode)
-        g.strokePath(curvepath, juce::PathStrokeType(1.0f));
-    if (auxenvmode)
-    {
-        g.setColour(juce::Colours::white);
-        auto numsteps = SimpleEnvelope<false>::maxnumsteps;
-        for (int i = 0; i < numsteps; ++i)
-        {
-            float x0 = (float)getWidth() / numsteps * i;
-            float x1 = (float)getWidth() / numsteps * (i + 1);
-            float y = juce::jmap<float>(auxenv.steps[i], -1.1f, 1.1f, getHeight(), 0);
-            g.drawLine(x0, y, x1, y, 2.0f);
-        }
-        g.drawText("Envelope " + juce::String(target_envelope + 1), 1, 1, getWidth() - 2, 20,
-                   juce::Justification::centredTop);
-        g.drawFittedText(lastError, 1, 20, getWidth() - 2, getHeight() - 2,
-                         juce::Justification::topLeft, 8);
-    }
+    g.drawText("Envelope " + juce::String(target_envelope + 1), 1, 1, getWidth() - 2, 20,
+               juce::Justification::centredTop);
+    g.drawFittedText(lastError, 1, 20, getWidth() - 2, getHeight() - 2,
+                     juce::Justification::topLeft, 8);
 }
 
-void VolumeEnvelopeComponent::transform_steps(TransformMode mode)
+void GrainEnvelopeEditorComponent::transform_steps(TransformMode mode)
 {
     auto numsteps = SimpleEnvelope<false>::maxnumsteps;
     auto oldsteps = granul->voiceaux_envelopes[target_envelope].steps;
@@ -128,10 +85,8 @@ void VolumeEnvelopeComponent::transform_steps(TransformMode mode)
     }
 }
 
-void VolumeEnvelopeComponent::mouseDown(const juce::MouseEvent &ev)
+void GrainEnvelopeEditorComponent::mouseDown(const juce::MouseEvent &ev)
 {
-    if (!auxenvmode)
-        return;
     auto numsteps = SimpleEnvelope<false>::maxnumsteps;
     if (ev.mods.isRightButtonDown())
     {
@@ -196,7 +151,7 @@ juce::URL("file:///C:/develop/nephos/src/nephos_help.html")
     juce::Timer::callAfterDelay(100, [this]() { repaint(); });
 }
 
-juce::PopupMenu VolumeEnvelopeComponent::generate_presets_menu()
+juce::PopupMenu GrainEnvelopeEditorComponent::generate_presets_menu()
 {
     juce::PopupMenu menu;
     for (auto &f : juce::RangedDirectoryIterator{
@@ -237,7 +192,7 @@ juce::PopupMenu VolumeEnvelopeComponent::generate_presets_menu()
     return menu;
 }
 
-void VolumeEnvelopeComponent::generate_steps(GenMode mode)
+void GrainEnvelopeEditorComponent::generate_steps(GenMode mode)
 {
     auto numsteps = SimpleEnvelope<false>::maxnumsteps;
     lastError = "";

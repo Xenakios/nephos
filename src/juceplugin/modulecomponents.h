@@ -197,7 +197,7 @@ class GrainModulationVisualizationComponent : public juce::Component, public juc
         menu.addSectionHeader("Modulation targets");
         for (auto &e : targets)
         {
-            menu.addItem(juce::String(e), [this, e]() {
+            menu.addItem(GranulatorVoice::get_mod_target_name((GranulatorVoice::MODTARGET)e), [this, e]() {
                 target_to_show = e;
                 repaint();
             });
@@ -267,10 +267,10 @@ class GrainModulationVisualizationComponent : public juce::Component, public juc
     }
 };
 
-class VolumeEnvelopeComponent : public juce::Component
+class GrainEnvelopeEditorComponent : public juce::Component
 {
   public:
-    VolumeEnvelopeComponent(ToneGranulator *gr, bool auxenv) : granul(gr), auxenvmode(auxenv)
+    GrainEnvelopeEditorComponent(ToneGranulator *gr) : granul(gr)
     {
         curvepath.preallocateSpace(512);
         rng.seed(65537, 90004);
@@ -309,8 +309,6 @@ class VolumeEnvelopeComponent : public juce::Component
     void mouseWheelMove(const juce::MouseEvent &event,
                         const juce::MouseWheelDetails &wheel) override
     {
-        if (!auxenvmode)
-            return;
         auto numsteps = SimpleEnvelope<false>::maxnumsteps;
         int stepindex = numsteps / (float)getWidth() * event.x;
         if (stepindex >= 0 && stepindex < numsteps)
@@ -331,41 +329,11 @@ class VolumeEnvelopeComponent : public juce::Component
 
     void updateIfNeeded()
     {
-        if (!auxenvmode)
-        {
-            int curvestart = *granul->idtoparvalptr[ToneGranulator::PAR_VOLENVEASINGSTART];
-            int curveend = *granul->idtoparvalptr[ToneGranulator::PAR_VOLENVEASINGEND];
-            float curvemorph = *granul->idtoparvalptr[ToneGranulator::PAR_ENVMORPH];
-            if (priorstartcurve != curvestart || priorendcurve != curveend ||
-                priormorph != curvemorph)
-            {
-                priorstartcurve = curvestart;
-                priorendcurve = curveend;
-                priormorph = curvemorph;
-                repaint();
-                // DBG(priorstartcurve << " " << priorendcurve << " " << priormorph);
-            }
-        }
-        else
-        {
-            float warp = granul->auxenvwarpmodulated;
-            float depth = granul->auxenvdepthpmodulated;
-            if (warp != priorauxwarp || depth != priorauxamount)
-            {
-                priorauxwarp = warp;
-                priorauxamount = depth;
-                repaint();
-            }
-        }
+        repaint();
     }
     ToneGranulator *granul = nullptr;
     juce::Path curvepath;
-    int priorstartcurve = 0;
-    int priorendcurve = 0;
-    float priormorph = 0.0f;
-    float priorauxwarp = 0.0f;
-    float priorauxamount = 0.0f;
-    bool auxenvmode = false;
+    
 };
 
 inline void initSlider(AudioPluginAudioProcessor &processor, juce::Component &parentComponent,
@@ -560,7 +528,7 @@ class OscillatorModuleComponent : public juce::GroupComponent
     XapSlider oscFMFeedbackKnob;
     XapSlider oscNoiseCorrelationKnob;
     XapSlider oscNoiseModeDrop;
-    VolumeEnvelopeComponent pitchEnvelopeComponent;
+    GrainEnvelopeEditorComponent pitchEnvelopeComponent;
     GrainModulationVisualizationComponent grainModComponent;
     juce::TextEditor oscTypeEditor;
     OscillatorModuleComponent(AudioPluginAudioProcessor &p)
@@ -583,7 +551,7 @@ class OscillatorModuleComponent : public juce::GroupComponent
           oscNoiseCorrelationKnob(
               XapSlider::SS_Knob,
               *p.granulator.idtoparmetadata[ToneGranulator::PAR_NOISECORRELATION]),
-          pitchEnvelopeComponent(&p.granulator, true), grainModComponent(&p.granulator)
+          pitchEnvelopeComponent(&p.granulator), grainModComponent(&p.granulator)
     {
         addAndMakeVisible(grainModComponent);
         addAndMakeVisible(oscTypeComponent);
@@ -893,7 +861,6 @@ class VolumeModuleComponent : public juce::GroupComponent
     XapSlider startCurveSlider;
     XapSlider endCurveSlider;
     std::vector<std::unique_ptr<XapSlider>> pitchBandGainKnobs;
-    VolumeEnvelopeComponent envcomp;
     VolumeModuleComponent(AudioPluginAudioProcessor &p)
         : juce::GroupComponent("", "Volume"), processorRef(p),
           volumeKnob(XapSlider::SS_Knob,
@@ -903,8 +870,7 @@ class VolumeModuleComponent : public juce::GroupComponent
           startCurveSlider(XapSlider::SS_HorizontalSlider,
                            *p.granulator.idtoparmetadata[ToneGranulator::PAR_VOLENVEASINGSTART]),
           endCurveSlider(XapSlider::SS_HorizontalSlider,
-                         *p.granulator.idtoparmetadata[ToneGranulator::PAR_VOLENVEASINGEND]),
-          envcomp(&p.granulator, false)
+                         *p.granulator.idtoparmetadata[ToneGranulator::PAR_VOLENVEASINGEND])
     {
         addAndMakeVisible(volumeKnob);
         volumeKnob.OnValueChanged = [this]() {
@@ -916,7 +882,6 @@ class VolumeModuleComponent : public juce::GroupComponent
         };
         initSlider(p, *this, startCurveSlider);
         initSlider(p, *this, endCurveSlider);
-        addAndMakeVisible(envcomp);
         for (int i = 0; i < 7; ++i)
         {
             auto knob = std::make_unique<XapSlider>(
@@ -952,7 +917,6 @@ class VolumeModuleComponent : public juce::GroupComponent
                            .withMargin(2)
                            .withMaxHeight(25)
                            .withMinWidth(60));
-        flex.items.add(juce::FlexItem(envcomp).withFlex(1.0).withMargin(2));
         flex.performLayout(juce::Rectangle<int>(7, 17, getWidth() - 16, 70));
         juce::FlexBox pitchgainflex;
         pitchgainflex.flexDirection = juce::FlexBox::Direction::row;

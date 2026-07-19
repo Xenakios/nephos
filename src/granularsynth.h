@@ -7,6 +7,7 @@
 #include <span>
 // #include "sst/basic-blocks/dsp/CorrelatedNoise.h"
 #include "clap/id.h"
+#include "fmt/format.h"
 #include "sst/basic-blocks/dsp/EllipticBlepOscillators.h"
 #include <variant>
 #include "../Common/xen_ambisonics.h"
@@ -975,6 +976,25 @@ class GranulatorVoice
         MT_INSERTBSTART = MT_INSERTASTART + 10,
         NUMMODTARGETS = MT_INSERTBSTART + 10,
     };
+    static std::string get_mod_target_name(MODTARGET target)
+    {
+        if (target == MT_PITCH)
+            return "PITCH";
+        else if (target == MT_VOLUME)
+            return "VOLUME";
+        else if (target == MT_FMDEPTH)
+            return "FM DEPTH";
+        else if (target == MT_AZIMUTH)
+            return "AZIMUTH";
+        else if (target >= MT_INSERTASTART && target < NUMMODTARGETS)
+        {
+            int i = target - MT_INSERTASTART;
+            int whichinsert = i / 10;
+            int whichparam = i % 10;
+            return fmt::format("INS {} PAR {}", whichinsert, whichparam);
+        }
+        return "";
+    }
     static void process_mod_matrix(
         double normphase, double auxenvtimewarp,
         std::array<ModSlot, GrainEvent::max_grain_mod_slots> &mod_slots,
@@ -1555,7 +1575,7 @@ class ToneGranulator
             auto v = std::make_unique<GranulatorVoice>();
             v->modulation_slots[0] = {0, 0.0f, GranulatorVoice::MT_PITCH};
             v->modulation_slots[1] = {1, 0.0f, GranulatorVoice::MT_PITCH};
-            v->modulation_slots[2] = {2, 0.0f, GranulatorVoice::MT_FMDEPTH};
+            v->modulation_slots[2] = {2, 0.0f, GranulatorVoice::MT_INSERTBSTART};
             v->modulation_slots[3] = {3, 0.0f, GranulatorVoice::MT_VOLUME};
             v->aux_envelopes = &voiceaux_envelopes;
             v->pitchBandAttens = pitchBandAttensShared;
