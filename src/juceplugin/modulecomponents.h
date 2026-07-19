@@ -203,7 +203,6 @@ class GrainModulationVisualizationComponent : public juce::Component, public juc
     void paint(juce::Graphics &g) override
     {
         g.fillAll(juce::Colours::black);
-
         juce::Path path;
         for (int i = 0; i < getWidth(); ++i)
         {
@@ -212,7 +211,18 @@ class GrainModulationVisualizationComponent : public juce::Component, public juc
             GranulatorVoice::process_mod_matrix(normphase, 0.0, granul->voices[0]->modulation_slots,
                                                 granul->voiceaux_envelopes, modvalues);
             float y = modvalues[target_to_show];
-            y = juce::jmap(y, -1.0f, 1.0f, (float)getHeight(), 0.0f);
+            if (target_to_show == GranulatorVoice::MT_VOLUME)
+            {
+                y += *granul->idtoparvalptr[ToneGranulator::PAR_GRAINVOLUME];
+                y = std::clamp(y, 0.0f, 1.0f);
+                y = y * y * y;
+                y = juce::jmap(y, 0.0f, 1.0f, (float)getHeight(), 0.0f);
+            }
+            else
+            {
+                y = juce::jmap(y, -1.0f, 1.0f, (float)getHeight(), 0.0f);
+            }
+
             if (i == 0)
                 path.startNewSubPath(i, y);
             else
@@ -569,7 +579,7 @@ class OscillatorModuleComponent : public juce::GroupComponent
     {
         oscTypeComponent.setBounds(7, 17, 350, 50);
         oscPitchKnob.setBounds(7, oscTypeComponent.getBottom() + 1, 80, 100);
-        grainModComponent.setBounds(7, oscPitchKnob.getBottom() + 2, 80, 80);
+
         for (int i = 0; i < modDepthKnobs.size(); ++i)
         {
             modDepthKnobs[i]->setBounds(oscPitchKnob.getRight() + 2,
@@ -580,6 +590,8 @@ class OscillatorModuleComponent : public juce::GroupComponent
         //                            50);
         pitchEnvelopeComponent.setBounds(modDepthKnobs[0]->getRight() + 2,
                                          oscTypeComponent.getBottom(), 150, 150);
+        grainModComponent.setBounds(pitchEnvelopeComponent.getX(),
+                                    pitchEnvelopeComponent.getBottom() + 2, 150, 50);
         oscSyncKnob.setBounds(pitchEnvelopeComponent.getRight() + 2,
                               oscTypeComponent.getBottom() + 1, 80, 50);
         oscPWKnob.setBounds(pitchEnvelopeComponent.getRight() + 2, oscSyncKnob.getBottom() + 1, 80,
