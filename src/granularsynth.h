@@ -1303,6 +1303,8 @@ class ToneGranulator
     struct GrainEnvelopeVisMessage
     {
         std::array<float, GrainEvent::max_grain_mod_slots> moddepths;
+        std::array<uint32_t, GrainEvent::max_grain_mod_slots> modsources;
+        std::array<uint32_t, GrainEvent::max_grain_mod_slots> modtargets;
         float grainvolume = 0.0f;
         float curvemorph = 0.0f;
         float startcurve = 0.0f;
@@ -2240,6 +2242,8 @@ class ToneGranulator
             {
                 msg.moddepths[i] =
                     modmatrix.m.getTargetValue({ToneGranulator::PAR_GRAINMODSLOTAMOUNT0 + i});
+                msg.modsources[i] = voices[0]->modulation_slots[i].source_id;
+                msg.modtargets[i] = voices[0]->modulation_slots[i].target_id;
             }
             msg.curvemorph = modmatrix.m.getTargetValue({ToneGranulator::PAR_ENVMORPH});
             msg.startcurve = *idtoparvalptr[ToneGranulator::PAR_VOLENVEASINGSTART];

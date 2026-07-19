@@ -185,6 +185,8 @@ class GrainModulationVisualizationComponent : public juce::Component, public juc
         startTimer(20);
         setOpaque(true);
         std::fill(vismsg.moddepths.begin(), vismsg.moddepths.end(), 0.0f);
+        std::fill(vismsg.modsources.begin(), vismsg.modsources.end(), CLAP_INVALID_ID);
+        std::fill(vismsg.modtargets.begin(), vismsg.modtargets.end(), CLAP_INVALID_ID);
     }
     void timerCallback() override
     {
@@ -228,8 +230,7 @@ class GrainModulationVisualizationComponent : public juce::Component, public juc
         for (int i = 0; i < modulation_slots.size(); ++i)
         {
             float depth = vismsg.moddepths[i];
-            modulation_slots[i] = {granul->voices[0]->modulation_slots[i].source_id, depth,
-                                   granul->voices[0]->modulation_slots[i].target_id};
+            modulation_slots[i] = {vismsg.modsources[i], depth, vismsg.modtargets[i]};
         }
         float sinfreq = getWidth() / 8.0;
         float curvemorph = vismsg.curvemorph;
