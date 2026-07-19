@@ -183,6 +183,7 @@ class GrainModulationVisualizationComponent : public juce::Component, public juc
     {
         path.preallocateSpace(200);
         startTimer(20);
+        setOpaque(true);
     }
     void timerCallback() override { repaint(); }
     void mouseDown(const juce::MouseEvent &ev) override
@@ -197,20 +198,25 @@ class GrainModulationVisualizationComponent : public juce::Component, public juc
         menu.addSectionHeader("Modulation targets");
         for (auto &e : targets)
         {
-            menu.addItem(GranulatorVoice::get_mod_target_name((GranulatorVoice::MODTARGET)e), [this, e]() {
-                target_to_show = e;
-                repaint();
-            });
+            menu.addItem(GranulatorVoice::get_mod_target_name((GranulatorVoice::MODTARGET)e),
+                         [this, e]() {
+                             target_to_show = e;
+                             repaint();
+                         });
         }
         menu.showMenuAsync({});
     }
     juce::Path path;
     void paint(juce::Graphics &g) override
     {
+        double t0 = juce::Time::getMillisecondCounterHiRes();
         g.fillAll(juce::Colours::black);
         path.clear();
         alignas(16) std::array<GranulatorVoice::ModSlot, GrainEvent::max_grain_mod_slots>
             modulation_slots;
+        // !!! this locking shouldn't be left in because it's only needed for
+        // our fancy visualization thing
+        granul->spinLock.lock();
         for (int i = 0; i < modulation_slots.size(); ++i)
         {
             float depth =
@@ -224,6 +230,7 @@ class GrainModulationVisualizationComponent : public juce::Component, public juc
         int curveend = *granul->idtoparvalptr[ToneGranulator::PAR_VOLENVEASINGEND];
         auto &eluts = granul->eluts;
         float grainvol = granul->modmatrix.m.getTargetValue({ToneGranulator::PAR_GRAINVOLUME});
+        granul->spinLock.unlock();
         for (int i = 0; i < getWidth(); ++i)
         {
             float modvalues[30] = {0.0f};
@@ -264,7 +271,21 @@ class GrainModulationVisualizationComponent : public juce::Component, public juc
         }
         g.setColour(juce::Colours::yellow);
         g.strokePath(path, juce::PathStrokeType(2.0f));
+        double t1 = juce::Time::getMillisecondCounterHiRes();
+        paint_elapsed_sum += t1 - t0;
+        ++paintcount;
+        double avg = paint_elapsed_sum / paintcount;
+        g.setColour(juce::Colours::white);
+        g.drawText(juce::String(avg, 2) + " ms avg", 1, 1, getWidth(), 25,
+                   juce::Justification::centredLeft);
+        if (paintcount == 50)
+        {
+            paintcount = 0;
+            paint_elapsed_sum = 0.0;
+        }
     }
+    int paintcount = 0;
+    double paint_elapsed_sum = 0.0;
 };
 
 class GrainEnvelopeEditorComponent : public juce::Component
@@ -327,13 +348,9 @@ class GrainEnvelopeEditorComponent : public juce::Component
     }
     void paint(juce::Graphics &g) override;
 
-    void updateIfNeeded()
-    {
-        repaint();
-    }
+    void updateIfNeeded() { repaint(); }
     ToneGranulator *granul = nullptr;
     juce::Path curvepath;
-    
 };
 
 inline void initSlider(AudioPluginAudioProcessor &processor, juce::Component &parentComponent,
