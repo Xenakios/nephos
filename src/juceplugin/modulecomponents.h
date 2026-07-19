@@ -182,7 +182,7 @@ class GrainModulationVisualizationComponent : public juce::Component, public juc
     GrainModulationVisualizationComponent(ToneGranulator *gr) : granul(gr)
     {
         path.preallocateSpace(200);
-        startTimer(40);
+        startTimer(20);
     }
     void timerCallback() override { repaint(); }
     void mouseDown(const juce::MouseEvent &ev) override
@@ -218,20 +218,39 @@ class GrainModulationVisualizationComponent : public juce::Component, public juc
             modulation_slots[i] = {granul->voices[0]->modulation_slots[i].source_id, depth,
                                    granul->voices[0]->modulation_slots[i].target_id};
         }
-
+        float sinfreq = getWidth() / 8.0;
+        float curvemorph = granul->modmatrix.m.getTargetValue({ToneGranulator::PAR_ENVMORPH});
+        int curvestart = *granul->idtoparvalptr[ToneGranulator::PAR_VOLENVEASINGSTART];
+        int curveend = *granul->idtoparvalptr[ToneGranulator::PAR_VOLENVEASINGEND];
+        auto &eluts = granul->eluts;
+        float grainvol = granul->modmatrix.m.getTargetValue({ToneGranulator::PAR_GRAINVOLUME});
         for (int i = 0; i < getWidth(); ++i)
         {
             float modvalues[30] = {0.0f};
-            double normphase = 1.0 / (getWidth() - 1) * i;
+            double normphase = 1.0 / getWidth() * i;
             GranulatorVoice::process_mod_matrix(normphase, 0.0, modulation_slots,
                                                 granul->voiceaux_envelopes, modvalues);
             float y = modvalues[target_to_show];
             if (target_to_show == GranulatorVoice::MT_VOLUME)
             {
-                y += *granul->idtoparvalptr[ToneGranulator::PAR_GRAINVOLUME];
+                y += grainvol;
                 y = std::clamp(y, 0.0f, 1.0f);
                 y = y * y * y;
-                y = juce::jmap(y, 0.0f, 1.0f, (float)getHeight(), 0.0f);
+                float sinvalue = std::sin(2 * M_PI * normphase * sinfreq);
+                y = sinvalue * y;
+                float envgain = 0.0f;
+                if (normphase < curvemorph)
+                {
+                    normphase = xenakios::mapvalue<float>(normphase, 0.0f, curvemorph, 0.0f, 1.0f);
+                    envgain = eluts.getValueLERP<true>(curvestart, normphase);
+                }
+                else
+                {
+                    normphase = xenakios::mapvalue<float>(normphase, curvemorph, 1.0f, 1.0f, 0.0f);
+                    envgain = eluts.getValueLERP<true>(curveend, normphase);
+                }
+                y *= envgain;
+                y = juce::jmap(y, -1.0f, 1.0f, (float)getHeight(), 0.0f);
             }
             else
             {
