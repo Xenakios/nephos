@@ -802,8 +802,14 @@ choc::value::Value AudioPluginAudioProcessor::getState()
     }
     state.setMember("osctypemapping", osctypemap);
 
-    auto auxenvstate = granulator.voiceaux_envelopes[0].getState();
-    state.setMember("auxenvstate", auxenvstate);
+    auto auxenvstates = choc::value::createEmptyArray();
+    for (int i = 0; i < granulator.voiceaux_envelopes.size(); ++i)
+    {
+        auto auxenvstate = granulator.voiceaux_envelopes[i].getState();
+        auxenvstates.addArrayElement(auxenvstate);
+    }
+
+    state.setMember("auxenvstates", auxenvstates);
 
     auto modroutings = choc::value::createEmptyArray();
     auto &mm = granulator.modmatrix;
@@ -849,19 +855,24 @@ void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
             }
         }
     }
-    if (state.hasObjectMember("auxenvstate"))
+    if (state.hasObjectMember("auxenvstates"))
     {
-        auto auxenvstate = state["auxenvstate"];
-        // granulator.set_aux_envelope_interpolation_mode(auxenvstate["interpmode"].getWithDefault(0));
-        auto auxenvsteps = auxenvstate["steps"];
-        for (int i = 0; i < auxenvsteps.size(); ++i)
+        auto auxenvstates = state["auxenvstates"];
+        for (int i = 0; i < auxenvstates.size(); ++i)
         {
-            StepModSource::Message msg;
-            msg.opcode = StepModSource::Message::OP_SETSTEP;
-            msg.fval0 = auxenvsteps[i].getWithDefault(0.0);
-            msg.dest = 1000;
-            msg.ival0 = i;
-            granulator.fifo.push(msg);
+            auto auxenvstate = auxenvstates[i];
+            granulator.set_aux_envelope_interpolation_mode(
+                i, auxenvstate["interpmode"].getWithDefault(0));
+            auto auxenvsteps = auxenvstate["steps"];
+            for (int j = 0; j < auxenvsteps.size(); ++j)
+            {
+                StepModSource::Message msg;
+                msg.opcode = StepModSource::Message::OP_SETSTEP;
+                msg.fval0 = auxenvsteps[j].getWithDefault(0.0);
+                msg.dest = 1000 + i;
+                msg.ival0 = j;
+                granulator.fifo.push(msg);
+            }
         }
     }
     if (state.hasObjectMember("stepseqstates"))
