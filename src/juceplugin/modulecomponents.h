@@ -184,8 +184,17 @@ class GrainModulationVisualizationComponent : public juce::Component, public juc
         path.preallocateSpace(200);
         startTimer(20);
         setOpaque(true);
+        std::fill(vismsg.moddepths.begin(), vismsg.moddepths.end(), 0.0f);
     }
-    void timerCallback() override { repaint(); }
+    void timerCallback() override
+    {
+        ToneGranulator::GrainEnvelopeVisMessage msg;
+        while (granul->gevisfifo.pop(msg))
+        {
+            vismsg = msg;
+        }
+        repaint();
+    }
     void mouseDown(const juce::MouseEvent &ev) override
     {
         juce::PopupMenu menu;
@@ -207,6 +216,7 @@ class GrainModulationVisualizationComponent : public juce::Component, public juc
         menu.showMenuAsync({});
     }
     juce::Path path;
+    ToneGranulator::GrainEnvelopeVisMessage vismsg;
     void paint(juce::Graphics &g) override
     {
         double t0 = juce::Time::getMillisecondCounterHiRes();
@@ -214,23 +224,20 @@ class GrainModulationVisualizationComponent : public juce::Component, public juc
         path.clear();
         alignas(16) std::array<GranulatorVoice::ModSlot, GrainEvent::max_grain_mod_slots>
             modulation_slots;
-        // !!! this locking shouldn't be left in because it's only needed for
-        // our fancy visualization thing
-        granul->spinLock.lock();
+
         for (int i = 0; i < modulation_slots.size(); ++i)
         {
-            float depth =
-                granul->modmatrix.m.getTargetValue({ToneGranulator::PAR_GRAINMODSLOTAMOUNT0 + i});
+            float depth = vismsg.moddepths[i];
             modulation_slots[i] = {granul->voices[0]->modulation_slots[i].source_id, depth,
                                    granul->voices[0]->modulation_slots[i].target_id};
         }
         float sinfreq = getWidth() / 8.0;
-        float curvemorph = granul->modmatrix.m.getTargetValue({ToneGranulator::PAR_ENVMORPH});
-        int curvestart = *granul->idtoparvalptr[ToneGranulator::PAR_VOLENVEASINGSTART];
-        int curveend = *granul->idtoparvalptr[ToneGranulator::PAR_VOLENVEASINGEND];
+        float curvemorph = vismsg.curvemorph;
+        int curvestart = vismsg.startcurve;
+        int curveend = vismsg.endcurve;
         auto &eluts = granul->eluts;
-        float grainvol = granul->modmatrix.m.getTargetValue({ToneGranulator::PAR_GRAINVOLUME});
-        granul->spinLock.unlock();
+        float grainvol = vismsg.grainvolume;
+
         for (int i = 0; i < getWidth(); ++i)
         {
             float modvalues[30] = {0.0f};
@@ -275,9 +282,10 @@ class GrainModulationVisualizationComponent : public juce::Component, public juc
         paint_elapsed_sum += t1 - t0;
         ++paintcount;
         double avg = paint_elapsed_sum / paintcount;
+        int fifoslots = granul->gevisfifo.getUsedSlots();
         g.setColour(juce::Colours::white);
-        g.drawText(juce::String(avg, 2) + " ms avg", 1, 1, getWidth(), 25,
-                   juce::Justification::centredLeft);
+        g.drawText(juce::String(avg, 2) + " ms avg " + juce::String(fifoslots), 1, 1, getWidth(),
+                   25, juce::Justification::centredLeft);
         if (paintcount == 50)
         {
             paintcount = 0;

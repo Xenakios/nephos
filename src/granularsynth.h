@@ -1300,6 +1300,16 @@ class ToneGranulator
     std::unordered_map<uint32_t, float> modRanges;
     std::unordered_map<int, int> shapeParToActualShape;
     choc::fifo::SingleReaderSingleWriterFIFO<StepModSource::Message> fifo;
+    struct GrainEnvelopeVisMessage
+    {
+        std::array<float, GrainEvent::max_grain_mod_slots> moddepths;
+        float grainvolume = 0.0f;
+        float curvemorph = 0.0f;
+        float startcurve = 0.0f;
+        float endcurve = 0.0f;
+    };
+    int audiocallbackcount = 0;
+    choc::fifo::SingleReaderSingleWriterFIFO<GrainEnvelopeVisMessage> gevisfifo;
     struct GrainVisualizerMessage
     {
         double timepos = 0.0;
@@ -1590,7 +1600,7 @@ class ToneGranulator
     ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
     {
         visualizer_fifo.reset(2048);
-
+        gevisfifo.reset(16);
         shapeParToActualShape[0] = GranulatorModMatrix::lfo_t::SINE;
         shapeParToActualShape[1] = GranulatorModMatrix::lfo_t::PULSE;
         shapeParToActualShape[2] = GranulatorModMatrix::lfo_t::SAW_TRI_RAMP;
@@ -2223,6 +2233,20 @@ class ToneGranulator
             modSourceValues[RANDOM0 + i] = randomModValues[i];
         modSourceValues[MIDINOTE] = midiNoteModValue;
         modmatrix.m.process();
+        if (audiocallbackcount % 100 == 0)
+        {
+            GrainEnvelopeVisMessage msg;
+            for (int i = 0; i < GrainEvent::max_grain_mod_slots; ++i)
+            {
+                msg.moddepths[i] =
+                    modmatrix.m.getTargetValue({ToneGranulator::PAR_GRAINMODSLOTAMOUNT0 + i});
+            }
+            msg.curvemorph = modmatrix.m.getTargetValue({ToneGranulator::PAR_ENVMORPH});
+            msg.startcurve = *idtoparvalptr[ToneGranulator::PAR_VOLENVEASINGSTART];
+            msg.endcurve = *idtoparvalptr[ToneGranulator::PAR_VOLENVEASINGEND];
+            msg.grainvolume = modmatrix.m.getTargetValue({ToneGranulator::PAR_GRAINVOLUME});
+            gevisfifo.push(msg);
+        }
     }
     void generate_grain()
     {
@@ -2792,5 +2816,6 @@ class ToneGranulator
                 ++voicesused;
         }
         numVoicesUsed = voicesused;
+        ++audiocallbackcount;
     }
 };
