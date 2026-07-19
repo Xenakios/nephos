@@ -162,6 +162,7 @@ void VolumeEnvelopeComponent::mouseDown(const juce::MouseEvent &ev)
         menu.addSectionHeader("Generate");
         menu.addItem("Reset to zero", [this]() { generate_steps(GM_RESET); });
         menu.addItem("Reset to max", [this]() { generate_steps(GM_MAX); });
+        menu.addItem("Alt min/max", [this]() { generate_steps(GM_ALTERNATEMINMAX); });
         menu.addItem("Ramp up", [this]() { generate_steps(GM_RAMPUP); });
         menu.addItem("Ramp up/down", [this]() { generate_steps(GM_RAMPUPDOWN); });
         menu.addItem("Random Uniform", [this]() { generate_steps(GM_RANDOM); });
@@ -277,6 +278,13 @@ void VolumeEnvelopeComponent::generate_steps(GenMode mode)
             val = rng.nextFloatInRange(-1.0f, 1.0f);
         else if (mode == GM_MAX)
             val = 1.0f;
+        else if (mode == GM_ALTERNATEMINMAX)
+        {
+            if (i % 2 == 0)
+                val = -1.0f;
+            else
+                val = 1.0f;
+        }
         else if (mode == GM_RAMPUP)
             val = juce::jmap<float>(i, 0, numsteps - 1, -1.0f, 1.0f);
         else if (mode == GM_RAMPUPDOWN)

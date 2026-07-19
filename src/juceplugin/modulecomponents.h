@@ -204,11 +204,21 @@ class GrainModulationVisualizationComponent : public juce::Component, public juc
     {
         g.fillAll(juce::Colours::black);
         juce::Path path;
+        alignas(16) std::array<GranulatorVoice::ModSlot, GrainEvent::max_grain_mod_slots>
+            modulation_slots;
+        for (int i = 0; i < modulation_slots.size(); ++i)
+        {
+            float depth =
+                granul->modmatrix.m.getTargetValue({ToneGranulator::PAR_GRAINMODSLOTAMOUNT0 + i});
+            modulation_slots[i] = {granul->voices[0]->modulation_slots[i].source_id, depth,
+                                   granul->voices[0]->modulation_slots[i].target_id};
+        }
+
         for (int i = 0; i < getWidth(); ++i)
         {
             float modvalues[30] = {0.0f};
             double normphase = 1.0 / (getWidth() - 1) * i;
-            GranulatorVoice::process_mod_matrix(normphase, 0.0, granul->voices[0]->modulation_slots,
+            GranulatorVoice::process_mod_matrix(normphase, 0.0, modulation_slots,
                                                 granul->voiceaux_envelopes, modvalues);
             float y = modvalues[target_to_show];
             if (target_to_show == GranulatorVoice::MT_VOLUME)
@@ -248,6 +258,7 @@ class VolumeEnvelopeComponent : public juce::Component
     {
         GM_RESET,
         GM_MAX,
+        GM_ALTERNATEMINMAX,
         GM_RAMPUP,
         GM_RAMPDOWN,
         GM_RAMPUPDOWN,
