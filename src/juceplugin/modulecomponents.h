@@ -179,7 +179,11 @@ class GrainModulationVisualizationComponent : public juce::Component, public juc
   public:
     ToneGranulator *granul = nullptr;
     int target_to_show = 0;
-    GrainModulationVisualizationComponent(ToneGranulator *gr) : granul(gr) { startTimer(40); }
+    GrainModulationVisualizationComponent(ToneGranulator *gr) : granul(gr)
+    {
+        path.preallocateSpace(200);
+        startTimer(40);
+    }
     void timerCallback() override { repaint(); }
     void mouseDown(const juce::MouseEvent &ev) override
     {
@@ -200,10 +204,11 @@ class GrainModulationVisualizationComponent : public juce::Component, public juc
         }
         menu.showMenuAsync({});
     }
+    juce::Path path;
     void paint(juce::Graphics &g) override
     {
         g.fillAll(juce::Colours::black);
-        juce::Path path;
+        path.clear();
         alignas(16) std::array<GranulatorVoice::ModSlot, GrainEvent::max_grain_mod_slots>
             modulation_slots;
         for (int i = 0; i < modulation_slots.size(); ++i)
@@ -601,12 +606,11 @@ class OscillatorModuleComponent : public juce::GroupComponent
         //                            50);
         pitchEnvelopeComponent.setBounds(modDepthKnobs[0]->getRight() + 2,
                                          oscTypeComponent.getBottom(), 150, 150);
-        grainModComponent.setBounds(pitchEnvelopeComponent.getX(),
-                                    pitchEnvelopeComponent.getBottom() + 2, 150, 50);
-        oscSyncKnob.setBounds(pitchEnvelopeComponent.getRight() + 2,
-                              oscTypeComponent.getBottom() + 1, 80, 50);
-        oscPWKnob.setBounds(pitchEnvelopeComponent.getRight() + 2, oscSyncKnob.getBottom() + 1, 80,
-                            50);
+        grainModComponent.setBounds(pitchEnvelopeComponent.getRight() + 2,
+                                    oscTypeComponent.getBottom(), 150, 150);
+        oscSyncKnob.setBounds(grainModComponent.getRight() + 2, oscTypeComponent.getBottom() + 1,
+                              80, 50);
+        oscPWKnob.setBounds(grainModComponent.getRight() + 2, oscSyncKnob.getBottom() + 1, 80, 50);
         oscFMPitchKnob.setBounds(oscSyncKnob.getRight() + 2, oscTypeComponent.getBottom() + 1, 80,
                                  50);
         oscFMDepthKnob.setBounds(oscFMPitchKnob.getRight() + 2, oscTypeComponent.getBottom() + 1,
