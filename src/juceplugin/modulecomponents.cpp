@@ -59,12 +59,6 @@ void GrainModulationVisualizationComponent::paint(juce::Graphics &g)
     int curveend = vismsg.endcurve;
     auto &eluts = granul->eluts;
     float grainvol = vismsg.grainvolume;
-    std::array<float, 8> envparams;
-    for (int i = 0; i < 4; ++i)
-    {
-        // envparams[i] = *granul->idtoparvalptr[ToneGranulator::PAR_AUXENVTIMEWARP + i];
-        // envparams[4 + i] = *granul->idtoparvalptr[ToneGranulator::PAR_AUXENVTIMESHIFT + i];
-    }
 
     for (int i = 0; i < getWidth(); ++i)
     {
@@ -267,7 +261,7 @@ juce::URL("file:///C:/develop/nephos/src/nephos_help.html")
     }
     else
     {
-        if (ev.y < 15)
+        if (ev.y < 14)
         {
             target_envelope = ev.x / 15.0f;
             target_envelope =
@@ -277,16 +271,9 @@ juce::URL("file:///C:/develop/nephos/src/nephos_help.html")
         }
         if (ev.y >= 15 && ev.y < top_margin)
         {
-            int pindex = ev.x / 45.0;
-            if (pindex >= 0 && pindex < 3)
-            {
-                if (pindex == 0)
-                    target_param = ToneGranulator::PAR_AUXENVTIMEWARP + target_envelope;
-                if (pindex == 1)
-                    target_param = ToneGranulator::PAR_AUXENVTIMESHIFT + target_envelope;
-                if (target_param != CLAP_INVALID_ID)
-                    param_start_value = *granul->idtoparvalptr[target_param];
-            }
+            target_param = get_param_from_x_coord(ev.x);
+            if (target_param != CLAP_INVALID_ID)
+                param_start_value = *granul->idtoparvalptr[target_param];
             repaint();
             return;
         }
@@ -581,9 +568,9 @@ void OscillatorModuleComponent::resized()
     // pitchEnvWarpKnob.setBounds(oscPitchKnob.getRight() + 2, pitchEnvKnob.getBottom() + 1, 80,
     //                            50);
     pitchEnvelopeComponent.setBounds(modDepthKnobs[0]->getRight() + 2, oscTypeComponent.getBottom(),
-                                     150, 150);
+                                     200, 200);
     grainModComponent.setBounds(pitchEnvelopeComponent.getRight() + 2, oscTypeComponent.getBottom(),
-                                150, 150);
+                                200, 200);
     oscSyncKnob.setBounds(grainModComponent.getRight() + 2, oscTypeComponent.getBottom() + 1, 80,
                           50);
     oscPWKnob.setBounds(grainModComponent.getRight() + 2, oscSyncKnob.getBottom() + 1, 80, 50);

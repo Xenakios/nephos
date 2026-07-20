@@ -242,8 +242,33 @@ class GrainEnvelopeEditorComponent : public juce::Component
         granul->set_aux_envelope_interpolation_mode(target_envelope, m);
         juce::Timer::callAfterDelay(100, [this]() { repaint(); });
     }
+    uint32_t get_param_from_x_coord(float x)
+    {
+        int pindex = x / 45.0;
+        uint32_t result = CLAP_INVALID_ID;
+        if (pindex >= 0 && pindex < 3)
+        {
+            if (pindex == 0)
+                result = ToneGranulator::PAR_AUXENVTIMEWARP + target_envelope;
+            if (pindex == 1)
+                result = ToneGranulator::PAR_AUXENVTIMESHIFT + target_envelope;
+        }
+        return result;
+    }
     void mouseDown(const juce::MouseEvent &ev) override;
     void mouseDrag(const juce::MouseEvent &ev) override;
+    void mouseDoubleClick(const juce::MouseEvent &ev) override
+    {
+        auto pid = get_param_from_x_coord(ev.x);
+        if (pid != CLAP_INVALID_ID)
+        {
+            ParameterMessage msg;
+            msg.id = pid;
+            msg.value = 0.0f;
+            processorRef.params_from_gui_fifo.push(msg);
+            repaint();
+        }
+    }
     void mouseUp(const juce::MouseEvent &ev) override
     {
         target_param = CLAP_INVALID_ID;
