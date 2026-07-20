@@ -257,18 +257,7 @@ class GrainEnvelopeEditorComponent : public juce::Component
     }
     void mouseDown(const juce::MouseEvent &ev) override;
     void mouseDrag(const juce::MouseEvent &ev) override;
-    void mouseDoubleClick(const juce::MouseEvent &ev) override
-    {
-        auto pid = get_param_from_x_coord(ev.x);
-        if (pid != CLAP_INVALID_ID)
-        {
-            ParameterMessage msg;
-            msg.id = pid;
-            msg.value = 0.0f;
-            processorRef.params_from_gui_fifo.push(msg);
-            repaint();
-        }
-    }
+    void mouseDoubleClick(const juce::MouseEvent &ev) override;
     void mouseUp(const juce::MouseEvent &ev) override
     {
         target_param = CLAP_INVALID_ID;

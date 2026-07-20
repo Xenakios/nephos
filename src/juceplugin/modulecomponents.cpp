@@ -310,6 +310,18 @@ void GrainEnvelopeEditorComponent::mouseDrag(const juce::MouseEvent &ev)
         // param_start_value = newval;
     }
 }
+void GrainEnvelopeEditorComponent::mouseDoubleClick(const juce::MouseEvent &ev)
+{
+    auto pid = get_param_from_x_coord(ev.x);
+    if (pid != CLAP_INVALID_ID)
+    {
+        ParameterMessage msg;
+        msg.id = pid;
+        msg.value = 0.0f;
+        processorRef.params_from_gui_fifo.push(msg);
+        repaint();
+    }
+}
 
 juce::PopupMenu GrainEnvelopeEditorComponent::generate_presets_menu()
 {
