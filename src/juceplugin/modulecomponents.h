@@ -277,30 +277,7 @@ class OscTypeComponent : public juce::Component, public juce::Timer
     int priorOscType = -1;
     std::vector<std::string> waveshortnames{{"SIN", "SEMI", "TRI", "SAW", "SQR", "FM", "NOIS"}};
     std::vector<juce::Image> waveimages;
-    juce::Image drawWaveImage(std::function<float(float)> func)
-    {
-        juce::Image img{juce::Image::ARGB, 50, 50, true};
-        juce::Graphics g(img);
-        g.fillAll(juce::Colours::transparentWhite);
-        juce::Path p;
-        for (int i = 0; i < img.getWidth(); ++i)
-        {
-            float x = juce::jmap<float>(i, 0, img.getWidth() - 1, 0.0f, 1.0f);
-            float y = (1.0 - func(x)) * 0.95 + 0.025;
-            y = y * img.getHeight();
-            if (i == 0)
-            {
-                p.startNewSubPath(0.0f, y);
-            }
-            else
-            {
-                p.lineTo(i, y);
-            }
-        }
-        g.setColour(juce::Colours::white);
-        g.strokePath(p, juce::PathStrokeType(2.0f));
-        return img;
-    }
+    juce::Image drawWaveImage(std::function<float(float)> func);
     OscTypeComponent(AudioPluginAudioProcessor &p) : processorRef(p)
     {
         waveimages.push_back(
@@ -331,38 +308,7 @@ class OscTypeComponent : public juce::Component, public juce::Timer
         startTimerHz(25);
         setWantsKeyboardFocus(true);
     }
-    bool keyPressed(const juce::KeyPress &ev) override
-    {
-        int delta = 0;
-        int otype = -1;
-        if (ev.getKeyCode() == juce::KeyPress::leftKey)
-            delta = -1;
-        if (ev.getKeyCode() == juce::KeyPress::rightKey)
-            delta = 1;
-        if (delta != 0)
-        {
-            otype = *processorRef.granulator.idtoparvalptr[ToneGranulator::PAR_OSCTYPE];
-            otype += delta;
-            if (otype < 0)
-                otype = 6;
-            if (otype > 6)
-                otype = 0;
-        }
-        if (ev.getKeyCode() >= '1' && ev.getKeyCode() < '8')
-        {
-            otype = ev.getKeyCode() - '1';
-            jassert(otype >= 0 && otype < 7);
-        }
-        if (otype >= 0 && otype < 7)
-        {
-            ParameterMessage msg;
-            msg.id = ToneGranulator::PAR_OSCTYPE;
-            msg.value = otype;
-            processorRef.params_from_gui_fifo.push(msg);
-            return true;
-        }
-        return false;
-    }
+    bool keyPressed(const juce::KeyPress &ev) override;
     void timerCallback() override
     {
         int curotype = processorRef.granulator.modulatedOscType;

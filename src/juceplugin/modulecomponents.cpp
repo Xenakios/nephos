@@ -110,9 +110,13 @@ void GrainModulationVisualizationComponent::paint(juce::Graphics &g)
     ++paintcount;
     double avg = paint_elapsed_sum / paintcount;
     int fifoslots = granul->gevisfifo.getUsedSlots();
-    g.setColour(juce::Colours::white);
-    g.drawText(juce::String(avg, 2) + " ms avg " + juce::String(fifoslots), 1, 1, getWidth(), 25,
-               juce::Justification::centredLeft);
+    if (false)
+    {
+        g.setColour(juce::Colours::white);
+        g.drawText(juce::String(avg, 2) + " ms avg " + juce::String(fifoslots), 1, 1, getWidth(),
+                   25, juce::Justification::centredLeft);
+    }
+
     if (paintcount == 50)
     {
         paintcount = 0;
@@ -442,4 +446,60 @@ void GrainEnvelopeEditorComponent::generate_steps(GenMode mode)
         granul->fifo.push(msg);
     }
     juce::Timer::callAfterDelay(100, [this]() { repaint(); });
+}
+juce::Image OscTypeComponent::drawWaveImage(std::function<float(float)> func)
+{
+    juce::Image img{juce::Image::ARGB, 50, 50, true};
+    juce::Graphics g(img);
+    g.fillAll(juce::Colours::transparentWhite);
+    juce::Path p;
+    for (int i = 0; i < img.getWidth(); ++i)
+    {
+        float x = juce::jmap<float>(i, 0, img.getWidth() - 1, 0.0f, 1.0f);
+        float y = (1.0 - func(x)) * 0.95 + 0.025;
+        y = y * img.getHeight();
+        if (i == 0)
+        {
+            p.startNewSubPath(0.0f, y);
+        }
+        else
+        {
+            p.lineTo(i, y);
+        }
+    }
+    g.setColour(juce::Colours::white);
+    g.strokePath(p, juce::PathStrokeType(2.0f));
+    return img;
+}
+bool OscTypeComponent::keyPressed(const juce::KeyPress &ev)
+{
+    int delta = 0;
+    int otype = -1;
+    if (ev.getKeyCode() == juce::KeyPress::leftKey)
+        delta = -1;
+    if (ev.getKeyCode() == juce::KeyPress::rightKey)
+        delta = 1;
+    if (delta != 0)
+    {
+        otype = *processorRef.granulator.idtoparvalptr[ToneGranulator::PAR_OSCTYPE];
+        otype += delta;
+        if (otype < 0)
+            otype = 6;
+        if (otype > 6)
+            otype = 0;
+    }
+    if (ev.getKeyCode() >= '1' && ev.getKeyCode() < '8')
+    {
+        otype = ev.getKeyCode() - '1';
+        jassert(otype >= 0 && otype < 7);
+    }
+    if (otype >= 0 && otype < 7)
+    {
+        ParameterMessage msg;
+        msg.id = ToneGranulator::PAR_OSCTYPE;
+        msg.value = otype;
+        processorRef.params_from_gui_fifo.push(msg);
+        return true;
+    }
+    return false;
 }
