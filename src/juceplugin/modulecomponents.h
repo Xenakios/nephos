@@ -188,116 +188,12 @@ class GrainModulationVisualizationComponent : public juce::Component, public juc
         std::fill(vismsg.modsources.begin(), vismsg.modsources.end(), CLAP_INVALID_ID);
         std::fill(vismsg.modtargets.begin(), vismsg.modtargets.end(), CLAP_INVALID_ID);
     }
-    void timerCallback() override
-    {
-        ToneGranulator::GrainEnvelopeVisMessage msg;
-        while (granul->gevisfifo.pop(msg))
-        {
-            vismsg = msg;
-        }
-        repaint();
-    }
-    void mouseDown(const juce::MouseEvent &ev) override
-    {
-        juce::PopupMenu menu;
-        std::set<uint32_t> targets;
-        for (auto &e : granul->voices[0]->modulation_slots)
-        {
-            if (e.target_id != CLAP_INVALID_ID)
-                targets.insert(e.target_id);
-        }
-        menu.addSectionHeader("Modulation targets");
-        for (auto &e : targets)
-        {
-            menu.addItem(GranulatorVoice::get_mod_target_name((GranulatorVoice::MODTARGET)e),
-                         [this, e]() {
-                             target_to_show = e;
-                             repaint();
-                         });
-        }
-        menu.showMenuAsync({});
-    }
+    void timerCallback() override;
+    void mouseDown(const juce::MouseEvent &ev) override;
+    
     juce::Path path;
     ToneGranulator::GrainEnvelopeVisMessage vismsg;
-    void paint(juce::Graphics &g) override
-    {
-        double t0 = juce::Time::getMillisecondCounterHiRes();
-        g.fillAll(juce::Colours::black);
-        path.clear();
-        alignas(16) std::array<GranulatorVoice::ModSlot, GrainEvent::max_grain_mod_slots>
-            modulation_slots;
-
-        for (int i = 0; i < modulation_slots.size(); ++i)
-        {
-            float depth = vismsg.moddepths[i];
-            modulation_slots[i] = {vismsg.modsources[i], depth, vismsg.modtargets[i]};
-        }
-        float sinfreq = getWidth() / 8.0;
-        float curvemorph = vismsg.curvemorph;
-        int curvestart = vismsg.startcurve;
-        int curveend = vismsg.endcurve;
-        auto &eluts = granul->eluts;
-        float grainvol = vismsg.grainvolume;
-        std::array<float, 4> twarps;
-        for (int i = 0; i < twarps.size(); ++i)
-        {
-            twarps[i] = *granul->idtoparvalptr[ToneGranulator::PAR_AUXENVTIMEWARP + i];
-        }
-
-        for (int i = 0; i < getWidth(); ++i)
-        {
-            float modvalues[30] = {0.0f};
-            double normphase = 1.0 / getWidth() * i;
-            GranulatorVoice::process_mod_matrix(normphase, twarps, modulation_slots,
-                                                granul->voiceaux_envelopes, modvalues);
-            float y = modvalues[target_to_show];
-            if (target_to_show == GranulatorVoice::MT_VOLUME)
-            {
-                y += grainvol;
-                y = std::clamp(y, 0.0f, 1.0f);
-                y = y * y * y;
-                float sinvalue = std::sin(2 * M_PI * normphase * sinfreq);
-                y = sinvalue * y;
-                float envgain = 0.0f;
-                if (normphase < curvemorph)
-                {
-                    normphase = xenakios::mapvalue<float>(normphase, 0.0f, curvemorph, 0.0f, 1.0f);
-                    envgain = eluts.getValueLERP<true>(curvestart, normphase);
-                }
-                else
-                {
-                    normphase = xenakios::mapvalue<float>(normphase, curvemorph, 1.0f, 1.0f, 0.0f);
-                    envgain = eluts.getValueLERP<true>(curveend, normphase);
-                }
-                y *= envgain;
-                y = juce::jmap(y, -1.0f, 1.0f, (float)getHeight(), 0.0f);
-            }
-            else
-            {
-                y = juce::jmap(y, -1.0f, 1.0f, (float)getHeight(), 0.0f);
-            }
-
-            if (i == 0)
-                path.startNewSubPath(i, y);
-            else
-                path.lineTo(i, y);
-        }
-        g.setColour(juce::Colours::yellow);
-        g.strokePath(path, juce::PathStrokeType(2.0f));
-        double t1 = juce::Time::getMillisecondCounterHiRes();
-        paint_elapsed_sum += t1 - t0;
-        ++paintcount;
-        double avg = paint_elapsed_sum / paintcount;
-        int fifoslots = granul->gevisfifo.getUsedSlots();
-        g.setColour(juce::Colours::white);
-        g.drawText(juce::String(avg, 2) + " ms avg " + juce::String(fifoslots), 1, 1, getWidth(),
-                   25, juce::Justification::centredLeft);
-        if (paintcount == 50)
-        {
-            paintcount = 0;
-            paint_elapsed_sum = 0.0;
-        }
-    }
+    void paint(juce::Graphics &g) override;
     int paintcount = 0;
     double paint_elapsed_sum = 0.0;
 };
@@ -346,24 +242,7 @@ class GrainEnvelopeEditorComponent : public juce::Component
         juce::Timer::callAfterDelay(100, [this]() { repaint(); });
     }
     void mouseDown(const juce::MouseEvent &ev) override;
-    void mouseDrag(const juce::MouseEvent &ev) override
-    {
-        if (target_param != CLAP_INVALID_ID)
-        {
-            float delta = ev.getDistanceFromDragStartY() * 0.01;
-            float newval = std::clamp(param_start_value + delta, -1.0f, 1.0f);
-            if (target_param >= ToneGranulator::PAR_AUXENVTIMEWARP &&
-                target_param < ToneGranulator::PAR_AUXENVTIMESHIFT)
-            {
-                ParameterMessage msg;
-                msg.id = target_param;
-                msg.value = newval;
-                processorRef.params_from_gui_fifo.push(msg);
-            }
-            // DBG(newval);
-            // param_start_value = newval;
-        }
-    }
+    void mouseDrag(const juce::MouseEvent &ev) override;
     void mouseUp(const juce::MouseEvent &ev) override
     {
         target_param = CLAP_INVALID_ID;
@@ -371,24 +250,7 @@ class GrainEnvelopeEditorComponent : public juce::Component
     }
     juce::PopupMenu generate_presets_menu();
     void mouseWheelMove(const juce::MouseEvent &event,
-                        const juce::MouseWheelDetails &wheel) override
-    {
-        auto numsteps = SimpleEnvelope<false>::maxnumsteps;
-        int stepindex = numsteps / (float)getWidth() * event.x;
-        if (stepindex >= 0 && stepindex < numsteps)
-        {
-            float delta = wheel.deltaY * 0.2;
-            auto &auxenv = granul->voiceaux_envelopes[target_envelope];
-            float val = std::clamp(auxenv.steps[stepindex] + delta, -1.0f, 1.0f);
-            StepModSource::Message msg;
-            msg.opcode = StepModSource::Message::OP_SETSTEP;
-            msg.fval0 = val;
-            msg.dest = 1000;
-            msg.ival0 = stepindex;
-            granul->fifo.push(msg);
-        }
-        repaint();
-    }
+                        const juce::MouseWheelDetails &wheel) override;
     void paint(juce::Graphics &g) override;
 
     void updateIfNeeded() { repaint(); }
