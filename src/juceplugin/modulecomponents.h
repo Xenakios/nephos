@@ -308,6 +308,7 @@ class GrainEnvelopeEditorComponent : public juce::Component
     xenakios::Xoroshiro128Plus rng;
     std::string lastError;
     int target_envelope = 0;
+    int top_margin = 15;
     enum GenMode
     {
         GM_RESET,

@@ -11,7 +11,17 @@
 void GrainEnvelopeEditorComponent::paint(juce::Graphics &g)
 {
     g.fillAll(juce::Colours::black);
-    g.setColour(juce::Colours::yellow);
+    for (int i = 0; i < GranulatorVoice::num_aux_envelopes; ++i)
+    {
+        if (i == target_envelope)
+            g.setColour(juce::Colours::lightgrey);
+        else
+            g.setColour(juce::Colours::darkgrey);
+        g.fillRect(i * 15, 0, 13, 13);
+        g.setColour(juce::Colours::white);
+        g.drawText(juce::String(i + 1), i * 15, 0, 14, 14, juce::Justification::centred);
+    }
+
     curvepath.clear();
     auto &auxenv = granul->voiceaux_envelopes[target_envelope];
 
@@ -21,11 +31,12 @@ void GrainEnvelopeEditorComponent::paint(juce::Graphics &g)
     {
         float x0 = (float)getWidth() / numsteps * i;
         float x1 = (float)getWidth() / numsteps * (i + 1);
-        float y = juce::jmap<float>(auxenv.steps[i], -1.1f, 1.1f, getHeight(), 0);
+        float y =
+            juce::jmap<float>(auxenv.steps[i], -1.1f, 1.1f, getHeight(), top_margin);
         g.drawLine(x0, y, x1, y, 2.0f);
     }
-    g.drawText("Envelope " + juce::String(target_envelope + 1), 1, 1, getWidth() - 2, 20,
-               juce::Justification::centredTop);
+    // g.drawText("Envelope " + juce::String(target_envelope + 1), 1, 1, getWidth() - 2, 20,
+    //            juce::Justification::centredTop);
     g.drawFittedText(lastError, 1, 20, getWidth() - 2, getHeight() - 2,
                      juce::Justification::topLeft, 8);
 }
@@ -91,14 +102,6 @@ void GrainEnvelopeEditorComponent::mouseDown(const juce::MouseEvent &ev)
     if (ev.mods.isRightButtonDown())
     {
         juce::PopupMenu menu;
-        menu.addSectionHeader("Target envelope");
-        for (int i = 0; i < GranulatorVoice::num_aux_envelopes; ++i)
-        {
-            menu.addItem(juce::String(i + 1), [this, i]() {
-                target_envelope = i;
-                repaint();
-            });
-        }
         menu.addSectionHeader("Interpolation mode");
         juce::StringArray modes{"None", "Linear", "Spline"};
         for (int i = 0; i < modes.size(); ++i)
@@ -136,10 +139,18 @@ juce::URL("file:///C:/develop/nephos/src/nephos_help.html")
     }
     else
     {
+        if (ev.y < top_margin)
+        {
+            target_envelope = ev.x / 15.0f;
+            target_envelope =
+                std::clamp<int>(target_envelope, 0, GranulatorVoice::num_aux_envelopes - 1);
+            repaint();
+            return;
+        }
         int stepindex = numsteps / (float)getWidth() * ev.x;
         if (stepindex >= 0 && stepindex < numsteps)
         {
-            float val = juce::jmap<float>(ev.y, 0, getHeight(), 1.1, -1.1);
+            float val = juce::jmap<float>(ev.y, top_margin, getHeight(), 1.1, -1.1);
             StepModSource::Message msg;
             msg.opcode = StepModSource::Message::OP_SETSTEP;
             msg.fval0 = val;
