@@ -1,4 +1,5 @@
 #include "modulecomponents.h"
+#include "clap/id.h"
 #include "juce_core/juce_core.h"
 #include "juce_graphics/juce_graphics.h"
 #include "juce_gui_basics/juce_gui_basics.h"
@@ -19,9 +20,21 @@ void GrainEnvelopeEditorComponent::paint(juce::Graphics &g)
             g.setColour(juce::Colours::darkgrey);
         g.fillRect(i * 15, 0, 13, 13);
         g.setColour(juce::Colours::white);
-        g.drawText(juce::String(i + 1), i * 15, 0, 14, 14, juce::Justification::centred);
+        g.drawText(juce::String(i + 1), i * 15, 0, 13, 13, juce::Justification::centred);
     }
-
+    juce::StringArray params{"TWARP", "TSHIFT", "VWARP"};
+    for (int i = 0; i < params.size(); ++i)
+    {
+        g.setColour(juce::Colours::darkgrey);
+        g.fillRect(i * 45, 15, 44, 13);
+        g.setColour(juce::Colours::white);
+        g.drawText(params[i], i * 45, 15, 44, 10, juce::Justification::centred);
+    }
+    if (target_param != CLAP_INVALID_ID)
+    {
+        float parval = *granul->idtoparvalptr[target_param];
+        g.drawText(juce::String(parval, 3), 0, top_margin, 100, 15, juce::Justification::centred);
+    }
     curvepath.clear();
     auto &auxenv = granul->voiceaux_envelopes[target_envelope];
 
@@ -31,8 +44,7 @@ void GrainEnvelopeEditorComponent::paint(juce::Graphics &g)
     {
         float x0 = (float)getWidth() / numsteps * i;
         float x1 = (float)getWidth() / numsteps * (i + 1);
-        float y =
-            juce::jmap<float>(auxenv.steps[i], -1.1f, 1.1f, getHeight(), top_margin);
+        float y = juce::jmap<float>(auxenv.steps[i], -1.1f, 1.1f, getHeight(), top_margin);
         g.drawLine(x0, y, x1, y, 2.0f);
     }
     // g.drawText("Envelope " + juce::String(target_envelope + 1), 1, 1, getWidth() - 2, 20,
@@ -139,11 +151,24 @@ juce::URL("file:///C:/develop/nephos/src/nephos_help.html")
     }
     else
     {
-        if (ev.y < top_margin)
+        if (ev.y < 15)
         {
             target_envelope = ev.x / 15.0f;
             target_envelope =
                 std::clamp<int>(target_envelope, 0, GranulatorVoice::num_aux_envelopes - 1);
+            repaint();
+            return;
+        }
+        if (ev.y >= 15 && ev.y < top_margin)
+        {
+            int pindex = ev.x / 45.0;
+            if (pindex >= 0 && pindex < 3)
+            {
+                if (pindex == 0)
+                    target_param = ToneGranulator::PAR_AUXENVTIMEWARP + target_envelope;
+                if (target_param != CLAP_INVALID_ID)
+                    param_start_value = *granul->idtoparvalptr[target_param];
+            }
             repaint();
             return;
         }

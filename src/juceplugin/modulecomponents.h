@@ -238,12 +238,17 @@ class GrainModulationVisualizationComponent : public juce::Component, public juc
         int curveend = vismsg.endcurve;
         auto &eluts = granul->eluts;
         float grainvol = vismsg.grainvolume;
+        std::array<float, 4> twarps;
+        for (int i = 0; i < twarps.size(); ++i)
+        {
+            twarps[i] = *granul->idtoparvalptr[ToneGranulator::PAR_AUXENVTIMEWARP + i];
+        }
 
         for (int i = 0; i < getWidth(); ++i)
         {
             float modvalues[30] = {0.0f};
             double normphase = 1.0 / getWidth() * i;
-            GranulatorVoice::process_mod_matrix(normphase, 0.0, modulation_slots,
+            GranulatorVoice::process_mod_matrix(normphase, twarps, modulation_slots,
                                                 granul->voiceaux_envelopes, modvalues);
             float y = modvalues[target_to_show];
             if (target_to_show == GranulatorVoice::MT_VOLUME)
@@ -300,7 +305,9 @@ class GrainModulationVisualizationComponent : public juce::Component, public juc
 class GrainEnvelopeEditorComponent : public juce::Component
 {
   public:
-    GrainEnvelopeEditorComponent(ToneGranulator *gr) : granul(gr)
+    AudioPluginAudioProcessor &processorRef;
+    GrainEnvelopeEditorComponent(AudioPluginAudioProcessor &p)
+        : processorRef(p), granul(&p.granulator)
     {
         curvepath.preallocateSpace(512);
         rng.seed(65537, 90004);
@@ -308,7 +315,10 @@ class GrainEnvelopeEditorComponent : public juce::Component
     xenakios::Xoroshiro128Plus rng;
     std::string lastError;
     int target_envelope = 0;
-    int top_margin = 15;
+    uint32_t target_param = CLAP_INVALID_ID;
+    float param_start_value = 0.0f;
+    int top_margin = 30;
+
     enum GenMode
     {
         GM_RESET,
@@ -336,6 +346,29 @@ class GrainEnvelopeEditorComponent : public juce::Component
         juce::Timer::callAfterDelay(100, [this]() { repaint(); });
     }
     void mouseDown(const juce::MouseEvent &ev) override;
+    void mouseDrag(const juce::MouseEvent &ev) override
+    {
+        if (target_param != CLAP_INVALID_ID)
+        {
+            float delta = ev.getDistanceFromDragStartY() * 0.01;
+            float newval = std::clamp(param_start_value + delta, -1.0f, 1.0f);
+            if (target_param >= ToneGranulator::PAR_AUXENVTIMEWARP &&
+                target_param < ToneGranulator::PAR_AUXENVTIMESHIFT)
+            {
+                ParameterMessage msg;
+                msg.id = target_param;
+                msg.value = newval;
+                processorRef.params_from_gui_fifo.push(msg);
+            }
+            // DBG(newval);
+            // param_start_value = newval;
+        }
+    }
+    void mouseUp(const juce::MouseEvent &ev) override
+    {
+        target_param = CLAP_INVALID_ID;
+        repaint();
+    }
     juce::PopupMenu generate_presets_menu();
     void mouseWheelMove(const juce::MouseEvent &event,
                         const juce::MouseWheelDetails &wheel) override
@@ -578,7 +611,7 @@ class OscillatorModuleComponent : public juce::GroupComponent
           oscNoiseCorrelationKnob(
               XapSlider::SS_Knob,
               *p.granulator.idtoparmetadata[ToneGranulator::PAR_NOISECORRELATION]),
-          pitchEnvelopeComponent(&p.granulator), grainModComponent(&p.granulator)
+          pitchEnvelopeComponent(p), grainModComponent(&p.granulator)
     {
         addAndMakeVisible(grainModComponent);
         addAndMakeVisible(oscTypeComponent);

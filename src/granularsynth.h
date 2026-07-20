@@ -485,7 +485,7 @@ struct GrainEvent
     uint8_t envelope_start_type = 0;
     uint8_t envelope_end_type = 0;
     float envelope_shape = 0.5f;
-    float auxenvtimewarp = 0.0f;
+    std::array<float, 4> auxenvtimewarps = {0.0f};
     float azimuth = 0.0f;
     float ambi_spread = 0.0f;
     float ambi_rotate = 0.0f;
@@ -690,7 +690,7 @@ class GranulatorVoice
     uint8_t envstarttype = 0;
     uint8_t envendtype = 0;
     double envshape = 0.5;
-    float auxenvtimewarp = 0.0;
+    std::array<float, num_aux_envelopes> auxenvtimewarps = {0.0f};
     int grainid = 0;
     bool doambnormalization = false;
     int ambisonic_order = 1;
@@ -909,8 +909,7 @@ class GranulatorVoice
         actdur = 0.002f + 0.498f * actdur;
         grain_end_phase = sr * actdur;
 
-        // aux_envelope.start(grain_end_phase);
-        auxenvtimewarp = evpars.auxenvtimewarp;
+        auxenvtimewarps = evpars.auxenvtimewarps;
 
         for (size_t i = 0; i < 2; ++i)
         {
@@ -996,7 +995,7 @@ class GranulatorVoice
         return "";
     }
     static void process_mod_matrix(
-        double normphase, double auxenvtimewarp,
+        double normphase, std::span<float> auxenvtimewarps,
         std::array<ModSlot, GrainEvent::max_grain_mod_slots> &mod_slots,
         std::array<SimpleEnvelope<false>, GranulatorVoice::num_aux_envelopes> &aux_envelopes,
         std::span<float> modulatedvalues)
@@ -1004,7 +1003,7 @@ class GranulatorVoice
         alignas(16) float aux_env_values[4] = {0.0f};
         for (size_t i = 0; i < num_aux_envelopes; ++i)
         {
-            aux_env_values[i] = aux_envelopes[i].get_value(normphase, auxenvtimewarp);
+            aux_env_values[i] = aux_envelopes[i].get_value(normphase, auxenvtimewarps[i]);
         }
 
         for (const auto &e : mod_slots)
@@ -1023,7 +1022,7 @@ class GranulatorVoice
     {
         double normphase = (double)phase / grain_end_phase;
         alignas(16) float modulatedvalues[NUMMODTARGETS] = {0.0f};
-        process_mod_matrix(normphase, auxenvtimewarp, modulation_slots, *aux_envelopes,
+        process_mod_matrix(normphase, auxenvtimewarps, modulation_slots, *aux_envelopes,
                            modulatedvalues);
         float modulatedvolume =
             std::clamp(grain_base_volume + modulatedvalues[MT_VOLUME], 0.0f, 1.0f);
@@ -1377,6 +1376,8 @@ class ToneGranulator
         PAR_GRAINMODSLOTAMOUNT2 = 3002,
         PAR_GRAINMODSLOTAMOUNT3 = 3003,
         PAR_AUXENVTIMEWARP = 3050,
+        PAR_AUXENVTIMESHIFT = 3054,
+        PAR_AUXENVVALUEWARP = 3058,
         PAR_MASTERHIGHPASSCUTOFF = 3100,
         PAR_LFORATES = 100000,
         PAR_LFODEFORMS = 100100,
@@ -1790,15 +1791,18 @@ class ToneGranulator
                                        .withID(PAR_GRAINMODSLOTAMOUNT0 + i)
                                        .withFlags(CLAP_PARAM_IS_MODULATABLE));
         }
+        for (int i = 0; i < GranulatorVoice::num_aux_envelopes; ++i)
+        {
+            parmetadatas.push_back(pmd()
+                                       .withRange(-1.0, 1.0)
+                                       .withDefault(0.0)
+                                       .withLinearScaleFormatting("")
+                                       .withName(fmt::format("Aux Env {} Time Warp", i + 1))
+                                       .withGroupName("Oscillator")
+                                       .withID(PAR_AUXENVTIMEWARP + i)
+                                       .withFlags(CLAP_PARAM_IS_MODULATABLE));
+        }
 
-        parmetadatas.push_back(pmd()
-                                   .withRange(-1.0, 1.0)
-                                   .withDefault(0.0)
-                                   .withLinearScaleFormatting("")
-                                   .withName("Aux Env Time Warp")
-                                   .withGroupName("Oscillator")
-                                   .withID(PAR_AUXENVTIMEWARP)
-                                   .withFlags(CLAP_PARAM_IS_MODULATABLE));
         parmetadatas.push_back(pmd()
                                    .withRange(0.0, 4.0)
                                    .withDefault(0.0)
@@ -2203,7 +2207,7 @@ class ToneGranulator
         }
         num_out_chans = ambisonicOrderNumChannels(order);
     }
-    std::atomic<float> auxenvwarpmodulated = 0.0f;
+
     std::atomic<float> auxenvdepthpmodulated = 0.0f;
     std::atomic<uint32_t> modulatedParamToStore{0};
     std::atomic<float> modulatedParValueForGUI{0.0f};
@@ -2315,7 +2319,11 @@ class ToneGranulator
                     genev.modamounts[k] = modmatrix.m.getTargetValue(
                         GranulatorModConfig::TargetIdentifier{PAR_GRAINMODSLOTAMOUNT0 + k});
                 auxenvdepthpmodulated = genev.modamounts[0];
-                genev.auxenvtimewarp = auxenvwarpmodulated;
+                for (int k = 0; k < GranulatorVoice::num_aux_envelopes; ++k)
+                {
+                    genev.auxenvtimewarps[k] = modmatrix.m.getTargetValue(
+                        GranulatorModConfig::TargetIdentifier{PAR_AUXENVTIMEWARP + k});
+                }
 
                 int numToSchedule = std::clamp(*idtoparvalptr[PAR_STACKCOUNT], 1.0f, 16.0f);
                 float pitchrand = std::clamp(*idtoparvalptr[PAR_STACKRANDOMPITCH], 0.0f, 1.0f);
@@ -2774,8 +2782,6 @@ class ToneGranulator
         //     self_generate = true;
         //  bool doambcoeffsnormalization = *idtoparvalptr[PAR_AMBUSENORMALIZATION];
         process_modulations();
-        auxenvwarpmodulated =
-            modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_AUXENVTIMEWARP});
         for (int i = 0; i < numPitchBandAttens; ++i)
         {
             pitchBandAttensShared[i] = modmatrix.m.getTargetValue(
