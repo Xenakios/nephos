@@ -59,17 +59,18 @@ void GrainModulationVisualizationComponent::paint(juce::Graphics &g)
     int curveend = vismsg.endcurve;
     auto &eluts = granul->eluts;
     float grainvol = vismsg.grainvolume;
-    std::array<float, 4> twarps;
-    for (int i = 0; i < twarps.size(); ++i)
+    std::array<float, 8> envparams;
+    for (int i = 0; i < 4; ++i)
     {
-        twarps[i] = *granul->idtoparvalptr[ToneGranulator::PAR_AUXENVTIMEWARP + i];
+        // envparams[i] = *granul->idtoparvalptr[ToneGranulator::PAR_AUXENVTIMEWARP + i];
+        // envparams[4 + i] = *granul->idtoparvalptr[ToneGranulator::PAR_AUXENVTIMESHIFT + i];
     }
 
     for (int i = 0; i < getWidth(); ++i)
     {
         float modvalues[30] = {0.0f};
         double normphase = 1.0 / getWidth() * i;
-        GranulatorVoice::process_mod_matrix(normphase, twarps, modulation_slots,
+        GranulatorVoice::process_mod_matrix(normphase, vismsg.auxenvparams, modulation_slots,
                                             granul->voiceaux_envelopes, modvalues);
         float y = modvalues[target_to_show];
         if (target_to_show == GranulatorVoice::MT_VOLUME)
@@ -281,6 +282,8 @@ juce::URL("file:///C:/develop/nephos/src/nephos_help.html")
             {
                 if (pindex == 0)
                     target_param = ToneGranulator::PAR_AUXENVTIMEWARP + target_envelope;
+                if (pindex == 1)
+                    target_param = ToneGranulator::PAR_AUXENVTIMESHIFT + target_envelope;
                 if (target_param != CLAP_INVALID_ID)
                     param_start_value = *granul->idtoparvalptr[target_param];
             }
@@ -307,9 +310,9 @@ void GrainEnvelopeEditorComponent::mouseDrag(const juce::MouseEvent &ev)
     if (target_param != CLAP_INVALID_ID)
     {
         float delta = ev.getDistanceFromDragStartY() * 0.01;
-        float newval = std::clamp(param_start_value + delta, -1.0f, 1.0f);
+        float newval = std::clamp(param_start_value - delta, -1.0f, 1.0f);
         if (target_param >= ToneGranulator::PAR_AUXENVTIMEWARP &&
-            target_param < ToneGranulator::PAR_AUXENVTIMESHIFT)
+            target_param < ToneGranulator::PAR_AUXENVTIMESHIFT + 4)
         {
             ParameterMessage msg;
             msg.id = target_param;

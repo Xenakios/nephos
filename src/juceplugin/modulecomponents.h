@@ -187,10 +187,11 @@ class GrainModulationVisualizationComponent : public juce::Component, public juc
         std::fill(vismsg.moddepths.begin(), vismsg.moddepths.end(), 0.0f);
         std::fill(vismsg.modsources.begin(), vismsg.modsources.end(), CLAP_INVALID_ID);
         std::fill(vismsg.modtargets.begin(), vismsg.modtargets.end(), CLAP_INVALID_ID);
+        std::fill(vismsg.auxenvparams.begin(), vismsg.auxenvparams.end(), 0.0f);
     }
     void timerCallback() override;
     void mouseDown(const juce::MouseEvent &ev) override;
-    
+
     juce::Path path;
     ToneGranulator::GrainEnvelopeVisMessage vismsg;
     void paint(juce::Graphics &g) override;
