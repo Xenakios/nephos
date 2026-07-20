@@ -173,15 +173,12 @@ void GrainEnvelopeEditorComponent::transform_steps(TransformMode mode)
         std::reverse(oldsteps.begin(), oldsteps.begin() + numsteps);
         waschanged = true;
     }
-    if (mode == TM_RotateLeft)
+    if (mode == TM_Mutate)
     {
-        std::rotate(oldsteps.begin(), oldsteps.begin() + 1, oldsteps.begin() + numsteps);
-        waschanged = true;
-    }
-    if (mode == TM_RotateRight)
-    {
-        std::rotate(oldsteps.begin(), oldsteps.begin() + (numsteps - 1),
-                    oldsteps.begin() + numsteps);
+        for (auto &e : oldsteps)
+        {
+            e = std::clamp(e + rng.nextHypCos(0.0, 0.02), -1.0, 1.0);
+        }
         waschanged = true;
     }
     if (mode == TM_Sort)
@@ -234,8 +231,7 @@ void GrainEnvelopeEditorComponent::mouseDown(const juce::MouseEvent &ev)
         }
         menu.addSectionHeader("Transform");
         menu.addItem("Reverse", [this]() { transform_steps(TM_Reverse); });
-        menu.addItem("Rotate left", [this]() { transform_steps(TM_RotateLeft); });
-        menu.addItem("Rotate right", [this]() { transform_steps(TM_RotateRight); });
+        menu.addItem("Mutate", [this]() { transform_steps(TM_Mutate); });
         menu.addItem("Sort", [this]() { transform_steps(TM_Sort); });
         menu.addItem("Envelope", [this]() { transform_steps(TM_ApplyEnvelope); });
 

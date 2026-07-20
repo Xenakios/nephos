@@ -230,8 +230,7 @@ class GrainEnvelopeEditorComponent : public juce::Component
     enum TransformMode
     {
         TM_Reverse,
-        TM_RotateLeft,
-        TM_RotateRight,
+        TM_Mutate,
         TM_Sort,
         TM_ApplyEnvelope
     };
