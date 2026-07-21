@@ -810,7 +810,17 @@ choc::value::Value AudioPluginAudioProcessor::getState()
     }
 
     state.setMember("auxenvstates", auxenvstates);
-
+    auto grainmodroutings = choc::value::createEmptyArray();
+    for (int i = 0; i < GrainEvent::max_grain_mod_slots; ++i)
+    {
+        auto grainmodrouting = choc::value::createObject("routing");
+        grainmodrouting.setMember("source",
+                                  (int64_t)granulator.voices[0]->modulation_slots[i].source_id);
+        grainmodrouting.setMember("destination",
+                                  (int64_t)granulator.voices[0]->modulation_slots[i].target_id);
+        grainmodroutings.addArrayElement(grainmodrouting);
+    }
+    state.setMember("grainmodroutings", grainmodroutings);
     auto modroutings = choc::value::createEmptyArray();
     auto &mm = granulator.modmatrix;
     for (int i = 0; i < GranulatorModConfig::FixedMatrixSize; ++i)
@@ -853,6 +863,17 @@ void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
                     granulator.osctypemapping[i] = osctypemap[i].getWithDefault(i);
                 }
             }
+        }
+    }
+    if (state.hasObjectMember("grainmodroutings"))
+    {
+        auto grainmodroutings = state["grainmodroutings"];
+        for (int i = 0; i < grainmodroutings.size(); ++i)
+        {
+            auto routing = grainmodroutings[i];
+            uint32_t src = routing["source"].getWithDefault(CLAP_INVALID_ID);
+            uint32_t dest = routing["destination"].getWithDefault(CLAP_INVALID_ID);
+            granulator.set_grain_modulation_routing(i, src, dest);
         }
     }
     if (state.hasObjectMember("auxenvstates"))

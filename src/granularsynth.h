@@ -701,7 +701,7 @@ class GranulatorVoice
     {
         std::fill(ambcoeffs.begin(), ambcoeffs.end(), 0.0f);
         for (int i = 0; i < GrainEvent::max_grain_mod_slots; ++i)
-            modulation_slots[i] = {0, 0.0f, CLAP_INVALID_ID};
+            modulation_slots[i] = {CLAP_INVALID_ID, 0.0f, CLAP_INVALID_ID};
     }
     void set_samplerate(double hz)
     {
@@ -1592,10 +1592,7 @@ class ToneGranulator
         for (int i = 0; i < numvoices; ++i)
         {
             auto v = std::make_unique<GranulatorVoice>();
-            v->modulation_slots[0] = {0, 0.0f, GranulatorVoice::MT_PITCH};
-            v->modulation_slots[1] = {1, 0.0f, GranulatorVoice::MT_PITCH};
-            v->modulation_slots[2] = {2, 0.0f, GranulatorVoice::MT_INSERTBSTART};
-            v->modulation_slots[3] = {3, 0.0f, GranulatorVoice::MT_VOLUME};
+
             v->aux_envelopes = &voiceaux_envelopes;
             v->pitchBandAttens = pitchBandAttensShared;
             v->osctypemapping = osctypemapping;
@@ -1606,6 +1603,8 @@ class ToneGranulator
     void set_grain_modulation_routing(int slot, std::optional<uint32_t> source,
                                       std::optional<uint32_t> destination)
     {
+        if (slot < 0 || slot >= GrainEvent::max_grain_mod_slots)
+            return;
         std::lock_guard<choc::threading::SpinLock> locker(spinLock);
         for (auto &v : voices)
         {
