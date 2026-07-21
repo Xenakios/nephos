@@ -1036,7 +1036,7 @@ class GranulatorVoice
 
         std::visit(
             [this, &modulatedvalues](auto &q) {
-                double finalpitch = pitch_base + modulatedvalues[MT_PITCH] * 12.0f;
+                double finalpitch = pitch_base + modulatedvalues[MT_PITCH] * 24.0f;
                 double hz = 440.0 * std::pow(2.0, 1.0 / 12.0 * (finalpitch - 9.0));
                 q.setFrequency(hz);
                 if constexpr (std::is_same_v<decltype(q), FMOsc &>)
@@ -1055,7 +1055,7 @@ class GranulatorVoice
             if (insert_fx[i].mainmode == GrainInsertFX::GFXSSTFILTER)
             {
                 // cutoff
-                insert_fx[i].parammodvalues[0] = modulatedvalues[MT_INSERTASTART + i * 10] * 24.0;
+                insert_fx[i].parammodvalues[0] = modulatedvalues[MT_INSERTASTART + i * 10] * 36.0;
                 // resonance
                 insert_fx[i].parammodvalues[1] =
                     modulatedvalues[MT_INSERTASTART + i * 10 + 1] * 0.5f;
