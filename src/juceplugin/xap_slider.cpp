@@ -108,6 +108,10 @@ void XapSlider::mouseDown(const juce::MouseEvent &ev)
                 repaint();
             });
         }
+        if (OnAddContextMenuItems)
+        {
+            OnAddContextMenuItems(menu);
+        }
         /*
         juce::PopupMenu storemenu;
         for (int i = 0; i < m_snap_positions.size(); ++i)
@@ -172,6 +176,15 @@ void XapSlider::mouseUp(const juce::MouseEvent &ev)
     if (!isEnabled())
         return;
     m_mousedown = false;
+    repaint();
+}
+void XapSlider::setValue(double v, bool notify)
+{
+    if (v == m_value)
+        return;
+    m_value = juce::jlimit(m_min_value, m_max_value, v);
+    if (notify && OnValueChanged)
+        OnValueChanged();
     repaint();
 }
 
@@ -251,6 +264,40 @@ void XapSlider::paint(juce::Graphics &g)
                        juce::Justification::centredLeft);
         }
     }
+}
+void XapSlider::showTextEditor()
+{
+    m_ed.setVisible(true);
+    m_ed.grabKeyboardFocus();
+    m_ed.setBounds(getWidth() / 2, 0, 80, getHeight());
+    auto txt = valueToString(m_value);
+    if (txt)
+        m_ed.setText(*txt);
+    else
+        m_ed.setText(juce::String(m_value));
+    m_ed.selectAll();
+    m_ed.onEscapeKey = [this]() { m_ed.setVisible(false); };
+    m_ed.onReturnKey = [this]() {
+        std::string err;
+        ParamDesc::FeatureState fs;
+        if (m_fstate)
+            fs = *m_fstate;
+        auto v = m_pardesc.valueFromString(m_ed.getText().toStdString(), err, fs);
+        if (v)
+        {
+            setValue(*v, true);
+        }
+        else
+        {
+            m_err_msg = err;
+            repaint();
+            juce::Timer::callAfterDelay(3000, [this]() {
+                m_err_msg = "";
+                repaint();
+            });
+        }
+        m_ed.setVisible(false);
+    };
 }
 
 void XapSlider::paintKnob(juce::Graphics &g)

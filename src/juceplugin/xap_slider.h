@@ -123,40 +123,7 @@ class XapSlider : public juce::Component
             fs = *m_fstate;
         return m_pardesc.valueToString(v, fs);
     }
-    void showTextEditor()
-    {
-        m_ed.setVisible(true);
-        m_ed.grabKeyboardFocus();
-        m_ed.setBounds(getWidth() / 2, 0, 80, getHeight());
-        auto txt = valueToString(m_value);
-        if (txt)
-            m_ed.setText(*txt);
-        else
-            m_ed.setText(juce::String(m_value));
-        m_ed.selectAll();
-        m_ed.onEscapeKey = [this]() { m_ed.setVisible(false); };
-        m_ed.onReturnKey = [this]() {
-            std::string err;
-            ParamDesc::FeatureState fs;
-            if (m_fstate)
-                fs = *m_fstate;
-            auto v = m_pardesc.valueFromString(m_ed.getText().toStdString(), err, fs);
-            if (v)
-            {
-                setValue(*v, true);
-            }
-            else
-            {
-                m_err_msg = err;
-                repaint();
-                juce::Timer::callAfterDelay(3000, [this]() {
-                    m_err_msg = "";
-                    repaint();
-                });
-            }
-            m_ed.setVisible(false);
-        };
-    }
+    void showTextEditor();
     juce::String m_err_msg;
     float dropdownXpercent = 0.5f;
 
@@ -164,15 +131,7 @@ class XapSlider : public juce::Component
     void mouseDrag(const juce::MouseEvent &ev) override;
     void mouseUp(const juce::MouseEvent &ev) override;
 
-    void setValue(double v, bool notify = false)
-    {
-        if (v == m_value)
-            return;
-        m_value = juce::jlimit(m_min_value, m_max_value, v);
-        if (notify && OnValueChanged)
-            OnValueChanged();
-        repaint();
-    }
+    void setValue(double v, bool notify = false);
     double getValue() { return m_value; }
     void setModulationAmount(double amt)
     {
@@ -180,4 +139,5 @@ class XapSlider : public juce::Component
         repaint();
     }
     std::function<void()> OnValueChanged;
+    std::function<void(juce::PopupMenu &)> OnAddContextMenuItems;
 };

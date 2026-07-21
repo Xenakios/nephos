@@ -986,12 +986,14 @@ class GranulatorVoice
             return "FM DEPTH";
         else if (target == MT_AZIMUTH)
             return "AZIMUTH";
+        else if (target == MT_ELEVATION)
+            return "ELEVATION";
         else if (target >= MT_INSERTASTART && target < NUMMODTARGETS)
         {
             int i = target - MT_INSERTASTART;
             int whichinsert = i / 10;
             int whichparam = i % 10;
-            return fmt::format("INS {} PAR {}", whichinsert, whichparam);
+            return fmt::format("INSERT {} PAR {}", char('A' + whichinsert), whichparam);
         }
         return "";
     }
@@ -1599,6 +1601,18 @@ class ToneGranulator
             v->osctypemapping = osctypemapping;
             v->eluts = &eluts;
             voices.push_back(std::move(v));
+        }
+    }
+    void set_grain_modulation_routing(int slot, std::optional<uint32_t> source,
+                                      std::optional<uint32_t> destination)
+    {
+        std::lock_guard<choc::threading::SpinLock> locker(spinLock);
+        for (auto &v : voices)
+        {
+            if (source)
+                v->modulation_slots[slot].source_id = *source;
+            if (destination)
+                v->modulation_slots[slot].target_id = *destination;
         }
     }
     const std::unordered_map<int, std::string> oscTypeToStringMap{

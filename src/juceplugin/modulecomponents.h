@@ -384,6 +384,27 @@ class OscillatorModuleComponent : public juce::GroupComponent
             auto knob = std::make_unique<XapSlider>(
                 XapSlider::SS_Knob,
                 *p.granulator.idtoparmetadata[ToneGranulator::PAR_GRAINMODSLOTAMOUNT0 + i]);
+            knob->OnAddContextMenuItems = [this, i](juce::PopupMenu &menu) {
+                menu.addSectionHeader("Routing");
+                juce::PopupMenu sourcemenu;
+                for (int j = 0; j < 4; ++j)
+                {
+                    sourcemenu.addItem("Envelope " + juce::String(j + 1), [this, i, j]() {
+                        processorRef.granulator.set_grain_modulation_routing(i, j, {});
+                    });
+                }
+                menu.addSubMenu("Modulation source", sourcemenu);
+                juce::PopupMenu targetmenu;
+                for (int j = 0; j < GranulatorVoice::NUMMODTARGETS; ++j)
+                {
+                    targetmenu.addItem(
+                        GranulatorVoice::get_mod_target_name((GranulatorVoice::MODTARGET)j),
+                        [this, i, j]() {
+                            processorRef.granulator.set_grain_modulation_routing(i, {}, j);
+                        });
+                }
+                menu.addSubMenu("Modulation target", targetmenu);
+            };
             initSlider(p, *this, *knob);
             modDepthKnobs.push_back(std::move(knob));
         }
