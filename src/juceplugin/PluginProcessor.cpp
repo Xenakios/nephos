@@ -681,16 +681,17 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     float *const *recordDatas = nullptr;
     if (recordBuffer.getNumChannels() > 0)
         recordDatas = recordBuffer.getArrayOfWritePointers();
-    int granulnumoutchans = granulator.num_out_chans;
     if (totalNumOutputChannels == 2)
     {
+        // super simple decode for stereo monitoring, we should probably just bite
+        // the bullet and get rid of this completely
         const float midGain = 1.414f;
         for (int j = 0; j < buffer.getNumSamples(); ++j)
         {
             buffer_adapter.pop(adapter_block);
             if (recordDatas)
             {
-                for (int k = 0; k < granulnumoutchans; ++k)
+                for (int k = 0; k < procnumoutchs; ++k)
                     recordDatas[k][j] = adapter_block[k];
             }
 
@@ -706,7 +707,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         // for convenience stereo output, visualize the MS decoded stereo
         avisComponent.pushBuffer(buffer);
     }
-    else if (totalNumOutputChannels >= procnumoutchs)
+    if (totalNumOutputChannels > 2)
     {
         for (int j = 0; j < buffer.getNumSamples(); ++j)
         {
@@ -715,7 +716,10 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             {
                 // float s = workBuffer[j * procnumoutchs + i];
                 float s = adapter_block[i];
-                channelDatas[i][j] = std::clamp(s, -1.0f, 1.0f);
+                if (i < totalNumOutputChannels)
+                {
+                    channelDatas[i][j] = std::clamp(s, -1.0f, 1.0f);
+                }
             }
         }
         // for ambisonic output, just show the W channel because with increasing ambisonic orders
@@ -724,10 +728,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         visualizerAudioBuffer.copyFrom(0, 0, buffer, 0, 0, buffer.getNumSamples());
         avisComponent.pushBuffer(visualizerAudioBuffer);
     }
-    else
-    {
-        jassert(false);
-    }
+    
 
     jassert(buffer.getNumSamples() > 0);
     double cpu_bench_t1 = juce::Time::getMillisecondCounterHiRes();

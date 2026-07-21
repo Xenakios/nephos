@@ -89,7 +89,8 @@ struct FilterBank
     {
         assert(numactivechannels > 0);
         semitones = std::clamp(semitones, -48.0f, 12.0f);
-        for (size_t i = 0; i < numactivechannels / 4; ++i)
+        size_t numFiltersToUpdate = (numactivechannels + 3) / 4; // ceiling division
+        for (size_t i = 0; i < numFiltersToUpdate; ++i)
         {
             filters[i].makeCoefficients(0, semitones, 0.0f);
             filters[i].copyCoefficientsFromVoiceToVoice(0, 1);
@@ -100,7 +101,8 @@ struct FilterBank
     void process(std::span<float> buffer)
     {
         assert(numactivechannels > 0);
-        for (size_t i = 0; i < numactivechannels / 4; ++i)
+        size_t numFiltersToUpdate = (numactivechannels + 3) / 4; // ceiling division
+        for (size_t i = 0; i < numFiltersToUpdate; ++i)
         {
             filters[i].prepareBlock();
         }
@@ -110,20 +112,26 @@ struct FilterBank
         {
             for (size_t i = 0; i < numactivechannels; i += 4)
             {
-                for (int j = 0; j < 4; ++j)
+                for (size_t i = 0; i < numactivechannels; i += 4)
                 {
-                    int chan = i + j;
-                    insamples[j] = buffer[sample * numactivechannels + chan];
-                }
-                filters[i].processQuadSample(insamples, outsamples);
-                for (int j = 0; j < 4; ++j)
-                {
-                    int chan = i + j;
-                    buffer[sample * numactivechannels + chan] = outsamples[j];
+                    for (int j = 0; j < 4; ++j)
+                    {
+                        size_t chan = i + j;
+                        insamples[j] = (chan < numactivechannels)
+                                           ? buffer[sample * numactivechannels + chan]
+                                           : 0.0f;
+                    }
+                    filters[i / 4].processQuadSample(insamples, outsamples);
+                    for (int j = 0; j < 4; ++j)
+                    {
+                        size_t chan = i + j;
+                        if (chan < numactivechannels)
+                            buffer[sample * numactivechannels + chan] = outsamples[j];
+                    }
                 }
             }
         }
-        for (size_t i = 0; i < numactivechannels / 4; ++i)
+        for (size_t i = 0; i < numFiltersToUpdate; ++i)
         {
             filters[i].concludeBlock();
         }
@@ -2851,9 +2859,8 @@ class ToneGranulator
                 // masterHighPassFilter.cutoffmapping[foo] = 1;
             }
             // masterHighPassFilter.set_cutoff_mapped(1, -48.0f);
-            masterHighPassFilter.set_cutoff_mapped(
-                0, modmatrix.m.getTargetValue(
-                       GranulatorModConfig::TargetIdentifier{PAR_MASTERHIGHPASSCUTOFF}));
+            masterHighPassFilter.set_cutoff(modmatrix.m.getTargetValue(
+                GranulatorModConfig::TargetIdentifier{PAR_MASTERHIGHPASSCUTOFF}));
             masterHighPassFilter.process(outputbuffer);
         }
 
