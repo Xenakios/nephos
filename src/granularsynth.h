@@ -112,22 +112,19 @@ struct FilterBank
         {
             for (size_t i = 0; i < numactivechannels; i += 4)
             {
-                for (size_t i = 0; i < numactivechannels; i += 4)
+                for (int j = 0; j < 4; ++j)
                 {
-                    for (int j = 0; j < 4; ++j)
-                    {
-                        size_t chan = i + j;
-                        insamples[j] = (chan < numactivechannels)
-                                           ? buffer[sample * numactivechannels + chan]
-                                           : 0.0f;
-                    }
-                    filters[i / 4].processQuadSample(insamples, outsamples);
-                    for (int j = 0; j < 4; ++j)
-                    {
-                        size_t chan = i + j;
-                        if (chan < numactivechannels)
-                            buffer[sample * numactivechannels + chan] = outsamples[j];
-                    }
+                    size_t chan = i + j;
+                    insamples[j] = (chan < numactivechannels)
+                                       ? buffer[sample * numactivechannels + chan]
+                                       : 0.0f;
+                }
+                filters[i / 4].processQuadSample(insamples, outsamples);
+                for (int j = 0; j < 4; ++j)
+                {
+                    size_t chan = i + j;
+                    if (chan < numactivechannels)
+                        buffer[sample * numactivechannels + chan] = outsamples[j];
                 }
             }
         }
