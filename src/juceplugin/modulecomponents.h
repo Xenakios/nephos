@@ -354,74 +354,7 @@ class OscillatorModuleComponent : public juce::GroupComponent
     GrainEnvelopeEditorComponent pitchEnvelopeComponent;
     GrainModulationVisualizationComponent grainModComponent;
     juce::TextEditor oscTypeEditor;
-    OscillatorModuleComponent(AudioPluginAudioProcessor &p)
-        : juce::GroupComponent("", "Oscillator"), processorRef(p), oscTypeComponent(p),
-          oscPitchKnob(XapSlider::SS_Knob,
-                       *p.granulator.idtoparmetadata[ToneGranulator::PAR_PITCH]),
-          pitchEnvWarpKnob(XapSlider::SS_Knob,
-                           *p.granulator.idtoparmetadata[ToneGranulator::PAR_AUXENVTIMEWARP]),
-          oscSyncKnob(XapSlider::SS_Knob,
-                      *p.granulator.idtoparmetadata[ToneGranulator::PAR_OSC_SYNC]),
-          oscPWKnob(XapSlider::SS_Knob, *p.granulator.idtoparmetadata[ToneGranulator::PAR_OSC_PW]),
-          oscFMPitchKnob(XapSlider::SS_Knob,
-                         *p.granulator.idtoparmetadata[ToneGranulator::PAR_FMPITCH]),
-          oscFMDepthKnob(XapSlider::SS_Knob,
-                         *p.granulator.idtoparmetadata[ToneGranulator::PAR_FMDEPTH]),
-          oscFMFeedbackKnob(XapSlider::SS_Knob,
-                            *p.granulator.idtoparmetadata[ToneGranulator::PAR_FMFEEDBACK]),
-          oscNoiseModeDrop(XapSlider::SS_HorizontalSlider,
-                           *p.granulator.idtoparmetadata[ToneGranulator::PAR_NOISEMODE]),
-          oscNoiseCorrelationKnob(
-              XapSlider::SS_Knob,
-              *p.granulator.idtoparmetadata[ToneGranulator::PAR_NOISECORRELATION]),
-          pitchEnvelopeComponent(p), grainModComponent(&p.granulator)
-    {
-        addAndMakeVisible(grainModComponent);
-        addAndMakeVisible(oscTypeComponent);
-        initSlider(p, *this, oscPitchKnob);
-        for (int i = 0; i < GrainEvent::max_grain_mod_slots; ++i)
-        {
-            auto knob = std::make_unique<XapSlider>(
-                XapSlider::SS_Knob,
-                *p.granulator.idtoparmetadata[ToneGranulator::PAR_GRAINMODSLOTAMOUNT0 + i]);
-            knob->OnAddContextMenuItems = [this, i](juce::PopupMenu &menu) {
-                menu.addSectionHeader("Routing");
-                juce::PopupMenu sourcemenu;
-                for (int j = 0; j < 4; ++j)
-                {
-                    sourcemenu.addItem("Envelope " + juce::String(j + 1), [this, i, j]() {
-                        processorRef.granulator.set_grain_modulation_routing(i, j, {});
-                    });
-                }
-                menu.addSubMenu("Modulation source", sourcemenu);
-                juce::PopupMenu targetmenu;
-                for (int j = 0; j < GranulatorVoice::NUMMODTARGETS; ++j)
-                {
-                    targetmenu.addItem(
-                        GranulatorVoice::get_mod_target_name((GranulatorVoice::MODTARGET)j),
-                        [this, i, j]() {
-                            processorRef.granulator.set_grain_modulation_routing(i, {}, j);
-                        });
-                }
-                menu.addSubMenu("Modulation target", targetmenu);
-            };
-            initSlider(p, *this, *knob);
-            modDepthKnobs.push_back(std::move(knob));
-        }
-
-        initSlider(p, *this, pitchEnvWarpKnob);
-        initSlider(p, *this, oscSyncKnob);
-        initSlider(p, *this, oscPWKnob);
-        initSlider(p, *this, oscFMPitchKnob);
-        initSlider(p, *this, oscFMDepthKnob);
-        initSlider(p, *this, oscFMFeedbackKnob);
-        initSlider(p, *this, oscNoiseModeDrop);
-        oscNoiseModeDrop.dropdownXpercent = 0.3;
-        initSlider(p, *this, oscNoiseCorrelationKnob);
-        addAndMakeVisible(pitchEnvelopeComponent);
-        addChildComponent(oscTypeEditor);
-        oscTypeEditor.setBounds(2, 2, 200, 25);
-    }
+    OscillatorModuleComponent(AudioPluginAudioProcessor &p);
     void resized() override;
 };
 
