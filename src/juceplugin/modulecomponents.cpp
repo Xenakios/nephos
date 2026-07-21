@@ -594,27 +594,27 @@ OscillatorModuleComponent::OscillatorModuleComponent(AudioPluginAudioProcessor &
             juce::PopupMenu sourcemenu;
             auto cursource = processorRef.granulator.voices[0]->modulation_slots[i].source_id;
             sourcemenu.addItem("None", true, cursource == CLAP_INVALID_ID, [this, i] {
-                processorRef.granulator.set_grain_modulation_routing(i, CLAP_INVALID_ID, {});
+                processorRef.granulator.set_grain_modulation_routing(i, CLAP_INVALID_ID, {}, false);
             });
             for (int j = 0; j < 4; ++j)
             {
                 sourcemenu.addItem(
                     "Envelope " + juce::String(j + 1), true, cursource == j, [this, i, j]() {
-                        processorRef.granulator.set_grain_modulation_routing(i, j, {});
+                        processorRef.granulator.set_grain_modulation_routing(i, j, {}, false);
                     });
             }
             menu.addSubMenu("Modulation source", sourcemenu);
             juce::PopupMenu targetmenu;
             auto curtarget = processorRef.granulator.voices[0]->modulation_slots[i].target_id;
             targetmenu.addItem("None", true, curtarget == CLAP_INVALID_ID, [this, i] {
-                processorRef.granulator.set_grain_modulation_routing(i, {}, CLAP_INVALID_ID);
+                processorRef.granulator.set_grain_modulation_routing(i, {}, CLAP_INVALID_ID, false);
             });
             for (int j = 0; j < GranulatorVoice::NUMMODTARGETS; ++j)
             {
                 targetmenu.addItem(
                     GranulatorVoice::get_mod_target_name((GranulatorVoice::MODTARGET)j), true,
                     curtarget == j, [this, i, j]() {
-                        processorRef.granulator.set_grain_modulation_routing(i, {}, j);
+                        processorRef.granulator.set_grain_modulation_routing(i, {}, j, false);
                     });
             }
             menu.addSubMenu("Modulation target", targetmenu);

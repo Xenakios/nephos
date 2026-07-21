@@ -1601,11 +1601,13 @@ class ToneGranulator
         }
     }
     void set_grain_modulation_routing(int slot, std::optional<uint32_t> source,
-                                      std::optional<uint32_t> destination)
+                                      std::optional<uint32_t> destination,
+                                      bool calledfromaudiothread)
     {
         if (slot < 0 || slot >= GrainEvent::max_grain_mod_slots)
             return;
-        std::lock_guard<choc::threading::SpinLock> locker(spinLock);
+        if (!calledfromaudiothread)
+            spinLock.lock();
         for (auto &v : voices)
         {
             if (source)
@@ -1613,6 +1615,8 @@ class ToneGranulator
             if (destination)
                 v->modulation_slots[slot].target_id = *destination;
         }
+        if (!calledfromaudiothread)
+            spinLock.unlock();
     }
     const std::unordered_map<int, std::string> oscTypeToStringMap{
         {0, "SINE"},   {1, "SEMISINE"}, {2, "TRIANGLE"}, {3, "SAW"},

@@ -873,7 +873,7 @@ void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
             auto routing = grainmodroutings[i];
             uint32_t src = routing["source"].getWithDefault(CLAP_INVALID_ID);
             uint32_t dest = routing["destination"].getWithDefault(CLAP_INVALID_ID);
-            granulator.set_grain_modulation_routing(i, src, dest);
+            granulator.set_grain_modulation_routing(i, src, dest, true);
         }
     }
     if (state.hasObjectMember("auxenvstates"))
