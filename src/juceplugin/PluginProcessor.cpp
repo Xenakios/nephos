@@ -191,7 +191,7 @@ void AudioPluginAudioProcessor::handleMacroKnob(int knobindex, float value, bool
 void AudioPluginAudioProcessor::initMidiBindings()
 {
     midiBindings.reserve(32);
-    midiBindings.emplace_back(MIDIBinding{21, ToneGranulator::PAR_PITCH});
+    midiBindings.emplace_back(MIDIBinding{21, ToneGranulator::PAR_PITCH, {{-12.0f, 12.0f}}});
     midiBindings.emplace_back(MIDIBinding{22, ToneGranulator::PAR_DENSITY});
     midiBindings.emplace_back(MIDIBinding{23, ToneGranulator::PAR_AZIMUTH});
     midiBindings.emplace_back(MIDIBinding{23, ToneGranulator::PAR_MAINMODDEPTHSTART + 1});
@@ -507,8 +507,14 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             {
                 if (binding.midicc == ccnum)
                 {
-                    float minval = granulator.idtoparmetadata[binding.target_param]->minVal;
-                    float maxval = granulator.idtoparmetadata[binding.target_param]->maxVal;
+                    auto md = granulator.idtoparmetadata[binding.target_param];
+                    float minval = md->minVal;
+                    float maxval = md->maxVal;
+                    if (binding.par_range)
+                    {
+                        minval = std::clamp(binding.par_range->first, md->minVal, md->maxVal);
+                        maxval = std::clamp(binding.par_range->second, md->minVal, md->maxVal);
+                    }
                     float val = juce::jmap<float>(msg.getControllerValue(), 0, 127, minval, maxval);
                     *granulator.idtoparvalptr[binding.target_param] = val;
                 }

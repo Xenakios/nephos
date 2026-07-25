@@ -60,8 +60,7 @@ struct MIDIBinding
 {
     uint32_t midicc = 0;
     uint32_t target_param = CLAP_INVALID_ID;
-    float minval = 0.0f;
-    float maxval = 0.0f;
+    std::optional<std::pair<float, float>> par_range;
 };
 
 namespace StateIgnoreStrings
