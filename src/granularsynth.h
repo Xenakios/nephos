@@ -2288,7 +2288,7 @@ class ToneGranulator
         modSourceValues[MIDINOTE] = midiNoteModValue;
         for (int i = 0; i < GranulatorModConfig::FixedMatrixSize; ++i)
         {
-            if (modmatrix.rt.routes[i].active)
+            if (modmatrix.rt.routes[i].active && modmatrix.rt.routes[i].target)
             {
                 float modrange = modRanges[modmatrix.rt.routes[i].target->baz];
                 modmatrix.rt.updateDepthAt(i, *idtoparvalptr[PAR_MAINMODDEPTHSTART + i] * modrange);

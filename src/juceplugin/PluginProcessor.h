@@ -4,6 +4,7 @@
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "../granularsynth.h"
+#include "clap/id.h"
 #include "containers/choc_SingleReaderSingleWriterFIFO.h"
 #include "juce_audio_basics/juce_audio_basics.h"
 #include "threading/choc_SpinLock.h"
@@ -53,6 +54,14 @@ struct MacroKnobBinding
     int dest = 0;
     std::optional<std::pair<float, float>> par_range;
     std::string label;
+};
+
+struct MIDIBinding
+{
+    uint32_t midicc = 0;
+    uint32_t target_param = CLAP_INVALID_ID;
+    float minval = 0.0f;
+    float maxval = 0.0f;
 };
 
 namespace StateIgnoreStrings
@@ -123,6 +132,8 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     void loadSnapShot(int index);
     void saveSnapShot(int index, choc::value::ValueView state);
     std::vector<MacroKnobBinding> macroBindings;
+    std::vector<MIDIBinding> midiBindings;
+    void initMidiBindings();
     void handleMacroKnob(int knobindex, float value, bool is_audio_tread);
     void loadMacroKnobs(std::string filename);
     std::string presetsPath;
@@ -133,12 +144,13 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     juce::AudioVisualiserComponent avisComponent;
     juce::AudioBuffer<float> visualizerAudioBuffer;
     juce::MidiKeyboardState keyboardState;
+
   private:
     alignas(32) std::vector<float> workBuffer;
     alignas(32) choc::fifo::SingleReaderSingleWriterFIFO<
         std::array<float, ambisonicOrderNumChannels(maxAmbiSonicOrder)>> buffer_adapter;
     void setStateDirtyHack();
-    void init_clouds(ToneGranulator & g);
+    void init_clouds(ToneGranulator &g);
     std::unordered_map<juce::AudioProcessorParameter *, int> jucepartoindex;
     juce::AudioParameterFloat *dirtyStateParam = nullptr;
 

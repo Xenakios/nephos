@@ -188,6 +188,15 @@ void AudioPluginAudioProcessor::handleMacroKnob(int knobindex, float value, bool
     }
 }
 
+void AudioPluginAudioProcessor::initMidiBindings()
+{
+    midiBindings.reserve(32);
+    midiBindings.emplace_back(MIDIBinding{21, ToneGranulator::PAR_PITCH});
+    midiBindings.emplace_back(MIDIBinding{22, ToneGranulator::PAR_DENSITY});
+    midiBindings.emplace_back(MIDIBinding{23, ToneGranulator::PAR_AZIMUTH});
+    midiBindings.emplace_back(MIDIBinding{23, ToneGranulator::PAR_MAINMODDEPTHSTART + 1});
+}
+
 AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     : AudioProcessor(BusesProperties()
                          .withInput("Input", juce::AudioChannelSet::stereo(), true)
@@ -195,6 +204,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
       avisComponent(2)
 {
     // init_clouds(granulator);
+    initMidiBindings();
     macroBindings.resize(16);
 #ifdef JUCE_MAC
     macroKnobsPath = R"(/Users/teemu/codeprojects/2026/nephos/src/macroknobs.json)";
@@ -493,8 +503,19 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             }
             auto &mm = granulator.modmatrix;
             uint32_t ccnum = msg.getControllerNumber();
+            for (const auto &binding : midiBindings)
+            {
+                if (binding.midicc == ccnum)
+                {
+                    float minval = granulator.idtoparmetadata[binding.target_param]->minVal;
+                    float maxval = granulator.idtoparmetadata[binding.target_param]->maxVal;
+                    float val = juce::jmap<float>(msg.getControllerValue(), 0, 127, minval, maxval);
+                    *granulator.idtoparvalptr[binding.target_param] = val;
+                }
+            }
             auto dmit = macroMidiMappings.find(ccnum);
-            if (dmit != macroMidiMappings.end())
+            // if (dmit != macroMidiMappings.end())
+            if (false)
             {
                 float val = juce::jmap<float>(msg.getControllerValue(), 0, 127, -1.0f, 1.0f);
                 handleMacroKnob(dmit->second, val, true);
@@ -506,12 +527,14 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 msg.value = val;
                 // params_to_gui_fifo.push(msg);
             }
+            /*
             auto it = granulator.midiCCMap.find(ccnum);
             if (it != granulator.midiCCMap.end())
             {
                 granulator.modSourceValues[it->second] =
                     juce::jmap<float>(msg.getControllerValue(), 0, 127, 0.0, 1.0);
             }
+            */
         }
         if (msg.isSustainPedalOn())
         {

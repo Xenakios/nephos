@@ -661,16 +661,6 @@ class ModulationPage : public juce::Component
                 parmsg.value = val;
                 processorRef.params_from_gui_fifo.push(parmsg);
             };
-            /*
-            idToSlider[ToneGranulator::PAR_LFORATES + i] = &lfoc->rateSlider;
-            idToSlider[ToneGranulator::PAR_LFODEFORMS + i] = &lfoc->deformSlider;
-            idToSlider[ToneGranulator::PAR_LFOSHIFTS + i] = &lfoc->shiftSlider;
-            idToSlider[ToneGranulator::PAR_LFOWARPS + i] = &lfoc->warpSlider;
-            idToSlider[ToneGranulator::PAR_LFOSHAPES + i] = &lfoc->shapeSlider;
-            idToSlider[ToneGranulator::PAR_LFOUNIPOLARS + i] = &lfoc->unipolarSlider;
-            lfoTabs.addTab("LFO " + juce::String(i + 1), juce::Colours::darkgrey, lfoc.get(),
-                           false);
-            */
             addAndMakeVisible(*lfoc);
             lfocomps.push_back(std::move(lfoc));
         }
