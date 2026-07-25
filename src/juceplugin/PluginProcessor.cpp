@@ -191,11 +191,19 @@ void AudioPluginAudioProcessor::handleMacroKnob(int knobindex, float value, bool
 
 void AudioPluginAudioProcessor::initMidiBindings()
 {
-    midiBindings.reserve(32);
+    midiBindings.reserve(64);
     // midiBindings.emplace_back(MIDIBinding{21, ToneGranulator::PAR_PITCH, {{-12.0f, 12.0f}}});
     // midiBindings.emplace_back(MIDIBinding{22, ToneGranulator::PAR_DENSITY});
     // midiBindings.emplace_back(MIDIBinding{23, ToneGranulator::PAR_AZIMUTH});
     // midiBindings.emplace_back(MIDIBinding{23, ToneGranulator::PAR_MAINMODDEPTHSTART + 1});
+}
+
+void AudioPluginAudioProcessor::removeMIDIAssignmentForParam(uint32_t parid)
+{
+    ThreadMessage msg;
+    msg.opcode = ThreadMessage::OP_UNLEARNMIDI;
+    msg.parid = parid;
+    from_gui_fifo.push(msg);
 }
 
 AudioPluginAudioProcessor::AudioPluginAudioProcessor()
@@ -597,6 +605,12 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     ThreadMessage msg;
     while (from_gui_fifo.pop(msg))
     {
+        if (msg.opcode == ThreadMessage::OP_UNLEARNMIDI)
+        {
+            std::erase_if(midiBindings, [parid = msg.parid](const MIDIBinding &b) {
+                return b.target_param == parid;
+            });
+        }
         if (msg.opcode == ThreadMessage::OP_FILTERTYPE && msg.filterindex >= 0 &&
             msg.filterindex < 2)
         {

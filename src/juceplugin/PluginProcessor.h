@@ -31,7 +31,8 @@ struct ThreadMessage
         OP_NOOP,
         OP_MODROUTING,
         OP_FILTERTYPE,
-        OP_STEPSEQUENCER
+        OP_STEPSEQUENCER,
+        OP_UNLEARNMIDI
     };
     OpCode opcode = OP_NOOP;
     int16_t modslot = -1;
@@ -46,6 +47,7 @@ struct ThreadMessage
     uint8_t awtype = 0;
     sfpp::FilterModel filtermodel;
     sfpp::ModelConfig filterconfig;
+    uint32_t parid = CLAP_INVALID_ID;
 };
 
 struct MacroKnobBinding
@@ -58,7 +60,7 @@ struct MacroKnobBinding
 
 struct MIDIBinding
 {
-    uint32_t midicc = 0;
+    uint32_t midicc = CLAP_INVALID_ID;
     uint32_t target_param = CLAP_INVALID_ID;
     std::optional<std::pair<float, float>> par_range;
 };
@@ -133,6 +135,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     std::vector<MacroKnobBinding> macroBindings;
     std::vector<MIDIBinding> midiBindings;
     std::atomic<uint32_t> midiLearnParam{CLAP_INVALID_ID};
+    void removeMIDIAssignmentForParam(uint32_t parid);
     void initMidiBindings();
     void handleMacroKnob(int knobindex, float value, bool is_audio_tread);
     void loadMacroKnobs(std::string filename);

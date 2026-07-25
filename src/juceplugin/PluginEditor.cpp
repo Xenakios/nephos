@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "clap/id.h"
 #include "containers/choc_Value.h"
 #include "juce_audio_utils/juce_audio_utils.h"
 #include "juce_core/juce_core.h"
@@ -90,9 +91,20 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
         c.second->addMenuItemsCallback([this, parid = c.first](juce::PopupMenu &menu) {
             menu.addSectionHeader("FOO HEADER " +
                                   processorRef.granulator.idtoparmetadata[parid]->name);
-            menu.addItem("MIDI LEARN",[this,parid](){
-                processorRef.midiLearnParam = parid;
-            });
+            uint32_t assigned = CLAP_INVALID_ID;
+            for (auto &b : processorRef.midiBindings)
+            {
+                if (b.target_param == parid)
+                    assigned = b.midicc;
+            }
+            if (assigned == CLAP_INVALID_ID)
+                menu.addItem("MIDI LEARN",
+                             [this, parid]() { processorRef.midiLearnParam = parid; });
+            else
+            {
+                menu.addItem("REMOVE ASSIGNED MIDI CC " + juce::String(assigned),
+                             [this, parid]() { processorRef.removeMIDIAssignmentForParam(parid); });
+            }
         });
     }
     setSize(1500, 720);
