@@ -185,19 +185,6 @@ void AudioPluginAudioProcessor::handleMacroKnob(int knobindex, float value, bool
                     *granulator.idtoparvalptr[msg.id] = msg.value;
             }
         }
-        if (macroBindings[knobindex].dest_type == 1)
-        {
-            auto dest = macroBindings[knobindex].dest;
-            if (dest < 0 || dest >= GranulatorModConfig::FixedMatrixSize)
-                return;
-            auto targetid = granulator.modmatrix.rt.routes[dest].target->baz;
-            ThreadMessage tmsg;
-            tmsg.opcode = ThreadMessage::OP_MODPARAM;
-            tmsg.modslot = dest;
-            auto range = granulator.modRanges[targetid];
-            tmsg.depth = value * range * 0.5;
-            from_gui_fifo.push(tmsg);
-        }
     }
 }
 
@@ -587,37 +574,27 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         }
 
         auto &mm = granulator.modmatrix;
-        if (msg.opcode == ThreadMessage::OP_MODPARAM && msg.moddest == -1)
-        {
-            mm.rt.updateDepthAt(msg.modslot, msg.depth);
-        }
-        else if (msg.opcode == ThreadMessage::OP_MODROUTING ||
-                 msg.opcode == ThreadMessage::OP_MODPARAM)
+        if (msg.opcode == ThreadMessage::OP_MODROUTING)
         {
             jassert(msg.moddest >= 1);
             auto it = granulator.modRanges.find(msg.moddest);
             if (it != granulator.modRanges.end())
                 msg.depth *= it->second;
-            if (msg.opcode == ThreadMessage::OP_MODPARAM)
+
+            mm.rt.updateActiveAt(msg.modslot, true);
+            // DBG(msg.modslot << " " << msg.modsource << " " << msg.depth << " " <<
+            // msg.moddest);
+            mm.rt.updateRoutingAt(msg.modslot,
+                                  GranulatorModConfig::SourceIdentifier{(uint32_t)msg.modsource},
+                                  GranulatorModConfig::SourceIdentifier{(uint32_t)msg.modvia},
+                                  GranulatorModConfig::MyCurve{msg.modcurve, msg.modcurvepar0},
+                                  GranulatorModConfig::TargetIdentifier{msg.moddest}, msg.depth);
+            if (msg.modvia == 0)
             {
-                mm.rt.updateDepthAt(msg.modslot, msg.depth);
+                mm.rt.routes[msg.modslot].sourceVia = std::nullopt;
             }
-            else
-            {
-                mm.rt.updateActiveAt(msg.modslot, true);
-                // DBG(msg.modslot << " " << msg.modsource << " " << msg.depth << " " <<
-                // msg.moddest);
-                mm.rt.updateRoutingAt(
-                    msg.modslot, GranulatorModConfig::SourceIdentifier{(uint32_t)msg.modsource},
-                    GranulatorModConfig::SourceIdentifier{(uint32_t)msg.modvia},
-                    GranulatorModConfig::MyCurve{msg.modcurve, msg.modcurvepar0},
-                    GranulatorModConfig::TargetIdentifier{msg.moddest}, msg.depth);
-                if (msg.modvia == 0)
-                {
-                    mm.rt.routes[msg.modslot].sourceVia = std::nullopt;
-                }
-                mm.m.prepare(mm.rt, granulator.m_sr, granul_block_size);
-            }
+            mm.m.prepare(mm.rt, granulator.m_sr, granul_block_size);
+
             statechanged = true;
         }
     }
@@ -728,7 +705,6 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         visualizerAudioBuffer.copyFrom(0, 0, buffer, 0, 0, buffer.getNumSamples());
         avisComponent.pushBuffer(visualizerAudioBuffer);
     }
-    
 
     jassert(buffer.getNumSamples() > 0);
     double cpu_bench_t1 = juce::Time::getMillisecondCounterHiRes();

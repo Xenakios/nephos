@@ -151,7 +151,6 @@ void AudioPluginAudioProcessorEditor::timerCallback()
 
             modulationPage.modRowComps[msg.modslot]->viaDrop.setSelectedId(msg.modvia);
 
-            // modulationPage.modRowComps[msg.modslot]->depthSlider.setValue(msg.depth, false);
             modulationPage.modRowComps[msg.modslot]->destDrop.setSelectedId(msg.moddest);
 
             modulationPage.modRowComps[msg.modslot]->setTarget(msg.moddest);
