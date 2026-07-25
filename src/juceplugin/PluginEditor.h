@@ -394,27 +394,42 @@ struct ModulationRowComponent : public juce::Component
         drop.setSelectedId(0);
     }
     using Node = DropDownComponent::Node;
-    ModulationRowComponent(ToneGranulator *g) : gr(g)
+    AudioPluginAudioProcessor &processorRef;
+    ModulationRowComponent(AudioPluginAudioProcessor &proc, int modindex)
+        : processorRef(proc), gr(&proc.granulator), modslotindex(modindex),
+          depthSlider(XapSlider::SS_HorizontalSlider,
+                      ParamDesc()
+                          .withRange(-1.0f, 1.0f)
+                          .withName("DEPTH")
+                          .withLinearScaleFormatting("")
+                          .withID(ToneGranulator::PAR_MAINMODDEPTHSTART + modindex))
     {
         addAndMakeVisible(sourceDrop);
         addAndMakeVisible(viaDrop);
         addAndMakeVisible(depthSlider);
 
         auto updatfunc = [this] {
-            CallbackParams pars{false,
-                                modslotindex,
-                                (int)sourceDrop.selectedId,
-                                (int)viaDrop.selectedId,
-                                (int)curveDrop.selectedId,
-                                (float)depthSlider.getValue(),
-                                (uint32_t)destDrop.selectedId};
-            stateChangedCallback(pars);
+            ThreadMessage msg;
+            msg.modslot = modslotindex;
+            msg.depth = depthSlider.getValue();
+            msg.modsource = sourceDrop.selectedId;
+            msg.modvia = viaDrop.selectedId;
+            msg.moddest = destDrop.selectedId;
+            msg.modcurve = curveDrop.selectedId;
+            msg.opcode = ThreadMessage::OP_MODROUTING;
+            processorRef.from_gui_fifo.push(msg);
         };
         fillDropWithSources(sourceDrop, "Modulation source");
         sourceDrop.OnItemSelected = updatfunc;
         fillDropWithSources(viaDrop, "Modulation via source");
         viaDrop.OnItemSelected = updatfunc;
-
+        depthSlider.OnValueChanged = [this]() {
+            ParameterMessage msg;
+            msg.id = ToneGranulator::PAR_MAINMODDEPTHSTART + modslotindex;
+            msg.value = depthSlider.getValue();
+            processorRef.params_from_gui_fifo.push(msg);
+        };
+        /*
         depthSlider.OnValueChanged = [this]() {
             CallbackParams pars{true,
                                 modslotindex,
@@ -425,13 +440,13 @@ struct ModulationRowComponent : public juce::Component
                                 (uint32_t)destDrop.selectedId};
             stateChangedCallback(pars);
         };
-
+        */
         addAndMakeVisible(curveDrop);
-        
+
         using mcf = GranulatorModConfig;
         fillDropWithCurves(curveDrop, "Curve");
         curveDrop.OnItemSelected = updatfunc;
-        
+
         addAndMakeVisible(destDrop);
         initDestinationDrop();
         destDrop.setSelectedId(1);
@@ -522,19 +537,17 @@ struct ModulationRowComponent : public juce::Component
         float depth = 0.0f;
         uint32_t target;
     };
-    std::function<void(CallbackParams)> stateChangedCallback;
+    
     int modslotindex = -1;
     juce::Label slotLabel;
     DropDownComponent sourceDrop;
     DropDownComponent viaDrop;
-    XapSlider depthSlider{XapSlider::SS_HorizontalSlider,
-                          ParamDesc()
-                              .asFloat()
-                              .withName("DEPTH")
-                              .withRange(-1.0f, 1.0f)
-                              .withLinearScaleFormatting("%", 100.0f)};
+
     DropDownComponent curveDrop;
     DropDownComponent destDrop;
+
+  private:
+    XapSlider depthSlider;
 };
 
 class MainPageComponent final : public juce::Component
@@ -672,28 +685,8 @@ class ModulationPage : public juce::Component
         addAndMakeVisible(stepSeqTabs);
         for (int i = 0; i < 16; ++i)
         {
-            auto modcomp = std::make_unique<ModulationRowComponent>(&processorRef.granulator);
+            auto modcomp = std::make_unique<ModulationRowComponent>(processorRef, i);
             modcomp->modslotindex = i;
-            modcomp->stateChangedCallback = [this](ModulationRowComponent::CallbackParams args) {
-                if (args.slot >= 0 && args.source >= 0 && args.target >= 0)
-                {
-                    processorRef.updateHostDisplay(
-                        juce::AudioProcessor::ChangeDetails().withNonParameterStateChanged(true));
-                    ThreadMessage msg;
-                    msg.modslot = args.slot;
-                    msg.depth = args.depth;
-                    msg.modsource = args.source;
-                    msg.modvia = args.via;
-                    msg.moddest = args.target;
-                    msg.modcurve = args.curve;
-                    msg.opcode = ThreadMessage::OP_MODROUTING;
-                    if (args.onlydepth)
-                    {
-                        msg.opcode = ThreadMessage::OP_MODPARAM;
-                    }
-                    processorRef.from_gui_fifo.push(msg);
-                }
-            };
             addAndMakeVisible(*modcomp);
             modRowComps.push_back(std::move(modcomp));
         }

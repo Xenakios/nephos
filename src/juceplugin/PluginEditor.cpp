@@ -66,6 +66,10 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
     addChildSlidersFrom(mainPage.timeModuleComponent);
     addChildSlidersFrom(mainPage.stackModuleComponent);
     addChildSlidersFrom(mainPage.mainOutModuleComponent);
+    for (auto &c : modulationPage.modRowComps)
+    {
+        addChildSlidersFrom(*c);
+    }
 #if JUCE_MAC
     setScaleFactor(0.80);
 #else
@@ -100,7 +104,7 @@ AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor() {}
 
 void AudioPluginAudioProcessorEditor::timerCallback()
 {
-    
+
     mainPage.oscModuleComponent.pitchEnvelopeComponent.updateIfNeeded();
 
     for (auto &c : modulationPage.stepcomps)
@@ -147,7 +151,7 @@ void AudioPluginAudioProcessorEditor::timerCallback()
 
             modulationPage.modRowComps[msg.modslot]->viaDrop.setSelectedId(msg.modvia);
 
-            modulationPage.modRowComps[msg.modslot]->depthSlider.setValue(msg.depth, false);
+            // modulationPage.modRowComps[msg.modslot]->depthSlider.setValue(msg.depth, false);
             modulationPage.modRowComps[msg.modslot]->destDrop.setSelectedId(msg.moddest);
 
             modulationPage.modRowComps[msg.modslot]->setTarget(msg.moddest);

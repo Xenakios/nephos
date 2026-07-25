@@ -48,6 +48,7 @@ class XapSlider : public juce::Component
     void setParameterMetaData(ParamDesc md, bool updateCurrentValue)
     {
         m_pardesc = md;
+        assert(!std::isnan(m_pardesc.defaultVal));
         if (updateCurrentValue)
             m_value = m_pardesc.defaultVal;
         m_default_value = m_pardesc.defaultVal;
