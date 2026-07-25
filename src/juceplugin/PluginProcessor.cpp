@@ -547,6 +547,10 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                         float val =
                             juce::jmap<float>(msg.getControllerValue(), 0, 127, minval, maxval);
                         *granulator.idtoparvalptr[binding.target_param] = val;
+                        ParameterMessage msg;
+                        msg.id = binding.target_param;
+                        msg.value = val;
+                        params_to_gui_fifo.push(msg);
                     }
                 }
             }
