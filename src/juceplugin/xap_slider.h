@@ -140,5 +140,9 @@ class XapSlider : public juce::Component
         repaint();
     }
     std::function<void()> OnValueChanged;
-    std::function<void(juce::PopupMenu &)> OnAddContextMenuItems;
+    void addMenuItemsCallback(std::function<void(juce::PopupMenu &)> f)
+    {
+        MenuAddCallbacks.push_back(f);
+    }
+    std::vector<std::function<void(juce::PopupMenu &)>> MenuAddCallbacks;
 };

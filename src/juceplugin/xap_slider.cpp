@@ -108,10 +108,14 @@ void XapSlider::mouseDown(const juce::MouseEvent &ev)
                 repaint();
             });
         }
-        if (OnAddContextMenuItems)
+        for (auto &func : MenuAddCallbacks)
         {
-            OnAddContextMenuItems(menu);
+            if (func)
+            {
+                func(menu);
+            }
         }
+
         /*
         juce::PopupMenu storemenu;
         for (int i = 0; i < m_snap_positions.size(); ++i)

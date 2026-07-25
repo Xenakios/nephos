@@ -589,7 +589,7 @@ OscillatorModuleComponent::OscillatorModuleComponent(AudioPluginAudioProcessor &
         auto knob = std::make_unique<XapSlider>(
             XapSlider::SS_Knob,
             *p.granulator.idtoparmetadata[ToneGranulator::PAR_GRAINMODSLOTAMOUNT0 + i]);
-        knob->OnAddContextMenuItems = [this, i](juce::PopupMenu &menu) {
+        knob->addMenuItemsCallback([this, i](juce::PopupMenu &menu) {
             menu.addSectionHeader("Routing");
             juce::PopupMenu sourcemenu;
             auto cursource = processorRef.granulator.voices[0]->modulation_slots[i].source_id;
@@ -618,7 +618,7 @@ OscillatorModuleComponent::OscillatorModuleComponent(AudioPluginAudioProcessor &
                     });
             }
             menu.addSubMenu("Modulation target", targetmenu);
-        };
+        });
         initSlider(p, *this, *knob);
         modDepthKnobs.push_back(std::move(knob));
     }
