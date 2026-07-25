@@ -89,7 +89,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
     for (auto &c : idToSlider)
     {
         c.second->addMenuItemsCallback([this, parid = c.first](juce::PopupMenu &menu) {
-            menu.addSectionHeader("FOO HEADER " +
+            menu.addSectionHeader("MIDI CONTROL " +
                                   processorRef.granulator.idtoparmetadata[parid]->name);
             uint32_t assigned = CLAP_INVALID_ID;
             for (auto &b : processorRef.midiBindings)
@@ -102,6 +102,28 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
                              [this, parid]() { processorRef.midiLearnParam = parid; });
             else
             {
+                std::vector<std::pair<float, float>> ranges;
+                ranges.emplace_back(-1.0f, 1.0f);
+                ranges.emplace_back(1.0f, -1.0f);
+                ranges.emplace_back(-0.5f, 0.5f);
+                ranges.emplace_back(0.5f, -0.5f);
+                ranges.emplace_back(0.0f, 1.0f);
+                ranges.emplace_back(0.0f, 0.5f);
+                ranges.emplace_back(0.0f, -0.5f);
+                ranges.emplace_back(0.0f, -1.0f);
+                float minval = processorRef.granulator.idtoparmetadata[parid]->minVal;
+                float maxval = processorRef.granulator.idtoparmetadata[parid]->maxVal;
+                for (auto &r : ranges)
+                {
+                    float scaledminval = juce::jmap<float>(r.first, -1.0f, 1.0f, minval, maxval);
+                    float scaledmaxval = juce::jmap<float>(r.second, -1.0f, 1.0f, minval, maxval);
+                    menu.addItem(
+                        juce::String(scaledminval, 2) + " -> " + juce::String(scaledmaxval, 2),
+                        [this, parid, scaledminval, scaledmaxval]() {
+                            processorRef.setMidiAssignmentParameterRange(parid, scaledminval,
+                                                                         scaledmaxval);
+                        });
+                }
                 menu.addItem("REMOVE ASSIGNED MIDI CC " + juce::String(assigned),
                              [this, parid]() { processorRef.removeMIDIAssignmentForParam(parid); });
             }

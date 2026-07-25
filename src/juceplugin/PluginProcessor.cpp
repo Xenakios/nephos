@@ -198,6 +198,20 @@ void AudioPluginAudioProcessor::initMidiBindings()
     // midiBindings.emplace_back(MIDIBinding{23, ToneGranulator::PAR_MAINMODDEPTHSTART + 1});
 }
 
+void AudioPluginAudioProcessor::setMidiAssignmentParameterRange(uint32_t parid, float minval,
+                                                                float maxval)
+{
+    // not thread safe!! fix!
+    for (auto &b : midiBindings)
+    {
+        if (b.target_param == parid)
+        {
+            b.par_range = {minval, maxval};
+            break;
+        }
+    }
+}
+
 void AudioPluginAudioProcessor::removeMIDIAssignmentForParam(uint32_t parid)
 {
     ThreadMessage msg;
