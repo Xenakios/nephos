@@ -85,6 +85,16 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
             }
         };
     }
+    for (auto &c : idToSlider)
+    {
+        c.second->addMenuItemsCallback([this, parid = c.first](juce::PopupMenu &menu) {
+            menu.addSectionHeader("FOO HEADER " +
+                                  processorRef.granulator.idtoparmetadata[parid]->name);
+            menu.addItem("MIDI LEARN",[this,parid](){
+                processorRef.midiLearnParam = parid;
+            });
+        });
+    }
     setSize(1500, 720);
     startTimer(50);
 }

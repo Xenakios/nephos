@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "clap/id.h"
 #include "containers/choc_Value.h"
 #include "juce_audio_utils/juce_audio_utils.h"
 #include "text/choc_Files.h"
@@ -191,10 +192,10 @@ void AudioPluginAudioProcessor::handleMacroKnob(int knobindex, float value, bool
 void AudioPluginAudioProcessor::initMidiBindings()
 {
     midiBindings.reserve(32);
-    midiBindings.emplace_back(MIDIBinding{21, ToneGranulator::PAR_PITCH, {{-12.0f, 12.0f}}});
-    midiBindings.emplace_back(MIDIBinding{22, ToneGranulator::PAR_DENSITY});
-    midiBindings.emplace_back(MIDIBinding{23, ToneGranulator::PAR_AZIMUTH});
-    midiBindings.emplace_back(MIDIBinding{23, ToneGranulator::PAR_MAINMODDEPTHSTART + 1});
+    // midiBindings.emplace_back(MIDIBinding{21, ToneGranulator::PAR_PITCH, {{-12.0f, 12.0f}}});
+    // midiBindings.emplace_back(MIDIBinding{22, ToneGranulator::PAR_DENSITY});
+    // midiBindings.emplace_back(MIDIBinding{23, ToneGranulator::PAR_AZIMUTH});
+    // midiBindings.emplace_back(MIDIBinding{23, ToneGranulator::PAR_MAINMODDEPTHSTART + 1});
 }
 
 AudioPluginAudioProcessor::AudioPluginAudioProcessor()
@@ -499,26 +500,36 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 {
                     snapnumber = 0;
                 }
-                loadSnapShot(snapnumber);
+                // loadSnapShot(snapnumber);
             }
             auto &mm = granulator.modmatrix;
             uint32_t ccnum = msg.getControllerNumber();
-            for (const auto &binding : midiBindings)
+            if (midiLearnParam == CLAP_INVALID_ID)
             {
-                if (binding.midicc == ccnum)
+                for (const auto &binding : midiBindings)
                 {
-                    auto md = granulator.idtoparmetadata[binding.target_param];
-                    float minval = md->minVal;
-                    float maxval = md->maxVal;
-                    if (binding.par_range)
+                    if (binding.midicc == ccnum)
                     {
-                        minval = std::clamp(binding.par_range->first, md->minVal, md->maxVal);
-                        maxval = std::clamp(binding.par_range->second, md->minVal, md->maxVal);
+                        auto md = granulator.idtoparmetadata[binding.target_param];
+                        float minval = md->minVal;
+                        float maxval = md->maxVal;
+                        if (binding.par_range)
+                        {
+                            minval = std::clamp(binding.par_range->first, md->minVal, md->maxVal);
+                            maxval = std::clamp(binding.par_range->second, md->minVal, md->maxVal);
+                        }
+                        float val =
+                            juce::jmap<float>(msg.getControllerValue(), 0, 127, minval, maxval);
+                        *granulator.idtoparvalptr[binding.target_param] = val;
                     }
-                    float val = juce::jmap<float>(msg.getControllerValue(), 0, 127, minval, maxval);
-                    *granulator.idtoparvalptr[binding.target_param] = val;
                 }
             }
+            else
+            {
+                midiBindings.emplace_back(MIDIBinding{ccnum, midiLearnParam});
+                midiLearnParam = CLAP_INVALID_ID;
+            }
+
             auto dmit = macroMidiMappings.find(ccnum);
             // if (dmit != macroMidiMappings.end())
             if (false)

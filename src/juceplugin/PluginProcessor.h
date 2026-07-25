@@ -132,6 +132,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     void saveSnapShot(int index, choc::value::ValueView state);
     std::vector<MacroKnobBinding> macroBindings;
     std::vector<MIDIBinding> midiBindings;
+    std::atomic<uint32_t> midiLearnParam{CLAP_INVALID_ID};
     void initMidiBindings();
     void handleMacroKnob(int knobindex, float value, bool is_audio_tread);
     void loadMacroKnobs(std::string filename);
