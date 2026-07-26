@@ -221,38 +221,47 @@ void GrainEnvelopeEditorComponent::mouseDown(const juce::MouseEvent &ev)
     if (ev.mods.isRightButtonDown())
     {
         juce::PopupMenu menu;
-        menu.addSectionHeader("Interpolation mode");
-        juce::StringArray modes{"None", "Linear", "Spline"};
-        for (int i = 0; i < modes.size(); ++i)
+        if (ev.y >= 15 && ev.y < top_margin)
         {
-            menu.addItem(modes[i], true,
-                         granul->get_aux_envelope_interpolation_mode(target_envelope) == i,
-                         [i, this]() { set_interpolation_mode(i); });
+            target_param = get_param_from_x_coord(ev.x);
+            if (target_param != CLAP_INVALID_ID)
+                addMidiLearnToMenu(menu, processorRef, target_param);
         }
-        menu.addSectionHeader("Transform");
-        menu.addItem("Reverse", [this]() { transform_steps(TM_Reverse); });
-        menu.addItem("Mutate", [this]() { transform_steps(TM_Mutate); });
-        menu.addItem("Sort", [this]() { transform_steps(TM_Sort); });
-        menu.addItem("Envelope", [this]() { transform_steps(TM_ApplyEnvelope); });
+        else
+        {
+            menu.addSectionHeader("Interpolation mode");
+            juce::StringArray modes{"None", "Linear", "Spline"};
+            for (int i = 0; i < modes.size(); ++i)
+            {
+                menu.addItem(modes[i], true,
+                             granul->get_aux_envelope_interpolation_mode(target_envelope) == i,
+                             [i, this]() { set_interpolation_mode(i); });
+            }
+            menu.addSectionHeader("Transform");
+            menu.addItem("Reverse", [this]() { transform_steps(TM_Reverse); });
+            menu.addItem("Mutate", [this]() { transform_steps(TM_Mutate); });
+            menu.addItem("Sort", [this]() { transform_steps(TM_Sort); });
+            menu.addItem("Envelope", [this]() { transform_steps(TM_ApplyEnvelope); });
 
-        menu.addSectionHeader("Generate");
-        menu.addItem("Reset to zero", [this]() { generate_steps(GM_RESET); });
-        menu.addItem("Reset to max", [this]() { generate_steps(GM_MAX); });
-        menu.addItem("Alt min/max", [this]() { generate_steps(GM_ALTERNATEMINMAX); });
-        menu.addItem("Ramp up", [this]() { generate_steps(GM_RAMPUP); });
-        menu.addItem("Ramp up/down", [this]() { generate_steps(GM_RAMPUPDOWN); });
-        menu.addItem("Random Uniform", [this]() { generate_steps(GM_RANDOM); });
-        menu.addItem("Paste from JSON array in clipboard",
-                     [this]() { generate_steps(GM_CLIPBOARD); });
-        auto presetsmenu = generate_presets_menu();
-        menu.addSubMenu("Presets", presetsmenu);
+            menu.addSectionHeader("Generate");
+            menu.addItem("Reset to zero", [this]() { generate_steps(GM_RESET); });
+            menu.addItem("Reset to max", [this]() { generate_steps(GM_MAX); });
+            menu.addItem("Alt min/max", [this]() { generate_steps(GM_ALTERNATEMINMAX); });
+            menu.addItem("Ramp up", [this]() { generate_steps(GM_RAMPUP); });
+            menu.addItem("Ramp up/down", [this]() { generate_steps(GM_RAMPUPDOWN); });
+            menu.addItem("Random Uniform", [this]() { generate_steps(GM_RANDOM); });
+            menu.addItem("Paste from JSON array in clipboard",
+                         [this]() { generate_steps(GM_CLIPBOARD); });
+            auto presetsmenu = generate_presets_menu();
+            menu.addSubMenu("Presets", presetsmenu);
 
-        /*
-        menu.addItem("Help", []() {
-juce::URL("file:///C:/develop/nephos/src/nephos_help.html")
-   .launchInDefaultBrowser();
-});
-*/
+            /*
+            menu.addItem("Help", []() {
+    juce::URL("file:///C:/develop/nephos/src/nephos_help.html")
+       .launchInDefaultBrowser();
+    });
+    */
+        }
         menu.showMenuAsync(juce::PopupMenu::Options{});
     }
     else

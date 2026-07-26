@@ -12,6 +12,47 @@
 #include <exception>
 #include <random>
 
+inline void addMidiLearnToMenu(juce::PopupMenu &menu, AudioPluginAudioProcessor &processorRef,
+                               uint32_t parid)
+{
+    menu.addSectionHeader("MIDI CONTROL " + processorRef.granulator.idtoparmetadata[parid]->name);
+    uint32_t assigned = CLAP_INVALID_ID;
+    for (auto &b : processorRef.midiBindings)
+    {
+        if (b.target_param == parid)
+            assigned = b.midicc;
+    }
+    if (assigned == CLAP_INVALID_ID)
+    {
+        menu.addItem("MIDI LEARN",
+                     [&processorRef, parid]() { processorRef.midiLearnParam = parid; });
+    }
+    else
+    {
+        juce::PopupMenu curvemenu;
+        auto curveinfos = GranulatorModConfig::get_curve_metadata();
+        for (auto &ci : curveinfos)
+        {
+            curvemenu.addItem(ci.groupname + "/" + ci.name,
+                              [&processorRef, parid, curveid = ci.id]() {
+                                  processorRef.setMidiAssignmentMappingCurve(parid, curveid);
+                              });
+        }
+        menu.addSubMenu("Curve", curvemenu);
+        float curval = *processorRef.granulator.idtoparvalptr[parid];
+        menu.addItem("Set current value as MIDI control range start",
+                     [&processorRef, parid, curval] {
+                         processorRef.setMidiAssignmentParameterRange(parid, curval, {});
+                     });
+        menu.addItem("Set current value as MIDI control range end", [&processorRef, parid, curval] {
+            processorRef.setMidiAssignmentParameterRange(parid, {}, curval);
+        });
+        menu.addItem("REMOVE ASSIGNED MIDI CC " + juce::String(assigned), [&processorRef, parid]() {
+            processorRef.removeMIDIAssignmentForParam(parid);
+        });
+    }
+}
+
 #ifdef CLAUDEGENERATEDRANDOMSOURCEGUI
 /*
     TriggeredRandomSourceEditor
