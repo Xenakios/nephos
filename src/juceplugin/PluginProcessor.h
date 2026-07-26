@@ -65,7 +65,7 @@ struct MIDIBinding
 {
     uint32_t midicc = CLAP_INVALID_ID;
     uint32_t target_param = CLAP_INVALID_ID;
-    std::optional<std::pair<float, float>> par_range;
+    std::pair<float, float> par_range{0.0f, 0.0f};
     std::function<float(float)> mapfunction;
     int mapfunctionid = 0;
 };

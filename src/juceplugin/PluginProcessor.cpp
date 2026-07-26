@@ -43,12 +43,8 @@ void AudioPluginAudioProcessor::setMidiAssignmentParameterRange(uint32_t parid,
     {
         if (b.target_param != parid)
             continue;
-
-        if (!b.par_range)
-            b.par_range = std::pair{0.0f, 0.0f};
-
-        b.par_range->first = minval.value_or(b.par_range->first);
-        b.par_range->second = maxval.value_or(b.par_range->second);
+        b.par_range.first = minval.value_or(b.par_range.first);
+        b.par_range.second = maxval.value_or(b.par_range.second);
     }
 }
 
@@ -349,13 +345,8 @@ void AudioPluginAudioProcessor::processMidiMessages(juce::MidiBuffer &midiMessag
                     if (binding.midicc == ccnum)
                     {
                         auto md = granulator.idtoparmetadata[binding.target_param];
-                        float minval = md->minVal;
-                        float maxval = md->maxVal;
-                        if (binding.par_range)
-                        {
-                            minval = std::clamp(binding.par_range->first, md->minVal, md->maxVal);
-                            maxval = std::clamp(binding.par_range->second, md->minVal, md->maxVal);
-                        }
+                        float minval = std::clamp(binding.par_range.first, md->minVal, md->maxVal);
+                        float maxval = std::clamp(binding.par_range.second, md->minVal, md->maxVal);
                         float val =
                             juce::jmap<float>(msg.getControllerValue(), 0, 127, -1.0f, 1.0f);
                         if (binding.mapfunction)
@@ -371,7 +362,9 @@ void AudioPluginAudioProcessor::processMidiMessages(juce::MidiBuffer &midiMessag
             }
             else
             {
-                midiBindings.emplace_back(MIDIBinding{ccnum, midiLearnParam});
+                auto md = granulator.idtoparmetadata[midiLearnParam];
+                midiBindings.emplace_back(
+                    MIDIBinding{ccnum, midiLearnParam, {md->minVal, md->maxVal}});
                 midiLearnParam = CLAP_INVALID_ID;
                 ThreadMessage msg;
                 msg.opcode = ThreadMessage::OP_PARAMREMOTE;
@@ -751,6 +744,8 @@ choc::value::Value AudioPluginAudioProcessor::getState()
         auto midibind = choc::value::createObject("midibinding");
         midibind.setMember("midicc", (int64_t)b.midicc);
         midibind.setMember("targetpar", (int64_t)b.target_param);
+        midibind.setMember("parmin", b.par_range.first);
+        midibind.setMember("parmax", b.par_range.second);
         midibinds.addArrayElement(midibind);
     }
     state.setMember("midibindings", midibinds);
@@ -773,7 +768,13 @@ void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
             auto b = binds[i];
             uint32_t cc = b["midicc"].getWithDefault(CLAP_INVALID_ID);
             uint32_t parid = b["targetpar"].getWithDefault(CLAP_INVALID_ID);
-            midiBindings.emplace_back(MIDIBinding{cc, parid});
+            auto it = granulator.idtoparmetadata.find(parid);
+            if (it != granulator.idtoparmetadata.end())
+            {
+                float parmin = b["parmin"].getWithDefault(it->second->minVal);
+                float parmax = b["parmax"].getWithDefault(it->second->maxVal);
+                midiBindings.emplace_back(MIDIBinding{cc, parid, {parmin, parmax}});
+            }
         }
     }
     if (state.hasObjectMember("osctypemapping"))
