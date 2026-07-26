@@ -746,6 +746,7 @@ choc::value::Value AudioPluginAudioProcessor::getState()
         midibind.setMember("targetpar", (int64_t)b.target_param);
         midibind.setMember("parmin", b.par_range.first);
         midibind.setMember("parmax", b.par_range.second);
+        midibind.setMember("curveid", b.mapfunctionid);
         midibinds.addArrayElement(midibind);
     }
     state.setMember("midibindings", midibinds);
@@ -773,7 +774,17 @@ void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
             {
                 float parmin = b["parmin"].getWithDefault(it->second->minVal);
                 float parmax = b["parmax"].getWithDefault(it->second->maxVal);
-                midiBindings.emplace_back(MIDIBinding{cc, parid, {parmin, parmax}});
+                int curveid = b["curveid"].getWithDefault(0);
+                MIDIBinding binding;
+                binding.midicc = cc;
+                binding.target_param = parid;
+                binding.par_range = {parmin, parmax};
+                if (curveid > 0)
+                {
+                    binding.mapfunctionid = curveid;
+                    binding.mapfunction = GranulatorModConfig::getCurveOperator({curveid});
+                }
+                midiBindings.emplace_back(binding);
             }
         }
     }
