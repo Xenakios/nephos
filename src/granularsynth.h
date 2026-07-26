@@ -2012,8 +2012,8 @@ class ToneGranulator
                                        .withGroupName(fmt::format("LFO {}", i + 1)));
             parmetadatas.push_back(pmd()
                                        .withUnorderedMapFormatting({{0, "SIN"},
-                                                                    {1, "SIN🡄🡆SQR🡄🡆TRI"},
-                                                                    {2, "DOWN🡄🡆TRI🡄🡆UP"},
+                                                                    {1, "SIN<>SQR<>TRI"},
+                                                                    {2, "DOWN<>TRI<>UP"},
                                                                     {3, "SMOOTH NOISE"},
                                                                     {4, "S&H NOISE"}},
                                                                    true)
