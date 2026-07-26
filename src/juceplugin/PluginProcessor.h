@@ -67,6 +67,7 @@ struct MIDIBinding
     uint32_t target_param = CLAP_INVALID_ID;
     std::optional<std::pair<float, float>> par_range;
     std::function<float(float)> mapfunction;
+    int mapfunctionid = 0;
 };
 
 namespace StateIgnoreStrings

@@ -6,6 +6,7 @@
 #include "juce_core/juce_core.h"
 #include "text/choc_Files.h"
 #include "text/choc_JSON.h"
+#include <cstdint>
 #include <exception>
 #include <float.h>
 #include "../../Common/xap_breakpoint_envelope.h"
@@ -19,6 +20,7 @@ void AudioPluginAudioProcessor::setMidiAssignmentMappingCurve(uint32_t parid, in
         {
             b.mapfunction = GranulatorModConfig::getCurveOperator(
                 GranulatorModConfig::CurveIdentifier{curveid});
+            b.mapfunctionid = curveid;
         }
     }
 }
@@ -743,6 +745,15 @@ choc::value::Value AudioPluginAudioProcessor::getState()
         }
     }
     state.setMember("modroutings", modroutings);
+    auto midibinds = choc::value::createEmptyArray();
+    for (auto &b : midiBindings)
+    {
+        auto midibind = choc::value::createObject("midibinding");
+        midibind.setMember("midicc", (int64_t)b.midicc);
+        midibind.setMember("targetpar", (int64_t)b.target_param);
+        midibinds.addArrayElement(midibind);
+    }
+    state.setMember("midibindings", midibinds);
     return state;
 }
 
@@ -751,6 +762,19 @@ void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
     if (!state[StateIgnoreStrings::dashboardsettings].getWithDefault(false))
     {
         granulator.gvsettings.timespantoshow = state["gvs_timespan"].getWithDefault(8.0);
+    }
+    if (state.hasObjectMember("midibindings"))
+    {
+        auto binds = state["midibindings"];
+        if (binds.size() > 0)
+            midiBindings.clear();
+        for (int i = 0; i < binds.size(); ++i)
+        {
+            auto b = binds[i];
+            uint32_t cc = b["midicc"].getWithDefault(CLAP_INVALID_ID);
+            uint32_t parid = b["targetpar"].getWithDefault(CLAP_INVALID_ID);
+            midiBindings.emplace_back(MIDIBinding{cc, parid});
+        }
     }
     if (state.hasObjectMember("osctypemapping"))
     {
