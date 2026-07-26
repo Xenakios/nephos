@@ -109,6 +109,32 @@ void AudioPluginAudioProcessorEditor::addChildSlidersFrom(juce::Component &c)
 
 AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor() {}
 
+void AudioPluginAudioProcessorEditor::updateParameterRemoteStates()
+{
+    DBG("updating knob remote control status leds");
+    for (auto &c : idToSlider)
+    {
+        XapSlider::RemoteControlStatus s = XapSlider::RCS_NONE;
+        for (auto &binding : processorRef.midiBindings)
+        {
+            if (binding.target_param == c.first)
+            {
+                s = XapSlider::RCS_MIDI;
+                break;
+            }
+        }
+        for (auto &r : processorRef.granulator.modmatrix.rt.routes)
+        {
+            if (r.target->baz == c.first)
+            {
+                s = XapSlider::RCS_MODULATED;
+                break;
+            }
+        }
+        c.second->setRemoteControlMode(s);
+    }
+}
+
 void AudioPluginAudioProcessorEditor::timerCallback()
 {
 
@@ -131,6 +157,10 @@ void AudioPluginAudioProcessorEditor::timerCallback()
     ThreadMessage msg;
     while (processorRef.to_gui_fifo.pop(msg))
     {
+        if (msg.opcode == ThreadMessage::OP_PARAMREMOTE)
+        {
+            updateParameterRemoteStates();
+        }
         if (msg.opcode == ThreadMessage::OP_STEPSEQUENCER)
         {
             mainPage.oscModuleComponent.pitchEnvelopeComponent.repaint();
@@ -265,6 +295,16 @@ MainPageComponent::~MainPageComponent()
 }
 
 void MainPageComponent::paint(juce::Graphics &g) { g.fillAll(juce::Colours::darkgrey); }
+
+void MainPageComponent::mouseDown(const juce::MouseEvent &ev)
+{
+    if (ev.mods.isRightButtonDown())
+    {
+        juce::PopupMenu menu;
+        menu.addItem("Reset MIDI assignments", [this]() { processorRef.midiBindings.clear(); });
+        menu.showMenuAsync({});
+    }
+}
 
 void MainPageComponent::resized()
 {

@@ -559,8 +559,8 @@ class MainPageComponent final : public juce::Component
     //==============================================================================
     void paint(juce::Graphics &) override;
     void resized() override;
-
-    // MyCustomLNF lnf;
+    void mouseDown(const juce::MouseEvent&) override;
+    
     AudioPluginAudioProcessor &processorRef;
     OscillatorModuleComponent oscModuleComponent;
     MainOutputModule mainOutModuleComponent;
@@ -718,6 +718,7 @@ class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor,
     ~AudioPluginAudioProcessorEditor() override;
     void resized() override;
     void timerCallback() override;
+    void updateParameterRemoteStates();
     AudioPluginAudioProcessor &processorRef;
     MainPageComponent mainPage;
     ModulationPage modulationPage;

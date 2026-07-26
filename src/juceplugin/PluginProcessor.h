@@ -8,6 +8,7 @@
 #include "containers/choc_SingleReaderSingleWriterFIFO.h"
 #include "juce_audio_basics/juce_audio_basics.h"
 #include "threading/choc_SpinLock.h"
+#include "xap_slider.h"
 
 inline bool is_debug()
 {
@@ -32,7 +33,8 @@ struct ThreadMessage
         OP_MODROUTING,
         OP_FILTERTYPE,
         OP_STEPSEQUENCER,
-        OP_UNLEARNMIDI
+        OP_UNLEARNMIDI,
+        OP_PARAMREMOTE
     };
     OpCode opcode = OP_NOOP;
     int16_t modslot = -1;
@@ -48,6 +50,7 @@ struct ThreadMessage
     sfpp::FilterModel filtermodel;
     sfpp::ModelConfig filterconfig;
     uint32_t parid = CLAP_INVALID_ID;
+    uint16_t parremotestatus = XapSlider::RCS_NONE;
 };
 
 struct MacroKnobBinding

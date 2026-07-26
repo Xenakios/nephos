@@ -11,6 +11,21 @@ using ParamDesc = sst::basic_blocks::params::ParamMetaData;
 
 class XapSlider : public juce::Component
 {
+  public:
+    enum RemoteControlStatus
+    {
+        RCS_NONE,
+        RCS_MIDI,
+        RCS_MODULATED
+    };
+    enum Style
+    {
+        SS_HorizontalSlider,
+        SS_VerticalSlider,
+        SS_Knob
+    };
+
+  private:
     double m_value = 0.0;
     double m_modulation_amt = 0.0;
     double m_min_value = 0.0;
@@ -27,15 +42,10 @@ class XapSlider : public juce::Component
     std::vector<std::pair<juce::KeyPress, double>> keypress_to_step;
     double m_param_step = 0.0;
     ParamDesc::FeatureState *m_fstate = nullptr;
+    RemoteControlStatus remoteStatus{RCS_NONE};
+    Style m_style;
 
   public:
-    enum Style
-    {
-        SS_HorizontalSlider,
-        SS_VerticalSlider,
-        SS_Knob
-    };
-    Style m_style;
     XapSlider(Style sty, ParamDesc pdesc, ParamDesc::FeatureState *fstate = nullptr)
         : m_pardesc(pdesc), m_fstate(fstate), m_style(sty)
     {
@@ -44,6 +54,12 @@ class XapSlider : public juce::Component
         setWantsKeyboardFocus(true);
         addChildComponent(m_ed);
     }
+    void setRemoteControlMode(RemoteControlStatus s)
+    {
+        remoteStatus = s;
+        repaint();
+    }
+    RemoteControlStatus getRemoteControlMode() const { return remoteStatus; }
     const ParamDesc &getParameterMetaData() const { return m_pardesc; }
     void setParameterMetaData(ParamDesc md, bool updateCurrentValue)
     {

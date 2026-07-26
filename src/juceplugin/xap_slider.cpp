@@ -342,4 +342,12 @@ void XapSlider::paintKnob(juce::Graphics &g)
     float y = circleCentY + (circleH / 2.0) * std::sin(rads);
     g.setColour(juce::Colours::green);
     g.fillEllipse(x - 4.0, y - 4.0, 8.0, 8.0);
+    if (remoteStatus != RCS_NONE)
+    {
+        if (remoteStatus == RCS_MIDI)
+            g.setColour(juce::Colours::yellow);
+        if (remoteStatus == RCS_MODULATED)
+            g.setColour(juce::Colours::red);
+        g.fillRect(1, 1, 6, 6);
+    }
 }

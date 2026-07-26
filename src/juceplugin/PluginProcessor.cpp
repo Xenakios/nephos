@@ -9,6 +9,7 @@
 #include <exception>
 #include <float.h>
 #include "../../Common/xap_breakpoint_envelope.h"
+#include "xap_slider.h"
 
 void AudioPluginAudioProcessor::setMidiAssignmentMappingCurve(uint32_t parid, int curveid)
 {
@@ -370,6 +371,9 @@ void AudioPluginAudioProcessor::processMidiMessages(juce::MidiBuffer &midiMessag
             {
                 midiBindings.emplace_back(MIDIBinding{ccnum, midiLearnParam});
                 midiLearnParam = CLAP_INVALID_ID;
+                ThreadMessage msg;
+                msg.opcode = ThreadMessage::OP_PARAMREMOTE;
+                to_gui_fifo.push(msg);
             }
 
             auto dmit = macroMidiMappings.find(ccnum);
@@ -471,6 +475,9 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             std::erase_if(midiBindings, [parid = msg.parid](const MIDIBinding &b) {
                 return b.target_param == parid;
             });
+            ThreadMessage tmsg;
+            tmsg.opcode = ThreadMessage::OP_PARAMREMOTE;
+            to_gui_fifo.push(tmsg);
         }
         if (msg.opcode == ThreadMessage::OP_FILTERTYPE && msg.filterindex >= 0 &&
             msg.filterindex < 2)
@@ -509,7 +516,9 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 mm.rt.routes[msg.modslot].sourceVia = std::nullopt;
             }
             mm.m.prepare(mm.rt, granulator.m_sr, granul_block_size);
-
+            ThreadMessage tmsg;
+            tmsg.opcode = ThreadMessage::OP_PARAMREMOTE;
+            to_gui_fifo.push(tmsg);
             statechanged = true;
         }
     }
@@ -985,6 +994,7 @@ void AudioPluginAudioProcessor::sendExtraStatesToGUI()
             to_gui_fifo.push(msg);
         }
     }
+    to_gui_fifo.push(ThreadMessage{ThreadMessage::OP_PARAMREMOTE});
 }
 
 void AudioPluginAudioProcessor::init_clouds(ToneGranulator &g)
