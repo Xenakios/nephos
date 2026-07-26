@@ -620,13 +620,7 @@ class DashPage : public juce::Component
         }
     }
     void loadSnapShot(int index) { processorRef.loadSnapShot(index); }
-    void saveSnapShot(int index)
-    {
-        auto state = processorRef.getState();
-        std::ofstream ostream(fmt::format("{}{}.json", processorRef.presetsPath, index + 1));
-        choc::json::writeAsJSON(ostream, state, true);
-        processorRef.saveSnapShot(index, state);
-    }
+    void saveSnapShot(int index);
 
     void resized() override
     {

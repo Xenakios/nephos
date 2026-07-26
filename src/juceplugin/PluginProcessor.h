@@ -78,6 +78,7 @@ static constexpr auto masterVolume = "ignore_param_mastervolume"sv;
 static constexpr auto modulationRouting = "ignore_modulationrouting"sv;
 static constexpr auto dashboardsettings = "ignore_dashboard"sv;
 static constexpr auto ambisonicOrder = "ignore_ambiorder"sv;
+static constexpr auto midiBinds = "ignore_midibindings"sv;
 } // namespace StateIgnoreStrings
 
 class AudioPluginAudioProcessor final : public juce::AudioProcessor

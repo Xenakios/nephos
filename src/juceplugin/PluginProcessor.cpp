@@ -87,6 +87,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                 state.setMember(StateIgnoreStrings::masterVolume, true);
                 state.setMember(StateIgnoreStrings::dashboardsettings, true);
                 state.setMember(StateIgnoreStrings::ambisonicOrder, true);
+                state.setMember(StateIgnoreStrings::midiBinds, true);
                 snapshots[i] = state;
             }
         }
@@ -759,7 +760,8 @@ void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
     {
         granulator.gvsettings.timespantoshow = state["gvs_timespan"].getWithDefault(8.0);
     }
-    if (state.hasObjectMember("midibindings"))
+    bool ignoreMidiBindings = state[StateIgnoreStrings::midiBinds].getWithDefault(false);
+    if (!ignoreMidiBindings && state.hasObjectMember("midibindings"))
     {
         auto binds = state["midibindings"];
         if (binds.size() > 0)

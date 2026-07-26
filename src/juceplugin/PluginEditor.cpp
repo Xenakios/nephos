@@ -653,3 +653,10 @@ void StepSeqComponent::runExternalProgram()
         }
     });
 }
+void DashPage::saveSnapShot(int index)
+{
+    auto state = processorRef.getState();
+    std::ofstream ostream(fmt::format("{}{}.json", processorRef.presetsPath, index + 1));
+    choc::json::writeAsJSON(ostream, state, true);
+    processorRef.saveSnapShot(index, state);
+}
