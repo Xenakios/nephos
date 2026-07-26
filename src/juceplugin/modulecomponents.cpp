@@ -513,7 +513,8 @@ bool OscTypeComponent::keyPressed(const juce::KeyPress &ev)
 void OscTypeComponent::paint(juce::Graphics &g)
 {
     g.fillAll(juce::Colours::black);
-    int otypebase = *processorRef.granulator.idtoparvalptr[ToneGranulator::PAR_OSCTYPE];
+    int otypebase =
+        std::round(0.1 + *processorRef.granulator.idtoparvalptr[ToneGranulator::PAR_OSCTYPE]);
     float cellw = 50.0f;
     for (int i = 0; i < 7; ++i)
     {
@@ -542,6 +543,13 @@ void OscTypeComponent::paint(juce::Graphics &g)
 }
 void OscTypeComponent::mouseDown(const juce::MouseEvent &ev)
 {
+    if (ev.x > 50 * 7 && ev.mods.isRightButtonDown())
+    {
+        juce::PopupMenu menu;
+        addMidiLearnToMenu(menu, processorRef, ToneGranulator::PAR_OSCTYPE);
+        menu.showMenuAsync({});
+        return;
+    }
     int otype = ev.x / 50.0;
     if (otype >= 0 && otype < 7)
     {
@@ -647,7 +655,7 @@ OscillatorModuleComponent::OscillatorModuleComponent(AudioPluginAudioProcessor &
 }
 void OscillatorModuleComponent::resized()
 {
-    oscTypeComponent.setBounds(7, 17, 350, 50);
+    oscTypeComponent.setBounds(7, 17, 370, 50);
     oscPitchKnob.setBounds(7, oscTypeComponent.getBottom() + 1, 80, 100);
 
     for (int i = 0; i < modDepthKnobs.size(); ++i)

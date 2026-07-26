@@ -24,7 +24,7 @@ inline void addMidiLearnToMenu(juce::PopupMenu &menu, AudioPluginAudioProcessor 
     }
     if (assigned == CLAP_INVALID_ID)
     {
-        menu.addItem("MIDI LEARN",
+        menu.addItem("Learn MIDI CC",
                      [&processorRef, parid]() { processorRef.midiLearnParam = parid; });
     }
     else
@@ -47,7 +47,7 @@ inline void addMidiLearnToMenu(juce::PopupMenu &menu, AudioPluginAudioProcessor 
         menu.addItem("Set current value as MIDI control range end", [&processorRef, parid, curval] {
             processorRef.setMidiAssignmentParameterRange(parid, {}, curval);
         });
-        menu.addItem("REMOVE ASSIGNED MIDI CC " + juce::String(assigned), [&processorRef, parid]() {
+        menu.addItem("Remove assigned MIDI CC " + juce::String(assigned), [&processorRef, parid]() {
             processorRef.removeMIDIAssignmentForParam(parid);
         });
     }
