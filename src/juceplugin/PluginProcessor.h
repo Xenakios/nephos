@@ -63,6 +63,7 @@ struct MIDIBinding
     uint32_t midicc = CLAP_INVALID_ID;
     uint32_t target_param = CLAP_INVALID_ID;
     std::optional<std::pair<float, float>> par_range;
+    std::function<float(float)> mapfunction;
 };
 
 namespace StateIgnoreStrings
@@ -85,7 +86,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     void releaseResources() override;
 
     bool isBusesLayoutSupported(const BusesLayout &layouts) const override;
-
+    void processMidiMessages(juce::MidiBuffer &midiMessages);
     void processBlock(juce::AudioBuffer<float> &, juce::MidiBuffer &) override;
     using AudioProcessor::processBlock;
 
@@ -133,12 +134,16 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     void loadSnapShot(int index);
     void saveSnapShot(int index, choc::value::ValueView state);
     std::vector<MacroKnobBinding> macroBindings;
+
     std::vector<MIDIBinding> midiBindings;
+
     std::atomic<uint32_t> midiLearnParam{CLAP_INVALID_ID};
     void removeMIDIAssignmentForParam(uint32_t parid);
     void setMidiAssignmentParameterRange(uint32_t parid, std::optional<float> minval,
                                          std::optional<float> maxval);
+    void setMidiAssignmentMappingCurve(uint32_t parid, int curveid);
     void initMidiBindings();
+
     void handleMacroKnob(int knobindex, float value, bool is_audio_tread);
     void loadMacroKnobs(std::string filename);
     std::string presetsPath;

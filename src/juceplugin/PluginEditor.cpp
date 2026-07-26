@@ -102,6 +102,16 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
                              [this, parid]() { processorRef.midiLearnParam = parid; });
             else
             {
+                juce::PopupMenu curvemenu;
+                auto curveinfos = GranulatorModConfig::get_curve_metadata();
+                for (auto &ci : curveinfos)
+                {
+                    curvemenu.addItem(
+                        ci.groupname + "/" + ci.name, [this, parid, curveid = ci.id]() {
+                            processorRef.setMidiAssignmentMappingCurve(parid, curveid);
+                        });
+                }
+                menu.addSubMenu("Curve", curvemenu);
                 float curval = *processorRef.granulator.idtoparvalptr[parid];
                 menu.addItem("Set current value as MIDI control range start",
                              [this, parid, curval] {

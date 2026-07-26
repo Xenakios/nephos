@@ -202,7 +202,8 @@ struct GranulatorModConfig
         CURVE_PEAKING6,
         CURVE_ABS,
         CURVE_POPCORN,
-        CURVE_BUTTERFLY
+        CURVE_BUTTERFLY,
+        NUM_CURVES
     };
     static float peaking_curve(float x, float y)
     {

@@ -3,188 +3,21 @@
 #include "clap/id.h"
 #include "containers/choc_Value.h"
 #include "juce_audio_utils/juce_audio_utils.h"
+#include "juce_core/juce_core.h"
 #include "text/choc_Files.h"
 #include "text/choc_JSON.h"
 #include <exception>
 #include <float.h>
 #include "../../Common/xap_breakpoint_envelope.h"
 
-void AudioPluginAudioProcessor::init_clouds(ToneGranulator &g)
+void AudioPluginAudioProcessor::setMidiAssignmentMappingCurve(uint32_t parid, int curveid)
 {
-    xenakios::Xoroshiro128Plus rng;
-    std::array<xenakios::Envelope, 8> lopitchlimits;
-    std::array<xenakios::Envelope, 8> hipitchlimits;
-    // static limits
-    lopitchlimits[0] = xenakios::Envelope{{{0.0, 0.0}}};
-    hipitchlimits[0] = xenakios::Envelope{{{0.0, 1.0}}};
-    lopitchlimits[1] = xenakios::Envelope{{{0.0, 0.0}, {1.0, 1.0}}};
-    hipitchlimits[1] = xenakios::Envelope{{{0.0, 1.0}}};
-    lopitchlimits[2] = xenakios::Envelope{{{0.0, 0.0}}};
-    hipitchlimits[2] = xenakios::Envelope{{{0.0, 1.0}, {1.0, 0.0}}};
-    lopitchlimits[3] = xenakios::Envelope{{{0.0, 0.5}, {1.0, 0.0}}};
-    hipitchlimits[3] = xenakios::Envelope{{{0.0, 0.5}, {1.0, 1.0}}};
-    lopitchlimits[4] = xenakios::Envelope{{{0.0, 0.0}, {1.0, 0.5}}};
-    hipitchlimits[4] = xenakios::Envelope{{{0.0, 1.0}, {1.0, 0.5}}};
-    lopitchlimits[5] = xenakios::Envelope{{{0.0, 0.5}, {0.5, 0.0}, {1.0, 0.5}}};
-    hipitchlimits[5] = xenakios::Envelope{{{0.0, 0.5}, {0.5, 1.0}, {1.0, 0.5}}};
-    lopitchlimits[6] = xenakios::Envelope{{{0.0, 0.0}, {0.5, 0.5}, {1.0, 0.0}}};
-    hipitchlimits[6] = xenakios::Envelope{{{0.0, 1.0}, {0.5, 0.5}, {1.0, 1.0}}};
-    lopitchlimits[7] = xenakios::Envelope{{{0.0, 0.0}}};
-    hipitchlimits[7] = xenakios::Envelope{{{0.0, 1.0}, {0.5, 0.0}, {1.0, 1.0}}};
+    for (auto &b : midiBindings)
     {
-        for (int i = 0; i < 8; ++i)
+        if (b.target_param == parid)
         {
-            Cloud c;
-            double clouddur = 4.0;
-            double t = 0.0;
-            while (t < clouddur)
-            {
-                double envtimepos = 1.0 / clouddur * t;
-                CloudEvent e;
-                e.time_position = t;
-                double pitchlo = -24.0 + 48.0 * lopitchlimits[i].getValueAtPosition(envtimepos);
-                double pitchhi = -24.0 + 48.0 * hipitchlimits[i].getValueAtPosition(envtimepos);
-                e.param_modulations[0] = {ToneGranulator::PAR_PITCH,
-                                          rng.nextFloatInRange(pitchlo, pitchhi)};
-                c.events.push_back(e);
-                t += -std::log(rng.nextFloat()) * (1.0 / 32.0);
-            }
-            g.clouds.push_back(c);
-        }
-    }
-    return;
-    std::vector<float> rates{0.5f, 0.25f, 0.125f, 0.05f, 0.025f};
-    for (auto &r : rates)
-    {
-        Cloud c;
-        double t = 0.0;
-        while (t < 1.0)
-        {
-            CloudEvent e;
-            e.time_position = t;
-            e.param_modulations[0].id = ToneGranulator::PAR_PITCH;
-            e.param_modulations[0].value = rng.nextFloatInRange(-12.0f, 12.0f);
-            e.param_modulations[1] = {ToneGranulator::PAR_OSCTYPE, 3};
-            e.param_modulations[2] = {ToneGranulator::PAR_DURATION, 0.5};
-            c.events.push_back(e);
-            t += r;
-        }
-        g.clouds.push_back(c);
-    }
-    Cloud c;
-    c.duration = 10.0;
-    c.events.clear();
-    c.duration = 1.0;
-    double t = 0.0;
-    int i = 0;
-    while (t < 10.0)
-    {
-        CloudEvent e;
-        e.time_position = t;
-        e.param_modulations[0].id = ToneGranulator::PAR_PITCH;
-        e.param_modulations[0].value = rng.nextFloatInRange(36.0, 48.0);
-        e.param_modulations[1] = {ToneGranulator::PAR_OSCTYPE, 0};
-        e.param_modulations[2] = {ToneGranulator::PAR_DURATION, 0.15};
-        e.param_modulations[3] = {ToneGranulator::PAR_AZIMUTH, rng.nextFloatInRange(-90.0f, 90.0f)};
-        c.events.push_back(e);
-
-        t += 0.025;
-    }
-    g.clouds.push_back(c);
-
-    c.events.clear();
-    c.duration = 1.0;
-    t = 0.0;
-    while (t < 10.0)
-    {
-        if (i % 7 == 0 || i % 13 == 0)
-        {
-            CloudEvent e;
-            e.time_position = t;
-            e.param_modulations[0].id = ToneGranulator::PAR_PITCH;
-            if (rng.nextFloat() < 0.5)
-            {
-                e.param_modulations[0].value = 35.0f;
-                e.param_modulations[2] = {ToneGranulator::PAR_DURATION, 0.19};
-            }
-            else
-            {
-                e.param_modulations[0].value = -11.0f;
-                e.param_modulations[4] = {ToneGranulator::PAR_OSC_SYNC, 1.53f};
-                e.param_modulations[2] = {ToneGranulator::PAR_DURATION, 0.6};
-            }
-
-            e.param_modulations[1] = {ToneGranulator::PAR_OSCTYPE, 2};
-
-            e.param_modulations[3] = {ToneGranulator::PAR_AZIMUTH,
-                                      rng.nextFloatInRange(-90.0f, 90.0f)};
-            c.events.push_back(e);
-        }
-        ++i;
-        t = i * 0.01;
-    }
-    g.clouds.push_back(c);
-    for (auto &e : g.clouds)
-    {
-        e.after_touch_dest = ToneGranulator::PAR_INSERTAFIRST + 0;
-    }
-}
-
-void AudioPluginAudioProcessor::loadMacroKnobs(std::string filename)
-{
-    try
-    {
-        auto jsontxt = choc::file::loadFileAsString(filename);
-        auto bindings = choc::json::parseValue(jsontxt);
-        for (int i = 0; i < bindings.size(); ++i)
-        {
-            auto binding = bindings[i];
-            auto index = binding["knob"].getWithDefault(-1);
-            if (index < 0 || index >= macroBindings.size())
-                continue;
-            macroBindings[index].dest_type = binding["desttype"].getWithDefault(-1);
-            macroBindings[index].dest = binding["dest"].getWithDefault(0);
-            macroBindings[index].label = binding["name"].getWithDefault(fmt::format("M{}", i + 1));
-            if (binding.hasObjectMember("min") && binding.hasObjectMember("max"))
-            {
-                macroBindings[index].par_range = {binding["min"].getWithDefault(-1.0f),
-                                                  binding["max"].getWithDefault(1.0f)};
-            }
-        }
-    }
-    catch (std::exception &excep)
-    {
-        DBG(excep.what());
-    }
-}
-
-void AudioPluginAudioProcessor::handleMacroKnob(int knobindex, float value, bool is_audio_thread)
-{
-    if (knobindex >= 0 && knobindex < macroBindings.size())
-    {
-        auto &mb = macroBindings[knobindex];
-        if (mb.dest_type == 0)
-        {
-            ParameterMessage msg;
-            msg.id = mb.dest;
-            auto pmdit = granulator.idtoparmetadata.find(msg.id);
-            if (pmdit != granulator.idtoparmetadata.end())
-            {
-                float val = pmdit->second->defaultVal;
-                float minval = pmdit->second->minVal;
-                float maxval = pmdit->second->maxVal;
-                if (mb.par_range)
-                {
-                    minval = mb.par_range->first;
-                    maxval = mb.par_range->second;
-                }
-                val = juce::jmap<float>(value, -1.0f, 1.0f, minval, maxval);
-                msg.value = val;
-                if (!is_audio_thread)
-                    params_from_gui_fifo.push(msg);
-                else
-                    *granulator.idtoparvalptr[msg.id] = msg.value;
-            }
+            b.mapfunction = GranulatorModConfig::getCurveOperator(
+                GranulatorModConfig::CurveIdentifier{curveid});
         }
     }
 }
@@ -488,32 +321,8 @@ void AudioPluginAudioProcessor::setStateDirtyHack()
     dirtyStateParam->setValueNotifyingHost(*dirtyStateParam == 0.0f ? 0.001f : 0.0f);
     dirtyStateParam->endChangeGesture();
 }
-
-void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
-                                             juce::MidiBuffer &midiMessages)
+void AudioPluginAudioProcessor::processMidiMessages(juce::MidiBuffer &midiMessages)
 {
-    juce::AudioProcessLoadMeasurer::ScopedTimer perftimer(perfMeasurer, buffer.getNumSamples());
-    double cpu_bench_t0 = juce::Time::getMillisecondCounterHiRes();
-
-    {
-        std::lock_guard<choc::threading::SpinLock> locker(stateLock);
-        if (!pendingState.isVoid())
-        {
-            double t0 = juce::Time::getMillisecondCounterHiRes();
-            changeStateImpl(pendingState);
-            pendingState = choc::value::Value();
-            sendExtraStatesToGUI();
-            double t1 = juce::Time::getMillisecondCounterHiRes();
-            DBG("state change took " << t1 - t0 << " milliseconds");
-        }
-    }
-    juce::ScopedNoDenormals noDenormals;
-    auto totalNumInputChannels = getTotalNumInputChannels();
-    auto totalNumOutputChannels = getTotalNumOutputChannels();
-
-    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear(i, 0, buffer.getNumSamples());
-    keyboardState.processNextMidiBuffer(midiMessages, 0, buffer.getNumSamples(), true);
     for (const auto mm : midiMessages)
     {
         const auto msg = mm.getMessage();
@@ -545,7 +354,10 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                             maxval = std::clamp(binding.par_range->second, md->minVal, md->maxVal);
                         }
                         float val =
-                            juce::jmap<float>(msg.getControllerValue(), 0, 127, minval, maxval);
+                            juce::jmap<float>(msg.getControllerValue(), 0, 127, -1.0f, 1.0f);
+                        if (binding.mapfunction)
+                            val = binding.mapfunction(val);
+                        val = juce::jmap<float>(val, -1.0f, 1.0f, minval, maxval);
                         *granulator.idtoparvalptr[binding.target_param] = val;
                         ParameterMessage msg;
                         msg.id = binding.target_param;
@@ -623,6 +435,33 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             }
         }
     }
+}
+void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
+                                             juce::MidiBuffer &midiMessages)
+{
+    juce::AudioProcessLoadMeasurer::ScopedTimer perftimer(perfMeasurer, buffer.getNumSamples());
+    double cpu_bench_t0 = juce::Time::getMillisecondCounterHiRes();
+
+    {
+        std::lock_guard<choc::threading::SpinLock> locker(stateLock);
+        if (!pendingState.isVoid())
+        {
+            double t0 = juce::Time::getMillisecondCounterHiRes();
+            changeStateImpl(pendingState);
+            pendingState = choc::value::Value();
+            sendExtraStatesToGUI();
+            double t1 = juce::Time::getMillisecondCounterHiRes();
+            DBG("state change took " << t1 - t0 << " milliseconds");
+        }
+    }
+    juce::ScopedNoDenormals noDenormals;
+    auto totalNumInputChannels = getTotalNumInputChannels();
+    auto totalNumOutputChannels = getTotalNumOutputChannels();
+
+    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
+        buffer.clear(i, 0, buffer.getNumSamples());
+    keyboardState.processNextMidiBuffer(midiMessages, 0, buffer.getNumSamples(), true);
+    processMidiMessages(midiMessages);
     bool statechanged = false;
     ThreadMessage msg;
     while (from_gui_fifo.pop(msg))
@@ -1144,6 +983,186 @@ void AudioPluginAudioProcessor::sendExtraStatesToGUI()
             if (it != granulator.modRanges.end())
                 msg.depth /= it->second;
             to_gui_fifo.push(msg);
+        }
+    }
+}
+
+void AudioPluginAudioProcessor::init_clouds(ToneGranulator &g)
+{
+    xenakios::Xoroshiro128Plus rng;
+    std::array<xenakios::Envelope, 8> lopitchlimits;
+    std::array<xenakios::Envelope, 8> hipitchlimits;
+    // static limits
+    lopitchlimits[0] = xenakios::Envelope{{{0.0, 0.0}}};
+    hipitchlimits[0] = xenakios::Envelope{{{0.0, 1.0}}};
+    lopitchlimits[1] = xenakios::Envelope{{{0.0, 0.0}, {1.0, 1.0}}};
+    hipitchlimits[1] = xenakios::Envelope{{{0.0, 1.0}}};
+    lopitchlimits[2] = xenakios::Envelope{{{0.0, 0.0}}};
+    hipitchlimits[2] = xenakios::Envelope{{{0.0, 1.0}, {1.0, 0.0}}};
+    lopitchlimits[3] = xenakios::Envelope{{{0.0, 0.5}, {1.0, 0.0}}};
+    hipitchlimits[3] = xenakios::Envelope{{{0.0, 0.5}, {1.0, 1.0}}};
+    lopitchlimits[4] = xenakios::Envelope{{{0.0, 0.0}, {1.0, 0.5}}};
+    hipitchlimits[4] = xenakios::Envelope{{{0.0, 1.0}, {1.0, 0.5}}};
+    lopitchlimits[5] = xenakios::Envelope{{{0.0, 0.5}, {0.5, 0.0}, {1.0, 0.5}}};
+    hipitchlimits[5] = xenakios::Envelope{{{0.0, 0.5}, {0.5, 1.0}, {1.0, 0.5}}};
+    lopitchlimits[6] = xenakios::Envelope{{{0.0, 0.0}, {0.5, 0.5}, {1.0, 0.0}}};
+    hipitchlimits[6] = xenakios::Envelope{{{0.0, 1.0}, {0.5, 0.5}, {1.0, 1.0}}};
+    lopitchlimits[7] = xenakios::Envelope{{{0.0, 0.0}}};
+    hipitchlimits[7] = xenakios::Envelope{{{0.0, 1.0}, {0.5, 0.0}, {1.0, 1.0}}};
+    {
+        for (int i = 0; i < 8; ++i)
+        {
+            Cloud c;
+            double clouddur = 4.0;
+            double t = 0.0;
+            while (t < clouddur)
+            {
+                double envtimepos = 1.0 / clouddur * t;
+                CloudEvent e;
+                e.time_position = t;
+                double pitchlo = -24.0 + 48.0 * lopitchlimits[i].getValueAtPosition(envtimepos);
+                double pitchhi = -24.0 + 48.0 * hipitchlimits[i].getValueAtPosition(envtimepos);
+                e.param_modulations[0] = {ToneGranulator::PAR_PITCH,
+                                          rng.nextFloatInRange(pitchlo, pitchhi)};
+                c.events.push_back(e);
+                t += -std::log(rng.nextFloat()) * (1.0 / 32.0);
+            }
+            g.clouds.push_back(c);
+        }
+    }
+    return;
+    std::vector<float> rates{0.5f, 0.25f, 0.125f, 0.05f, 0.025f};
+    for (auto &r : rates)
+    {
+        Cloud c;
+        double t = 0.0;
+        while (t < 1.0)
+        {
+            CloudEvent e;
+            e.time_position = t;
+            e.param_modulations[0].id = ToneGranulator::PAR_PITCH;
+            e.param_modulations[0].value = rng.nextFloatInRange(-12.0f, 12.0f);
+            e.param_modulations[1] = {ToneGranulator::PAR_OSCTYPE, 3};
+            e.param_modulations[2] = {ToneGranulator::PAR_DURATION, 0.5};
+            c.events.push_back(e);
+            t += r;
+        }
+        g.clouds.push_back(c);
+    }
+    Cloud c;
+    c.duration = 10.0;
+    c.events.clear();
+    c.duration = 1.0;
+    double t = 0.0;
+    int i = 0;
+    while (t < 10.0)
+    {
+        CloudEvent e;
+        e.time_position = t;
+        e.param_modulations[0].id = ToneGranulator::PAR_PITCH;
+        e.param_modulations[0].value = rng.nextFloatInRange(36.0, 48.0);
+        e.param_modulations[1] = {ToneGranulator::PAR_OSCTYPE, 0};
+        e.param_modulations[2] = {ToneGranulator::PAR_DURATION, 0.15};
+        e.param_modulations[3] = {ToneGranulator::PAR_AZIMUTH, rng.nextFloatInRange(-90.0f, 90.0f)};
+        c.events.push_back(e);
+
+        t += 0.025;
+    }
+    g.clouds.push_back(c);
+
+    c.events.clear();
+    c.duration = 1.0;
+    t = 0.0;
+    while (t < 10.0)
+    {
+        if (i % 7 == 0 || i % 13 == 0)
+        {
+            CloudEvent e;
+            e.time_position = t;
+            e.param_modulations[0].id = ToneGranulator::PAR_PITCH;
+            if (rng.nextFloat() < 0.5)
+            {
+                e.param_modulations[0].value = 35.0f;
+                e.param_modulations[2] = {ToneGranulator::PAR_DURATION, 0.19};
+            }
+            else
+            {
+                e.param_modulations[0].value = -11.0f;
+                e.param_modulations[4] = {ToneGranulator::PAR_OSC_SYNC, 1.53f};
+                e.param_modulations[2] = {ToneGranulator::PAR_DURATION, 0.6};
+            }
+
+            e.param_modulations[1] = {ToneGranulator::PAR_OSCTYPE, 2};
+
+            e.param_modulations[3] = {ToneGranulator::PAR_AZIMUTH,
+                                      rng.nextFloatInRange(-90.0f, 90.0f)};
+            c.events.push_back(e);
+        }
+        ++i;
+        t = i * 0.01;
+    }
+    g.clouds.push_back(c);
+    for (auto &e : g.clouds)
+    {
+        e.after_touch_dest = ToneGranulator::PAR_INSERTAFIRST + 0;
+    }
+}
+
+void AudioPluginAudioProcessor::loadMacroKnobs(std::string filename)
+{
+    try
+    {
+        auto jsontxt = choc::file::loadFileAsString(filename);
+        auto bindings = choc::json::parseValue(jsontxt);
+        for (int i = 0; i < bindings.size(); ++i)
+        {
+            auto binding = bindings[i];
+            auto index = binding["knob"].getWithDefault(-1);
+            if (index < 0 || index >= macroBindings.size())
+                continue;
+            macroBindings[index].dest_type = binding["desttype"].getWithDefault(-1);
+            macroBindings[index].dest = binding["dest"].getWithDefault(0);
+            macroBindings[index].label = binding["name"].getWithDefault(fmt::format("M{}", i + 1));
+            if (binding.hasObjectMember("min") && binding.hasObjectMember("max"))
+            {
+                macroBindings[index].par_range = {binding["min"].getWithDefault(-1.0f),
+                                                  binding["max"].getWithDefault(1.0f)};
+            }
+        }
+    }
+    catch (std::exception &excep)
+    {
+        DBG(excep.what());
+    }
+}
+
+void AudioPluginAudioProcessor::handleMacroKnob(int knobindex, float value, bool is_audio_thread)
+{
+    if (knobindex >= 0 && knobindex < macroBindings.size())
+    {
+        auto &mb = macroBindings[knobindex];
+        if (mb.dest_type == 0)
+        {
+            ParameterMessage msg;
+            msg.id = mb.dest;
+            auto pmdit = granulator.idtoparmetadata.find(msg.id);
+            if (pmdit != granulator.idtoparmetadata.end())
+            {
+                float val = pmdit->second->defaultVal;
+                float minval = pmdit->second->minVal;
+                float maxval = pmdit->second->maxVal;
+                if (mb.par_range)
+                {
+                    minval = mb.par_range->first;
+                    maxval = mb.par_range->second;
+                }
+                val = juce::jmap<float>(value, -1.0f, 1.0f, minval, maxval);
+                msg.value = val;
+                if (!is_audio_thread)
+                    params_from_gui_fifo.push(msg);
+                else
+                    *granulator.idtoparvalptr[msg.id] = msg.value;
+            }
         }
     }
 }
