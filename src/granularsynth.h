@@ -499,7 +499,7 @@ struct GrainEvent
     float elevation = 0.0f;
     float sync_ratio = 1.0f;
     float pulse_width = 0.5f;
-    float fm_frequency_hz = 0.0f;
+    float fm_pitch = 0.0f;
     float fm_amount = 0.0f;
     float fm_feedback = 0.0f;
     float noisecorr = 0.0f;
@@ -756,7 +756,7 @@ class GranulatorVoice
         }
         */
     }
-    float fmhz = 1.0f;
+    float fmpitch = 0.0f;
     float fmmodamount = 0.0f;
     float fmfeedback = 0.0f;
     void start(GrainEvent &evpars)
@@ -808,7 +808,7 @@ class GranulatorVoice
         pitch_base = std::clamp(pitch_base, -48.0f, 64.0f);
         auto syncratio = std::clamp(evpars.sync_ratio, 1.0f, 16.0f);
         auto pw = evpars.pulse_width; // osc implementation clamps itself to 0..1
-        fmhz = evpars.fm_frequency_hz;
+        fmpitch = evpars.fm_pitch;
         fmmodamount = std::clamp(evpars.fm_amount, 0.0f, 1.0f);
         fmfeedback = std::clamp(evpars.fm_feedback, -1.0f, 1.0f);
 
@@ -827,6 +827,7 @@ class GranulatorVoice
                 }
                 if constexpr (std::is_same_v<decltype(q), FMOsc &>)
                 {
+                    float fmhz = 440.0 * std::pow(2.0, 1.0 / 12.0 * (fmpitch - 9.0));
                     q.setModulatorFreq(fmhz);
                     q.setModIndex(fmmodamount);
                     q.setFeedbackAmount(fmfeedback);
@@ -976,6 +977,7 @@ class GranulatorVoice
         MT_PITCH = 0,
         MT_VOLUME,
         MT_FMDEPTH,
+        MT_FMPITCH,
         MT_AZIMUTH,
         MT_ELEVATION,
         MT_INSERTASTART,
@@ -990,10 +992,12 @@ class GranulatorVoice
             return "VOLUME";
         else if (target == MT_FMDEPTH)
             return "FM DEPTH";
+        else if (target == MT_FMPITCH)
+            return "FM PITCH";
         else if (target == MT_AZIMUTH)
-            return "AZIMUTH";
+            return "AZIMUTH (not implemented yet)";
         else if (target == MT_ELEVATION)
-            return "ELEVATION";
+            return "ELEVATION (not implemented yet)";
         else if (target >= MT_INSERTASTART && target < NUMMODTARGETS)
         {
             int i = target - MT_INSERTASTART;
@@ -1002,7 +1006,7 @@ class GranulatorVoice
             return fmt::format("INSERT {} PAR {}", char('A' + whichinsert),
                                insert_fx[whichinsert].getParameterName(whichparam));
         }
-        return "";
+        return "error";
     }
     static void process_mod_matrix(
         double normphase, std::span<float> auxenvparams,
@@ -1048,6 +1052,9 @@ class GranulatorVoice
                 q.setFrequency(hz);
                 if constexpr (std::is_same_v<decltype(q), FMOsc &>)
                 {
+                    float modulatedfmpitch =
+                        std::clamp(fmpitch + modulatedvalues[MT_FMPITCH] * 24.0f, -48.0f, 48.0f);
+                    float fmhz = 440.0 * std::pow(2.0, 1.0 / 12.0 * (modulatedfmpitch - 9.0));
                     q.setModulatorFreq(fmhz);
                     float modulatedfmamount =
                         std::clamp(fmmodamount + modulatedvalues[MT_FMDEPTH], 0.0f, 1.0f);
@@ -2357,7 +2364,7 @@ class ToneGranulator
                                           GranulatorModConfig::TargetIdentifier{PAR_OSCTYPE}));
                 float fm_pitch =
                     modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_FMPITCH});
-                genev.fm_frequency_hz = 440.0 * std::pow(2.0, 1.0 / 12 * (fm_pitch - 9.0));
+                genev.fm_pitch = fm_pitch;
                 genev.fm_amount =
                     modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_FMDEPTH});
                 genev.fm_feedback = modmatrix.m.getTargetValue(
