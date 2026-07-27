@@ -1012,7 +1012,7 @@ class GranulatorVoice
         double normphase, std::span<float> auxenvparams,
         std::array<ModSlot, GrainEvent::max_grain_mod_slots> &mod_slots,
         std::array<SimpleEnvelope<false>, GranulatorVoice::num_aux_envelopes> &aux_envelopes,
-        std::span<float> modulatedvalues)
+        std::span<float> targetmodvalues)
     {
         assert(auxenvparams.size() == 8);
         alignas(16) float aux_env_values[4] = {0.0f};
@@ -1026,10 +1026,10 @@ class GranulatorVoice
         {
             if (e.source_id < CLAP_INVALID_ID && e.target_id < CLAP_INVALID_ID)
             {
-                modulatedvalues[e.target_id] += aux_env_values[e.source_id] * e.depth;
+                targetmodvalues[e.target_id] += aux_env_values[e.source_id] * e.depth;
             }
         }
-        for (auto &e : modulatedvalues)
+        for (auto &e : targetmodvalues)
         {
             e = std::clamp(e, -1.0f, 1.0f);
         }
