@@ -31,7 +31,7 @@ void GrainModulationVisualizationComponent::mouseDown(const juce::MouseEvent &ev
     menu.addSectionHeader("Modulation targets");
     for (auto &e : targets)
     {
-        menu.addItem(GranulatorVoice::get_mod_target_name((GranulatorVoice::MODTARGET)e),
+        menu.addItem(granul->voices[0]->get_mod_target_name((GranulatorVoice::MODTARGET)e),
                      [this, e]() {
                          target_to_show = e;
                          repaint();
@@ -629,7 +629,7 @@ OscillatorModuleComponent::OscillatorModuleComponent(AudioPluginAudioProcessor &
             for (int j = 0; j < GranulatorVoice::NUMMODTARGETS; ++j)
             {
                 targetmenu.addItem(
-                    GranulatorVoice::get_mod_target_name((GranulatorVoice::MODTARGET)j), true,
+                    processorRef.granulator.voices[0]->get_mod_target_name((GranulatorVoice::MODTARGET)j), true,
                     curtarget == j, [this, i, j]() {
                         processorRef.granulator.set_grain_modulation_routing(i, {}, j, false);
                     });

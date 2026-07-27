@@ -982,7 +982,7 @@ class GranulatorVoice
         MT_INSERTBSTART = MT_INSERTASTART + 10,
         NUMMODTARGETS = MT_INSERTBSTART + 10,
     };
-    static std::string get_mod_target_name(MODTARGET target)
+    std::string get_mod_target_name(MODTARGET target)
     {
         if (target == MT_PITCH)
             return "PITCH";
@@ -999,7 +999,8 @@ class GranulatorVoice
             int i = target - MT_INSERTASTART;
             int whichinsert = i / 10;
             int whichparam = i % 10;
-            return fmt::format("INSERT {} PAR {}", char('A' + whichinsert), whichparam);
+            return fmt::format("INSERT {} PAR {}", char('A' + whichinsert),
+                               insert_fx[whichinsert].getParameterName(whichparam));
         }
         return "";
     }
