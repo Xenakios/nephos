@@ -158,7 +158,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     // usually we would not have gui components as audioprocessor members
     // but in this case easier to just do it this way
     juce::AudioVisualiserComponent avisComponent;
-    XenAudioVisualizerComponent xenAvisComponent;
+    std::unique_ptr<XenAudioVisualizerComponent> xenAvisComponent;
     juce::AudioBuffer<float> visualizerAudioBuffer;
     juce::MidiKeyboardState keyboardState;
 
