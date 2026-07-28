@@ -3,6 +3,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_audio_utils/juce_audio_utils.h>
+#include <memory>
 #include "../granularsynth.h"
 #include "clap/id.h"
 #include "containers/choc_SingleReaderSingleWriterFIFO.h"
@@ -158,7 +159,10 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     // usually we would not have gui components as audioprocessor members
     // but in this case easier to just do it this way
     juce::AudioVisualiserComponent avisComponent;
-    std::unique_ptr<XenAudioVisualizerComponent> xenAvisComponent;
+    
+    // this is bit of an antipattern to have the AudioProcessor own the component, but oh well...
+    // maybe fix this later
+    std::unique_ptr<baconpaul::six_sines::ui::SpectrumAnalyzerComponent> baconSpectrum;
     juce::AudioBuffer<float> visualizerAudioBuffer;
     juce::MidiKeyboardState keyboardState;
 

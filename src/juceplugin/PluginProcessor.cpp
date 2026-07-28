@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "audiovisualizercomponent.h"
 #include "clap/id.h"
 #include "containers/choc_Value.h"
 #include "juce_audio_utils/juce_audio_utils.h"
@@ -263,8 +264,15 @@ void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerB
     workBuffer.resize(granul_block_size * 64);
     granulator.prepare(sampleRate, GranulatorVoice::FR_ALLSERIAL, 0.002f, 0.002f);
     currentSampleRate = sampleRate;
-    if (xenAvisComponent)
-        xenAvisComponent->setSampleRate(sampleRate);
+    if (!baconSpectrum)
+    {
+        baconSpectrum =
+            std::make_unique<baconpaul::six_sines::ui::SpectrumAnalyzerComponent>(sampleRate);
+    }
+    if (baconSpectrum)
+    {
+        baconSpectrum->setHostSampleRate(sampleRate);
+    }
 }
 
 void AudioPluginAudioProcessor::releaseResources() {}
@@ -598,8 +606,8 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             float s = adapter_block[1];
             channelDatas[0][j] = std::clamp((m + s) * 0.5f, -1.0f, 1.0f);
             channelDatas[1][j] = std::clamp((m - s) * 0.5f, -1.0f, 1.0f);
-            if (xenAvisComponent)
-                xenAvisComponent->pushNextSampleIntoFifo(m);
+            if (baconSpectrum)
+                baconSpectrum->pushSample(m);
         }
         if (recordDatas && isRecording && threadedWriter)
         {

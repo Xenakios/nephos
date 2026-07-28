@@ -49,9 +49,8 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
     dashPage.dashBoardComponent.OnMacroKnobsLoadRequested = [this]() {
         processorRef.loadMacroKnobs(processorRef.macroKnobsPath);
     };
-    if (processorRef.xenAvisComponent)
-        mainTabs.addTab("SPECTROGRAM", juce::Colours::grey, processorRef.xenAvisComponent.get(),
-                        false);
+    if (processorRef.baconSpectrum)
+        mainTabs.addTab("ANALYSIS", juce::Colours::grey, processorRef.baconSpectrum.get(), false);
     mainTabs.setCurrentTabIndex(0);
     addAndMakeVisible(mainTabs);
     for (int i = 0; i < 8; ++i)
@@ -282,9 +281,7 @@ void MainPageComponent::resized()
 {
     oscModuleComponent.setBounds(0, 0, 920, 280);
     volumeModuleComponent.setBounds(0, oscModuleComponent.getBottom() + 1, 700, 150);
-    if (processorRef.xenAvisComponent)
-        processorRef.xenAvisComponent->setBounds(volumeModuleComponent.getRight() + 2,
-                                                 oscModuleComponent.getBottom() + 2, 500, 150);
+    
     timeModuleComponent.setBounds(oscModuleComponent.getRight() + 2, 0, 300, 125);
 
     spatModuleComponent.setBounds(0, volumeModuleComponent.getBottom() + 2, 600, 125);
