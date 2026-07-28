@@ -263,6 +263,7 @@ void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerB
     workBuffer.resize(granul_block_size * 64);
     granulator.prepare(sampleRate, GranulatorVoice::FR_ALLSERIAL, 0.002f, 0.002f);
     currentSampleRate = sampleRate;
+    xenAvisComponent.setSampleRate(sampleRate);
 }
 
 void AudioPluginAudioProcessor::releaseResources() {}
@@ -596,6 +597,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             float s = adapter_block[1];
             channelDatas[0][j] = std::clamp((m + s) * 0.5f, -1.0f, 1.0f);
             channelDatas[1][j] = std::clamp((m - s) * 0.5f, -1.0f, 1.0f);
+            xenAvisComponent.pushNextSampleIntoFifo(channelDatas[0][j]);
         }
         if (recordDatas && isRecording && threadedWriter)
         {

@@ -9,6 +9,7 @@
 #include "juce_audio_basics/juce_audio_basics.h"
 #include "threading/choc_SpinLock.h"
 #include "xap_slider.h"
+#include "audiovisualizercomponent.h"
 
 inline bool is_debug()
 {
@@ -157,6 +158,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     // usually we would not have gui components as audioprocessor members
     // but in this case easier to just do it this way
     juce::AudioVisualiserComponent avisComponent;
+    XenAudioVisualizerComponent xenAvisComponent;
     juce::AudioBuffer<float> visualizerAudioBuffer;
     juce::MidiKeyboardState keyboardState;
 

@@ -206,38 +206,7 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
       volumeModuleComponent(p), stackModuleComponent(p), mainOutModuleComponent(p),
       keyboardComponent(p.keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard)
 {
-    /*
-    addAndMakeVisible(testTree);
-    testRootItem.containsSubItems = true;
-    std::map<std::string, MyTreeItem *> groups;
-    for (auto &e : p.granulator.modSources)
-    {
-        if (!e.groupname.empty() && groups.count(e.groupname) == 0)
-        {
-            auto item = new MyTreeItem;
-            item->itemText = e.groupname;
-            item->containsSubItems = true;
-            testRootItem.addSubItem(item, -1);
-            groups[e.groupname] = item;
-        }
-
-        {
-            auto item = new MyTreeItem;
-            item->itemText = e.name;
-            item->containsSubItems = false;
-            if (groups.count(e.groupname))
-            {
-                auto gitem = groups[e.groupname];
-                gitem->addSubItem(item, -1);
-            }
-            else
-            {
-                testRootItem.addSubItem(item);
-            }
-        }
-    }
-    testTree.setRootItem(&testRootItem);
-    */
+    addAndMakeVisible(processorRef.xenAvisComponent);
     mainOutModuleComponent.perfComponent.RequestData = [this](int &maxvoices, int &usedvoices,
                                                               float &cpu) {
         maxvoices = processorRef.granulator.voices.size();
@@ -310,6 +279,8 @@ void MainPageComponent::resized()
 {
     oscModuleComponent.setBounds(0, 0, 920, 280);
     volumeModuleComponent.setBounds(0, oscModuleComponent.getBottom() + 1, 700, 150);
+    processorRef.xenAvisComponent.setBounds(volumeModuleComponent.getRight() + 2,
+                                            oscModuleComponent.getBottom() + 2, 500, 150);
     timeModuleComponent.setBounds(oscModuleComponent.getRight() + 2, 0, 300, 125);
 
     spatModuleComponent.setBounds(0, volumeModuleComponent.getBottom() + 2, 600, 125);

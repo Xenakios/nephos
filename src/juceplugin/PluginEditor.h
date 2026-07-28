@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PluginProcessor.h"
+#include "audiovisualizercomponent.h"
 #include "containers/choc_Value.h"
 #include "juce_audio_utils/juce_audio_utils.h"
 #include "juce_core/juce_core.h"
@@ -572,6 +573,7 @@ class MainPageComponent final : public juce::Component
 
     std::unique_ptr<juce::TextButton> recordButton;
     juce::MidiKeyboardComponent keyboardComponent;
+    
     // juce::TreeView testTree;
     struct MyTreeItem : public juce::TreeViewItem
     {
