@@ -94,17 +94,10 @@ AHFloat BounceEaseIn(AHFloat p);
 
 AHFloat BounceEaseInOut(AHFloat p);
 
-inline AHFloat Linear50ThenHold(AHFloat p)
+template <float Percent> inline AHFloat LinearThenHold(AHFloat p)
 {
-    if (p < 0.5)
-        return p * 2.0;
-    return 1.0;
-}
-
-inline AHFloat Linear25ThenHold(AHFloat p)
-{
-    if (p < 0.25)
-        return p * 4.0;
+    if (p < Percent)
+        return p * (1.0f / Percent);
     return 1.0;
 }
 
@@ -118,8 +111,9 @@ typedef struct
 
 const EasingMapping easing_table[] = {
     {"Linear", LinearInterpolation},
-    {"Linear 25% And Hold", Linear25ThenHold},
-    {"Linear 50% And Hold", Linear50ThenHold},
+    {"Linear 5% And Hold", LinearThenHold<0.05f>},
+    {"Linear 25% And Hold", LinearThenHold<0.25f>},
+    {"Linear 50% And Hold", LinearThenHold<0.5f>},
 
     {"Quadratic Ease In", QuadraticEaseIn},
     {"Quadratic Ease Out", QuadraticEaseOut},
@@ -167,7 +161,7 @@ const EasingMapping easing_table[] = {
 struct EasingLUTS
 {
     static const size_t LUTSize = 1024;
-    static const size_t numFunctions = 34;
+    static const size_t numFunctions = 35;
     float data[numFunctions][LUTSize + 1];
     EasingLUTS()
     {
