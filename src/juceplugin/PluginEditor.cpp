@@ -292,6 +292,8 @@ void MainPageComponent::resized()
 
     stackModuleComponent.setBounds(oscModuleComponent.getRight() + 2,
                                    timeModuleComponent.getBottom() + 2, 490, 125);
+    processorRef.xenAvisComponent.setBounds(getWidth() - 501, stackModuleComponent.getBottom() + 2,
+                                            500, 250);
     // keyboardComponent.setBounds(1, getHeight() - 50, getWidth() - 300, 49);
     // testTree.setBounds(getWidth() - 299, timeModuleComponent.getBottom() + 2, 300, 300);
 }

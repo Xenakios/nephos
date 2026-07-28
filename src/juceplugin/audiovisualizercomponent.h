@@ -1,5 +1,6 @@
 #pragma once
 
+#include "juce_graphics/juce_graphics.h"
 #include "juce_gui_basics/juce_gui_basics.h"
 #include "juce_dsp/juce_dsp.h"
 
@@ -8,10 +9,11 @@ class XenAudioVisualizerComponent : public juce::Component, public juce::Timer
   public:
     enum
     {
-        fftOrder = 12,
+        fftOrder = 11,
         fftSize = 1 << fftOrder
     };
     juce::dsp::FFT forwardFFT;
+    juce::dsp::WindowingFunction<float> window;
     juce::Image spectrogramImage;
 
     alignas(16) float fifo[fftSize];
@@ -20,7 +22,8 @@ class XenAudioVisualizerComponent : public juce::Component, public juce::Timer
     alignas(16) std::atomic<bool> nextFFTBlockReady = false;
     float sampleRate = 0.0f;
     XenAudioVisualizerComponent()
-        : forwardFFT(fftOrder), spectrogramImage(juce::Image::RGB, 512, 512, true)
+        : forwardFFT(fftOrder), window(fftSize, juce::dsp::WindowingFunction<float>::hann),
+          spectrogramImage(juce::Image::RGB, 512, 512, true)
     {
         setOpaque(true);
         startTimerHz(25);
@@ -36,41 +39,7 @@ class XenAudioVisualizerComponent : public juce::Component, public juce::Timer
             repaint();
         }
     }
-    void drawNextLineOfSpectrogram()
-    {
-        auto rightHandEdge = spectrogramImage.getWidth() - 1;
-        auto imageHeight = spectrogramImage.getHeight();
-
-        // first, shuffle our image leftwards by 1 pixel..
-        spectrogramImage.moveImageSection(0, 0, 1, 0, rightHandEdge, imageHeight);
-
-        // then render our FFT data..
-        forwardFFT.performFrequencyOnlyForwardTransform(fftData);
-
-        auto maxLevel = juce::FloatVectorOperations::findMinAndMax(fftData, fftSize / 2);
-
-        // --- log-frequency axis parameters ---
-        const auto binWidth = (float)sampleRate / (float)fftSize; // Hz per FFT bin
-        const auto minFreq = binWidth;                            // skip the DC bin
-        const auto maxFreq = (float)sampleRate * 0.5f;            // Nyquist
-
-        juce::Image::BitmapData bitmap{
-            spectrogramImage, rightHandEdge, 0, 1, imageHeight, juce::Image::BitmapData::writeOnly};
-
-        for (auto y = 1; y < imageHeight; ++y)
-        {
-            // top of image = high frequency, bottom = low frequency
-            auto proportionY = 1.0f - (float)y / (float)imageHeight;
-            auto freq = minFreq * std::pow(maxFreq / minFreq, proportionY);
-
-            auto fftDataIndex = juce::jlimit(0, fftSize / 2, (int)std::round(freq / binWidth));
-
-            auto level = juce::jmap(fftData[fftDataIndex], 0.0f,
-                                    juce::jmax(maxLevel.getEnd(), 1e-5f), 0.0f, 1.0f);
-
-            bitmap.setPixelColour(0, y, juce::Colour::fromHSV(level, 1.0f, level, 1.0f));
-        }
-    }
+    void drawNextLineOfSpectrogram();
     void paint(juce::Graphics &g) override
     {
         g.fillAll(juce::Colours::black);
@@ -88,6 +57,7 @@ class XenAudioVisualizerComponent : public juce::Component, public juce::Timer
             {
                 juce::zeromem(fftData, sizeof(fftData));
                 memcpy(fftData, fifo, sizeof(fifo));
+                window.multiplyWithWindowingTable(fftData, fftSize);
                 nextFFTBlockReady = true;
             }
 

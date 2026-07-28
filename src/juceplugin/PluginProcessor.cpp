@@ -597,7 +597,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             float s = adapter_block[1];
             channelDatas[0][j] = std::clamp((m + s) * 0.5f, -1.0f, 1.0f);
             channelDatas[1][j] = std::clamp((m - s) * 0.5f, -1.0f, 1.0f);
-            xenAvisComponent.pushNextSampleIntoFifo(channelDatas[0][j]);
+            xenAvisComponent.pushNextSampleIntoFifo(m);
         }
         if (recordDatas && isRecording && threadedWriter)
         {

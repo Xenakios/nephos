@@ -103,6 +103,7 @@ target_sources(NephosPlugin
         src/easing.cpp
         src/juceplugin/xap_slider.cpp
         src/juceplugin/modulecomponents.cpp
+        src/juceplugin/audiovisualizercomponent.cpp
 )   
 
 # target_compile_options(NephosPlugin PRIVATE -mavx2 -mfma -Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Werror=return-type "$<$<COMPILE_LANGUAGE:CXX>:-fno-char8_t>")
