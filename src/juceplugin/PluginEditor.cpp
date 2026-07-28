@@ -49,6 +49,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
     dashPage.dashBoardComponent.OnMacroKnobsLoadRequested = [this]() {
         processorRef.loadMacroKnobs(processorRef.macroKnobsPath);
     };
+    mainTabs.addTab("SPECTROGRAM", juce::Colours::grey, &processorRef.xenAvisComponent, false);
     mainTabs.setCurrentTabIndex(0);
     addAndMakeVisible(mainTabs);
     for (int i = 0; i < 8; ++i)
@@ -206,7 +207,7 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
       volumeModuleComponent(p), stackModuleComponent(p), mainOutModuleComponent(p),
       keyboardComponent(p.keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard)
 {
-    addAndMakeVisible(processorRef.xenAvisComponent);
+    // addAndMakeVisible(processorRef.xenAvisComponent);
     mainOutModuleComponent.perfComponent.RequestData = [this](int &maxvoices, int &usedvoices,
                                                               float &cpu) {
         maxvoices = processorRef.granulator.voices.size();
@@ -292,10 +293,11 @@ void MainPageComponent::resized()
 
     stackModuleComponent.setBounds(oscModuleComponent.getRight() + 2,
                                    timeModuleComponent.getBottom() + 2, 490, 125);
-    processorRef.xenAvisComponent.setBounds(getWidth() - 501, stackModuleComponent.getBottom() + 2,
-                                            500, 250);
-    // keyboardComponent.setBounds(1, getHeight() - 50, getWidth() - 300, 49);
-    // testTree.setBounds(getWidth() - 299, timeModuleComponent.getBottom() + 2, 300, 300);
+    // processorRef.xenAvisComponent.setBounds(getWidth() - 501, stackModuleComponent.getBottom() +
+    // 2,
+    //                                         500, 250);
+    //  keyboardComponent.setBounds(1, getHeight() - 50, getWidth() - 300, 49);
+    //  testTree.setBounds(getWidth() - 299, timeModuleComponent.getBottom() + 2, 300, 300);
 }
 
 void StepSeqComponent::paint(juce::Graphics &g)
