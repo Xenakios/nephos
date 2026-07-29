@@ -170,63 +170,7 @@ void AudioPluginAudioProcessor::loadSnapShot(int index)
     }
 }
 
-void AudioPluginAudioProcessor::startRecording()
-{
-    isRecording = false;
-    juce::WavAudioFormat wavformat;
-    juce::File outfile{R"(C:\MusicAudio\Dome\granulatorlivebounces)"};
-    outfile = outfile.getNonexistentChildFile("recording", ".wav");
-    std::unique_ptr<juce::OutputStream> ostream = std::make_unique<juce::FileOutputStream>(outfile);
-    auto writer =
-        wavformat.createWriterFor(ostream, juce::AudioFormatWriterOptions()
-                                               .withSampleRate(44100)
-                                               .withBitsPerSample(32)
-                                               .withNumChannels(granulator.num_out_chans));
-    if (writer)
-    {
-        recordBuffer.setSize(granulator.num_out_chans, 4096);
-        threadedWriter = std::make_unique<juce::AudioFormatWriter::ThreadedWriter>(
-            writer.release(), sliceThread, 65536);
-        isRecording = true;
-    }
-}
-
-void AudioPluginAudioProcessor::stopRecording()
-{
-    isRecording = false;
-    threadedWriter = nullptr;
-}
-
 const juce::String AudioPluginAudioProcessor::getName() const { return JucePlugin_Name; }
-
-bool AudioPluginAudioProcessor::acceptsMidi() const
-{
-#if JucePlugin_WantsMidiInput
-    return true;
-#else
-    return false;
-#endif
-}
-
-bool AudioPluginAudioProcessor::producesMidi() const
-{
-#if JucePlugin_ProducesMidiOutput
-    return true;
-#else
-    return false;
-#endif
-}
-
-bool AudioPluginAudioProcessor::isMidiEffect() const
-{
-#if JucePlugin_IsMidiEffect
-    return true;
-#else
-    return false;
-#endif
-}
-
-double AudioPluginAudioProcessor::getTailLengthSeconds() const { return 0.0; }
 
 int AudioPluginAudioProcessor::getNumPrograms()
 {
@@ -585,9 +529,6 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     procnumoutchs = granulator.num_out_chans;
     buffer.clear();
     auto channelDatas = buffer.getArrayOfWritePointers();
-    float *const *recordDatas = nullptr;
-    if (recordBuffer.getNumChannels() > 0)
-        recordDatas = recordBuffer.getArrayOfWritePointers();
     if (totalNumOutputChannels == 2)
     {
         // super simple decode for stereo monitoring, we should probably just bite
@@ -596,22 +537,12 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         for (int j = 0; j < buffer.getNumSamples(); ++j)
         {
             buffer_adapter.pop(adapter_block);
-            if (recordDatas)
-            {
-                for (int k = 0; k < procnumoutchs; ++k)
-                    recordDatas[k][j] = adapter_block[k];
-            }
-
             float m = adapter_block[0] * midGain;
             float s = adapter_block[1];
             channelDatas[0][j] = std::clamp((m + s) * 0.5f, -1.0f, 1.0f);
             channelDatas[1][j] = std::clamp((m - s) * 0.5f, -1.0f, 1.0f);
             if (baconSpectrum)
                 baconSpectrum->pushSample(m);
-        }
-        if (recordDatas && isRecording && threadedWriter)
-        {
-            threadedWriter->write(recordDatas, buffer.getNumSamples());
         }
         // for convenience stereo output, visualize the MS decoded stereo
         avisComponent.pushBuffer(buffer);
@@ -646,10 +577,6 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
 }
 
 //==============================================================================
-bool AudioPluginAudioProcessor::hasEditor() const
-{
-    return true; // (change this to false if you choose to not supply an editor)
-}
 
 juce::AudioProcessorEditor *AudioPluginAudioProcessor::createEditor()
 {

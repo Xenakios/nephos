@@ -98,14 +98,14 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     using AudioProcessor::processBlock;
 
     juce::AudioProcessorEditor *createEditor() override;
-    bool hasEditor() const override;
+    bool hasEditor() const override { return true; };
 
     const juce::String getName() const override;
 
-    bool acceptsMidi() const override;
-    bool producesMidi() const override;
-    bool isMidiEffect() const override;
-    double getTailLengthSeconds() const override;
+    bool acceptsMidi() const override { return true; };
+    bool producesMidi() const override { return false; };
+    bool isMidiEffect() const override { return false; };
+    double getTailLengthSeconds() const override { return 0.0; };
 
     int getNumPrograms() override;
     int getCurrentProgram() override;
@@ -124,11 +124,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     std::atomic<float> cpu_load{0.0f};
     juce::ThreadPool tpool{juce::ThreadPool::Options{"granulatorworker", 1}};
     juce::TimeSliceThread sliceThread{"granulatortimeslicethread"};
-    void startRecording();
-    void stopRecording();
-    std::atomic<bool> isRecording{false};
-    std::unique_ptr<juce::AudioFormatWriter::ThreadedWriter> threadedWriter;
-    juce::AudioBuffer<float> recordBuffer;
+
     choc::value::Value getState();
     void setState(choc::value::ValueView state);
     void changeStateImpl(choc::value::ValueView state);
@@ -159,7 +155,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     // usually we would not have gui components as audioprocessor members
     // but in this case easier to just do it this way
     juce::AudioVisualiserComponent avisComponent;
-    
+
     // this is bit of an antipattern to have the AudioProcessor own the component, but oh well...
     // maybe fix this later
     std::unique_ptr<baconpaul::six_sines::ui::SpectrumAnalyzerComponent> baconSpectrum;

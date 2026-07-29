@@ -571,7 +571,6 @@ class MainPageComponent final : public juce::Component
     StackingModuleComponent stackModuleComponent;
     std::vector<std::unique_ptr<InsertModuleComponent>> insertComponents;
 
-    std::unique_ptr<juce::TextButton> recordButton;
     juce::MidiKeyboardComponent keyboardComponent;
     
     // juce::TreeView testTree;

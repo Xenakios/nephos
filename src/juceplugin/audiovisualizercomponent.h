@@ -21,6 +21,12 @@
 #include "juce_dsp/juce_dsp.h"
 #include "containers/choc_SingleReaderSingleWriterFIFO.h"
 
+// The waveform scope isn't hugely useful for Nephos, so allow
+// compile time enabling/disabling.
+// It could maybe be more useful if it can be made to support longer time spans,
+// say 1 second, but there's probably a reason BaconPaul chose
+// 20 milliseconds as the used time span
+
 // #define BPANALYZERSCOPE
 
 namespace baconpaul::six_sines::ui

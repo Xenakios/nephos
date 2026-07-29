@@ -234,18 +234,6 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
     addAndMakeVisible(stackModuleComponent);
     addAndMakeVisible(timeModuleComponent);
 
-    recordButton = std::make_unique<juce::TextButton>();
-    recordButton->setButtonText("Record");
-    recordButton->onClick = [this]() {
-        if (processorRef.isRecording)
-            processorRef.stopRecording();
-        else
-            processorRef.startRecording();
-        if (processorRef.isRecording)
-            recordButton->setButtonText("Stop");
-        else
-            recordButton->setButtonText("Record");
-    };
     // mainParamsComponent.addHeaderComponent(recordButton.get());
     // mainParamsComponent.addHeaderComponent(perfcomp.get());
 
