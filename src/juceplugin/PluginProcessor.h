@@ -41,6 +41,8 @@ struct ThreadMessage
         OP_PARAMREMOTE
     };
     OpCode opcode = OP_NOOP;
+    // note that some of the fields have multiple meanings depending on
+    // the opcode. this mess should be fixed at some point somehow...
     int16_t modslot = -1;
     int modsource = -1;
     int modvia = 0;

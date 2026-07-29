@@ -1,6 +1,49 @@
 #include "xap_slider.h"
 #include "juce_graphics/juce_graphics.h"
 
+void XapSlider::setRemoteControlMode(RemoteControlStatus s)
+{
+    remoteStatus = s;
+    repaint();
+}
+void XapSlider::setParameterMetaData(ParamDesc md, bool updateCurrentValue)
+{
+    m_pardesc = md;
+    assert(!std::isnan(m_pardesc.defaultVal));
+    if (updateCurrentValue)
+        m_value = m_pardesc.defaultVal;
+    m_default_value = m_pardesc.defaultVal;
+    m_min_value = m_pardesc.minVal;
+    m_max_value = m_pardesc.maxVal;
+    if (m_min_value < 0.0)
+        m_is_bipolar = true;
+    m_labeltxt = m_pardesc.name;
+    m_modulation_amt = 0.0;
+    m_snap_positions.resize(9);
+    for (int i = 0; i < 9; ++i)
+        m_snap_positions[i] = m_min_value + (m_max_value - m_min_value) / 8 * i;
+    m_param_step = (m_max_value - m_min_value) / 64;
+    if (m_pardesc.type == ParamDesc::BOOL || m_pardesc.type == ParamDesc::INT)
+        m_param_step = 1;
+    keypress_to_step.clear();
+    keypress_to_step.emplace_back(
+        juce::KeyPress(juce::KeyPress::leftKey, juce::ModifierKeys::noModifiers, 0), -m_param_step);
+    keypress_to_step.emplace_back(
+        juce::KeyPress(juce::KeyPress::rightKey, juce::ModifierKeys::noModifiers, 0), m_param_step);
+    keypress_to_step.emplace_back(
+        juce::KeyPress(juce::KeyPress::leftKey, juce::ModifierKeys::shiftModifier, 0),
+        -m_param_step * 0.1);
+    keypress_to_step.emplace_back(
+        juce::KeyPress(juce::KeyPress::rightKey, juce::ModifierKeys::shiftModifier, 0),
+        m_param_step * 0.1);
+    repaint();
+}
+void XapSlider::setModulationDisplayDepth(float d, std::string units)
+{
+    m_pardesc = m_pardesc.withLinearScaleFormatting(units, d);
+    repaint();
+}
+
 void XapSlider::mouseWheelMove(const juce::MouseEvent &event, const juce::MouseWheelDetails &wheel)
 {
     if (!isEnabled() || m_ed.isVisible())
@@ -269,6 +312,20 @@ void XapSlider::paint(juce::Graphics &g)
         }
     }
 }
+void XapSlider::mouseDoubleClick(const juce::MouseEvent &event)
+{
+    if (!isEnabled())
+        return;
+    setValue(m_default_value, true);
+}
+std::optional<std::string> XapSlider::valueToString(float v)
+{
+    ParamDesc::FeatureState fs;
+    if (m_fstate)
+        fs = *m_fstate;
+    return m_pardesc.valueToString(v, fs);
+}
+
 void XapSlider::showTextEditor()
 {
     m_ed.setVisible(true);
@@ -354,4 +411,19 @@ void XapSlider::paintKnob(juce::Graphics &g)
             g.setColour(juce::Colours::red);
         g.fillRect(1, 1, 6, 6);
     }
+}
+std::string XapSlider::getFormattedParamText()
+{
+    auto val = m_value;
+    if (m_pardesc.type == ParamDesc::INT)
+        val = std::floor(m_value);
+    auto partext = valueToString(val);
+    if (partext)
+    {
+        // if (m_pardesc.displayScale != ParamDesc::UNORDERED_MAP)
+        {
+            return *partext;
+        }
+    }
+    return "no FMT, bug";
 }

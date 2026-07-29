@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "juce_graphics/juce_graphics.h"
 #include "sst/basic-blocks/params/ParamMetadata.h"
 
 using ParamDesc = sst::basic_blocks::params::ParamMetaData;
@@ -46,6 +47,7 @@ class XapSlider : public juce::Component
     Style m_style;
 
   public:
+    juce::Font m_font{juce::FontOptions{}};
     XapSlider(Style sty, ParamDesc pdesc, ParamDesc::FeatureState *fstate = nullptr)
         : m_pardesc(pdesc), m_fstate(fstate), m_style(sty)
     {
@@ -54,92 +56,25 @@ class XapSlider : public juce::Component
         setWantsKeyboardFocus(true);
         addChildComponent(m_ed);
     }
-    void setRemoteControlMode(RemoteControlStatus s)
-    {
-        remoteStatus = s;
-        repaint();
-    }
+    void setRemoteControlMode(RemoteControlStatus s);
     RemoteControlStatus getRemoteControlMode() const { return remoteStatus; }
     const ParamDesc &getParameterMetaData() const { return m_pardesc; }
-    void setParameterMetaData(ParamDesc md, bool updateCurrentValue)
-    {
-        m_pardesc = md;
-        assert(!std::isnan(m_pardesc.defaultVal));
-        if (updateCurrentValue)
-            m_value = m_pardesc.defaultVal;
-        m_default_value = m_pardesc.defaultVal;
-        m_min_value = m_pardesc.minVal;
-        m_max_value = m_pardesc.maxVal;
-        if (m_min_value < 0.0)
-            m_is_bipolar = true;
-        m_labeltxt = m_pardesc.name;
-        m_modulation_amt = 0.0;
-        m_snap_positions.resize(9);
-        for (int i = 0; i < 9; ++i)
-            m_snap_positions[i] = m_min_value + (m_max_value - m_min_value) / 8 * i;
-        m_param_step = (m_max_value - m_min_value) / 64;
-        if (m_pardesc.type == ParamDesc::BOOL || m_pardesc.type == ParamDesc::INT)
-            m_param_step = 1;
-        keypress_to_step.clear();
-        keypress_to_step.emplace_back(
-            juce::KeyPress(juce::KeyPress::leftKey, juce::ModifierKeys::noModifiers, 0),
-            -m_param_step);
-        keypress_to_step.emplace_back(
-            juce::KeyPress(juce::KeyPress::rightKey, juce::ModifierKeys::noModifiers, 0),
-            m_param_step);
-        keypress_to_step.emplace_back(
-            juce::KeyPress(juce::KeyPress::leftKey, juce::ModifierKeys::shiftModifier, 0),
-            -m_param_step * 0.1);
-        keypress_to_step.emplace_back(
-            juce::KeyPress(juce::KeyPress::rightKey, juce::ModifierKeys::shiftModifier, 0),
-            m_param_step * 0.1);
-        repaint();
-    }
-    void setModulationDisplayDepth(float d, std::string units)
-    {
-        m_pardesc = m_pardesc.withLinearScaleFormatting(units, d);
-        repaint();
-    }
+    void setParameterMetaData(ParamDesc md, bool updateCurrentValue);
+    void setModulationDisplayDepth(float d, std::string units);
     void enablementChanged() override { repaint(); }
     void mouseWheelMove(const juce::MouseEvent &event,
                         const juce::MouseWheelDetails &wheel) override;
     bool keyPressed(const juce::KeyPress &key) override;
 
-    juce::Font m_font;
     juce::TextEditor m_ed;
     void focusGained(juce::Component::FocusChangeType cause) override { repaint(); }
     void focusLost(juce::Component::FocusChangeType cause) override { repaint(); }
     void paintKnob(juce::Graphics &g);
 
-    std::string getFormattedParamText()
-    {
-        auto val = m_value;
-        if (m_pardesc.type == ParamDesc::INT)
-            val = std::floor(m_value);
-        auto partext = valueToString(val);
-        if (partext)
-        {
-            // if (m_pardesc.displayScale != ParamDesc::UNORDERED_MAP)
-            {
-                return *partext;
-            }
-        }
-        return "no FMT, bug";
-    }
+    std::string getFormattedParamText();
     void paint(juce::Graphics &g) override;
-    void mouseDoubleClick(const juce::MouseEvent &event) override
-    {
-        if (!isEnabled())
-            return;
-        setValue(m_default_value, true);
-    }
-    std::optional<std::string> valueToString(float v)
-    {
-        ParamDesc::FeatureState fs;
-        if (m_fstate)
-            fs = *m_fstate;
-        return m_pardesc.valueToString(v, fs);
-    }
+    void mouseDoubleClick(const juce::MouseEvent &event) override;
+    std::optional<std::string> valueToString(float v);
     void showTextEditor();
     juce::String m_err_msg;
     float dropdownXpercent = 0.5f;
