@@ -249,6 +249,75 @@ void AudioPluginAudioProcessor::setStateDirtyHack()
     dirtyStateParam->setValueNotifyingHost(*dirtyStateParam == 0.0f ? 0.001f : 0.0f);
     dirtyStateParam->endChangeGesture();
 }
+
+void AudioPluginAudioProcessor::handleMIDICCMessage(int channel, int ccnumber, int ccvalue)
+{
+    if (ccnumber == 50 && ccvalue > 64)
+    {
+        int snapnumber = granulator.currentSnapShot + 1;
+        if (snapnumber >= snapshots.size())
+        {
+            snapnumber = 0;
+        }
+        // loadSnapShot(snapnumber);
+    }
+    auto &mm = granulator.modmatrix;
+    uint32_t ccnum = ccnumber;
+    if (midiLearnParam == CLAP_INVALID_ID)
+    {
+        for (const auto &binding : midiBindings)
+        {
+            if (binding.midicc == ccnum)
+            {
+                auto md = granulator.idtoparmetadata[binding.target_param];
+                float minval = std::clamp(binding.par_range.first, md->minVal, md->maxVal);
+                float maxval = std::clamp(binding.par_range.second, md->minVal, md->maxVal);
+                float val = juce::jmap<float>(ccvalue, 0, 127, -1.0f, 1.0f);
+                if (binding.mapfunction)
+                    val = binding.mapfunction(val);
+                val = juce::jmap<float>(val, -1.0f, 1.0f, minval, maxval);
+                *granulator.idtoparvalptr[binding.target_param] = val;
+                ParameterMessage msg;
+                msg.id = binding.target_param;
+                msg.value = val;
+                params_to_gui_fifo.push(msg);
+            }
+        }
+    }
+    else
+    {
+        auto md = granulator.idtoparmetadata[midiLearnParam];
+        midiBindings.emplace_back(MIDIBinding{ccnum, midiLearnParam, {md->minVal, md->maxVal}});
+        midiLearnParam = CLAP_INVALID_ID;
+        ThreadMessage msg;
+        msg.opcode = ThreadMessage::OP_PARAMREMOTE;
+        to_gui_fifo.push(msg);
+    }
+
+    auto dmit = macroMidiMappings.find(ccnum);
+    // if (dmit != macroMidiMappings.end())
+    if (false)
+    {
+        float val = juce::jmap<float>(ccvalue, 0, 127, -1.0f, 1.0f);
+        handleMacroKnob(dmit->second, val, true);
+        const auto &pmd = granulator.idtoparmetadata[dmit->second];
+
+        // *granulator.idtoparvalptr[dmit->second] = val;
+        ParameterMessage msg;
+        msg.id = dmit->second;
+        msg.value = val;
+        // params_to_gui_fifo.push(msg);
+    }
+    /*
+    auto it = granulator.midiCCMap.find(ccnum);
+    if (it != granulator.midiCCMap.end())
+    {
+        granulator.modSourceValues[it->second] =
+            juce::jmap<float>(msg.getControllerValue(), 0, 127, 0.0, 1.0);
+    }
+    */
+}
+
 void AudioPluginAudioProcessor::processMidiMessages(juce::MidiBuffer &midiMessages)
 {
     for (const auto mm : midiMessages)
@@ -256,72 +325,8 @@ void AudioPluginAudioProcessor::processMidiMessages(juce::MidiBuffer &midiMessag
         const auto msg = mm.getMessage();
         if (msg.isController())
         {
-            if (msg.getControllerNumber() == 50 && msg.getControllerValue() > 64)
-            {
-                int snapnumber = granulator.currentSnapShot + 1;
-                if (snapnumber >= snapshots.size())
-                {
-                    snapnumber = 0;
-                }
-                // loadSnapShot(snapnumber);
-            }
-            auto &mm = granulator.modmatrix;
-            uint32_t ccnum = msg.getControllerNumber();
-            if (midiLearnParam == CLAP_INVALID_ID)
-            {
-                for (const auto &binding : midiBindings)
-                {
-                    if (binding.midicc == ccnum)
-                    {
-                        auto md = granulator.idtoparmetadata[binding.target_param];
-                        float minval = std::clamp(binding.par_range.first, md->minVal, md->maxVal);
-                        float maxval = std::clamp(binding.par_range.second, md->minVal, md->maxVal);
-                        float val =
-                            juce::jmap<float>(msg.getControllerValue(), 0, 127, -1.0f, 1.0f);
-                        if (binding.mapfunction)
-                            val = binding.mapfunction(val);
-                        val = juce::jmap<float>(val, -1.0f, 1.0f, minval, maxval);
-                        *granulator.idtoparvalptr[binding.target_param] = val;
-                        ParameterMessage msg;
-                        msg.id = binding.target_param;
-                        msg.value = val;
-                        params_to_gui_fifo.push(msg);
-                    }
-                }
-            }
-            else
-            {
-                auto md = granulator.idtoparmetadata[midiLearnParam];
-                midiBindings.emplace_back(
-                    MIDIBinding{ccnum, midiLearnParam, {md->minVal, md->maxVal}});
-                midiLearnParam = CLAP_INVALID_ID;
-                ThreadMessage msg;
-                msg.opcode = ThreadMessage::OP_PARAMREMOTE;
-                to_gui_fifo.push(msg);
-            }
-
-            auto dmit = macroMidiMappings.find(ccnum);
-            // if (dmit != macroMidiMappings.end())
-            if (false)
-            {
-                float val = juce::jmap<float>(msg.getControllerValue(), 0, 127, -1.0f, 1.0f);
-                handleMacroKnob(dmit->second, val, true);
-                const auto &pmd = granulator.idtoparmetadata[dmit->second];
-
-                // *granulator.idtoparvalptr[dmit->second] = val;
-                ParameterMessage msg;
-                msg.id = dmit->second;
-                msg.value = val;
-                // params_to_gui_fifo.push(msg);
-            }
-            /*
-            auto it = granulator.midiCCMap.find(ccnum);
-            if (it != granulator.midiCCMap.end())
-            {
-                granulator.modSourceValues[it->second] =
-                    juce::jmap<float>(msg.getControllerValue(), 0, 127, 0.0, 1.0);
-            }
-            */
+            handleMIDICCMessage(msg.getChannel(), msg.getControllerNumber(),
+                                msg.getControllerValue());
         }
         if (msg.isSustainPedalOn())
         {

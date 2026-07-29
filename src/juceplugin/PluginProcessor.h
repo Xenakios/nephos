@@ -97,6 +97,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     void releaseResources() override;
 
     bool isBusesLayoutSupported(const BusesLayout &layouts) const override;
+    void handleMIDICCMessage(int channel, int ccnumber, int ccvalue);
     void processMidiMessages(juce::MidiBuffer &midiMessages);
     void processBlock(juce::AudioBuffer<float> &, juce::MidiBuffer &) override;
     using AudioProcessor::processBlock;
