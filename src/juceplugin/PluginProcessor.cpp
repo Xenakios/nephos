@@ -421,9 +421,15 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     {
         if (msg.opcode == ThreadMessage::OP_UNLEARNMIDI)
         {
-            std::erase_if(midiBindings, [parid = msg.parid](const MIDIBinding &b) {
-                return b.target_param == parid;
-            });
+            if (msg.parid != CLAP_INVALID_ID)
+            {
+                std::erase_if(midiBindings, [parid = msg.parid](const MIDIBinding &b) {
+                    return b.target_param == parid;
+                });
+            } else
+            {
+                midiBindings.clear();
+            }
             ThreadMessage tmsg;
             tmsg.opcode = ThreadMessage::OP_PARAMREMOTE;
             to_gui_fifo.push(tmsg);

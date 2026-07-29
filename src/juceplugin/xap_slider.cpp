@@ -273,7 +273,10 @@ void XapSlider::showTextEditor()
 {
     m_ed.setVisible(true);
     m_ed.grabKeyboardFocus();
-    m_ed.setBounds(getWidth() / 2, 0, 80, getHeight());
+    if (m_style == SS_HorizontalSlider)
+        m_ed.setBounds(getWidth() / 2, 0, 80, getHeight());
+    else
+        m_ed.setBounds(0, 0, getWidth(), 25);
     auto txt = valueToString(m_value);
     if (txt)
         m_ed.setText(*txt);

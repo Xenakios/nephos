@@ -260,7 +260,13 @@ void MainPageComponent::mouseDown(const juce::MouseEvent &ev)
     if (ev.mods.isRightButtonDown())
     {
         juce::PopupMenu menu;
-        menu.addItem("Reset MIDI assignments", [this]() { processorRef.midiBindings.clear(); });
+        menu.addItem("Reset MIDI assignments", [this]() 
+        { 
+            ThreadMessage msg;
+            msg.opcode = ThreadMessage::OP_UNLEARNMIDI;
+            msg.parid = CLAP_INVALID_ID;
+            processorRef.from_gui_fifo.push(msg);
+        });
         menu.showMenuAsync({});
     }
 }
