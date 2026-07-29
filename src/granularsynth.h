@@ -418,8 +418,6 @@ class GranulatorModMatrix
   public:
     FixedMatrix<GranulatorModConfig> m;
     FixedMatrix<GranulatorModConfig>::RoutingTable rt;
-    // std::array<GranulatorModConfig::SourceIdentifier, 32> sourceIds;
-
     double samplerate = 0.0;
 
     static constexpr size_t BLOCKSIZE = granul_block_size;
@@ -432,12 +430,9 @@ class GranulatorModMatrix
     GranulatorModMatrix(double sr) : samplerate(sr)
     {
         initTables();
-        // sourceIds[0] =
-        //     GranulatorModConfig::SourceIdentifier{GranulatorModConfig::SourceIdentifier::NOSOURCE};
         for (size_t i = 0; i < numLfos; ++i)
         {
-            auto lfo = std::make_unique<lfo_t>(this);
-            m_lfos[i] = std::move(lfo);
+            m_lfos[i] = std::make_unique<lfo_t>(this);
             m_lfos[i]->attack(0);
         }
     }
@@ -1458,7 +1453,7 @@ class ToneGranulator
         GranulatorModConfig::SourceIdentifier id;
         float val = 0.0f;
     };
-    std::vector<ModSourceInfo> modSources;
+    std::vector<ModSourceInfo> modSourceInfos;
     alignas(16) std::array<float, 256> modSourceValues;
     std::unordered_map<int, int> midiCCMap;
     alignas(16) std::atomic<int> numVoicesUsed;
@@ -2094,48 +2089,48 @@ class ToneGranulator
         modmatrix.m.bindTargetBaseValue(GranulatorModConfig::TargetIdentifier{(int)1},
                                         dummyTargetValue);
 
-        modSources.reserve(64);
-        modSources.emplace_back("Off", "", GranulatorModConfig::SourceIdentifier{0});
+        modSourceInfos.reserve(256);
+        modSourceInfos.emplace_back("Off", "", GranulatorModConfig::SourceIdentifier{0});
         for (uint32_t i = 0; i < GranulatorModMatrix::numLfos; ++i)
         {
-            modSources.emplace_back(fmt::format("LFO {}", i + 1), "LFO",
+            modSourceInfos.emplace_back(fmt::format("LFO {}", i + 1), "LFO",
                                     GranulatorModConfig::SourceIdentifier{i + 1});
         }
         for (uint32_t i = 0; i < 8; ++i)
         {
-            modSources.emplace_back(fmt::format("StepSeq {}", i + 1), "Step Sequencer",
+            modSourceInfos.emplace_back(fmt::format("StepSeq {}", i + 1), "Step Sequencer",
                                     GranulatorModConfig::SourceIdentifier{STEPS0 + i});
         }
         for (uint32_t i = 0; i < 4; ++i)
         {
-            modSources.emplace_back(fmt::format("Random {}", i + 1), "Random",
+            modSourceInfos.emplace_back(fmt::format("Random {}", i + 1), "Random",
                                     GranulatorModConfig::SourceIdentifier{RANDOM0 + i});
         }
         for (uint32_t i = 0; i < 16; ++i)
         {
-            modSources.emplace_back(fmt::format("Host Parameter {}", i + 1), "Host Parameter",
+            modSourceInfos.emplace_back(fmt::format("Host Parameter {}", i + 1), "Host Parameter",
                                     GranulatorModConfig::SourceIdentifier{HOSTPARAMSTART + i});
         }
-        modSources.emplace_back("MIDI KEY", "MIDI NOTES",
+        modSourceInfos.emplace_back("MIDI KEY", "MIDI NOTES",
                                 GranulatorModConfig::SourceIdentifier{MIDINOTE});
-        modSources.emplace_back("MIDI VELOCITY", "MIDI NOTES",
+        modSourceInfos.emplace_back("MIDI VELOCITY", "MIDI NOTES",
                                 GranulatorModConfig::SourceIdentifier{MIDIVELO});
-        modSources.emplace_back("MIDI AFTERTOUCH", "MIDI NOTES",
+        modSourceInfos.emplace_back("MIDI AFTERTOUCH", "MIDI NOTES",
                                 GranulatorModConfig::SourceIdentifier{MIDIAT});
         for (uint32_t i = 1; i < 128; ++i)
         {
-            modSources.emplace_back(fmt::format("MIDI CC {}", i), "MIDI CC",
+            modSourceInfos.emplace_back(fmt::format("MIDI CC {}", i), "MIDI CC",
                                     GranulatorModConfig::SourceIdentifier{i + MIDICCSTART});
         }
-
+        std::cout << "num mod sources " << modSourceInfos.size() << "\n";
         for (auto &v : modSourceValues)
             v = 0.0f;
-        for (uint32_t i = 0; i < modSources.size(); ++i)
+        for (uint32_t i = 0; i < modSourceInfos.size(); ++i)
         {
             // std::print("{} binding {} {} to {}\n", i,
             // modSources[i].id.src, modSources[i].name,
             //            (void *)&modSourceValues[i]);
-            modmatrix.m.bindSourceValue(modSources[i].id, modSourceValues[i]);
+            modmatrix.m.bindSourceValue(modSourceInfos[i].id, modSourceValues[i]);
         }
         init_filter_infos();
     }

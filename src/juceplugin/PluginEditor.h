@@ -368,9 +368,9 @@ struct ModulationRowComponent : public juce::Component
         drop.rootNode.text = roottext;
         std::map<std::string, DropDownComponent::Node *> nodemap;
         drop.rootNode.children.reserve(16);
-        for (int i = 0; i < gr->modSources.size(); ++i)
+        for (int i = 0; i < gr->modSourceInfos.size(); ++i)
         {
-            auto &ms = gr->modSources[i];
+            auto &ms = gr->modSourceInfos[i];
             if (!ms.groupname.empty())
             {
                 if (nodemap.count(ms.groupname) == 0)
@@ -380,9 +380,9 @@ struct ModulationRowComponent : public juce::Component
                 }
             }
         }
-        for (int i = 0; i < gr->modSources.size(); ++i)
+        for (int i = 0; i < gr->modSourceInfos.size(); ++i)
         {
-            auto &ms = gr->modSources[i];
+            auto &ms = gr->modSourceInfos[i];
             if (ms.groupname.empty())
             {
                 drop.rootNode.children.push_back({ms.name, (int)ms.id.src});
