@@ -15,25 +15,21 @@
 
 void AudioPluginAudioProcessor::setMidiAssignmentMappingCurve(uint32_t parid, int curveid)
 {
-    for (auto &b : midiBindings)
+    for (size_t i = 0; i < midiBindings.size(); ++i)
     {
+        const auto &b = midiBindings[i];
         if (b.target_param == parid)
         {
-            b.mapfunction = GranulatorModConfig::getCurveOperator(
-                GranulatorModConfig::CurveIdentifier{curveid});
-            b.mapfunctionid = curveid;
+            ThreadMessage msg;
+            msg.opcode = ThreadMessage::OP_MIDILEARNCURVE;
+            msg.modslot = i;
+            msg.modcurve = curveid;
+            from_gui_fifo.push(msg);
         }
     }
 }
 
-void AudioPluginAudioProcessor::initMidiBindings()
-{
-    midiBindings.reserve(64);
-    // midiBindings.emplace_back(MIDIBinding{21, ToneGranulator::PAR_PITCH, {{-12.0f, 12.0f}}});
-    // midiBindings.emplace_back(MIDIBinding{22, ToneGranulator::PAR_DENSITY});
-    // midiBindings.emplace_back(MIDIBinding{23, ToneGranulator::PAR_AZIMUTH});
-    // midiBindings.emplace_back(MIDIBinding{23, ToneGranulator::PAR_MAINMODDEPTHSTART + 1});
-}
+void AudioPluginAudioProcessor::initMidiBindings() { midiBindings.reserve(64); }
 
 void AudioPluginAudioProcessor::setMidiAssignmentParameterRange(uint32_t parid,
                                                                 std::optional<float> minval,
@@ -427,6 +423,12 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         {
             midiBindings[msg.modslot].par_range.first = msg.depth;
             midiBindings[msg.modslot].par_range.second = msg.modcurvepar0;
+        }
+        if (msg.opcode == ThreadMessage::OP_MIDILEARNCURVE)
+        {
+            midiBindings[msg.modslot].mapfunction = GranulatorModConfig::getCurveOperator(
+                GranulatorModConfig::CurveIdentifier{msg.modcurve});
+            midiBindings[msg.modslot].mapfunctionid = msg.modcurve;
         }
         if (msg.opcode == ThreadMessage::OP_UNLEARNMIDI)
         {

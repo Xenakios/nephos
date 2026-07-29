@@ -37,6 +37,7 @@ struct ThreadMessage
         OP_STEPSEQUENCER,
         OP_UNLEARNMIDI,
         OP_MIDILEARNRANGE,
+        OP_MIDILEARNCURVE,
         OP_PARAMREMOTE
     };
     OpCode opcode = OP_NOOP;
