@@ -673,7 +673,7 @@ choc::value::Value AudioPluginAudioProcessor::getState()
                 routingstate.setMember("via", (int)(mm.rt.routes[i].sourceVia->src));
             routingstate.setMember("depth", mm.rt.routes[i].depth);
             if (mm.rt.routes[i].target)
-                routingstate.setMember("dest", (int)(mm.rt.routes[i].target->baz));
+                routingstate.setMember("dest", (int)(mm.rt.routes[i].target->target));
             if (mm.rt.routes[i].curve)
                 routingstate.setMember("curve", mm.rt.routes[i].curve->id);
             modroutings.addArrayElement(routingstate);
@@ -964,7 +964,7 @@ void AudioPluginAudioProcessor::sendExtraStatesToGUI()
             if (mm.rt.routes[i].sourceVia)
                 msg.modvia = mm.rt.routes[i].sourceVia->src;
             msg.depth = mm.rt.routes[i].depth;
-            msg.moddest = mm.rt.routes[i].target->baz;
+            msg.moddest = mm.rt.routes[i].target->target;
             if (mm.rt.routes[i].curve)
                 msg.modcurve = mm.rt.routes[i].curve->id;
             auto it = granulator.modRanges.find(msg.moddest);

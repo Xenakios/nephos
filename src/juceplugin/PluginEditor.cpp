@@ -127,7 +127,7 @@ void AudioPluginAudioProcessorEditor::updateParameterRemoteStates()
         }
         for (auto &r : processorRef.granulator.modmatrix.rt.routes)
         {
-            if (r.target && r.target->baz == c.first)
+            if (r.target && r.target->target == c.first)
             {
                 s = XapSlider::RCS_MODULATED;
                 break;

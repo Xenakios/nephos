@@ -145,13 +145,13 @@ struct GranulatorModConfig
 
     struct TargetIdentifier
     {
-        int baz{0};
+        int target{0};
         // uint32_t nm{};
         int16_t depthPosition{-1};
 
         bool operator==(const TargetIdentifier &other) const
         {
-            return baz == other.baz && depthPosition == other.depthPosition;
+            return target == other.target && depthPosition == other.depthPosition;
             // return baz == other.baz && nm == other.nm && depthPosition == other.depthPosition;
         }
     };
@@ -405,7 +405,7 @@ template <> struct std::hash<GranulatorModConfig::TargetIdentifier>
 {
     std::size_t operator()(const GranulatorModConfig::TargetIdentifier &s) const noexcept
     {
-        auto h1 = std::hash<int>{}((int)s.baz);
+        auto h1 = std::hash<int>{}((int)s.target);
         return h1;
         // auto h2 = std::hash<uint32_t>{}((int)s.nm);
 
@@ -2294,7 +2294,7 @@ class ToneGranulator
         {
             if (modmatrix.rt.routes[i].active && modmatrix.rt.routes[i].target)
             {
-                float modrange = modRanges[modmatrix.rt.routes[i].target->baz];
+                float modrange = modRanges[modmatrix.rt.routes[i].target->target];
                 modmatrix.rt.updateDepthAt(i, *idtoparvalptr[PAR_MAINMODDEPTHSTART + i] * modrange);
             }
         }
