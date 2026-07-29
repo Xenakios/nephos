@@ -61,6 +61,21 @@ SpectrumAnalyzerComponent::SpectrumAnalyzerComponent(float hostSr)
     applyMode(savedMode);
 }
 
+void SpectrumAnalyzerComponent::visibilityChanged()
+{
+    if (isVisible())
+    {
+        applyMode(lastSavedModeIdx);
+    }
+    else
+    {
+        running = false;
+        if (analysisThread.joinable())
+            analysisThread.join();
+    }
+    visibleAtomic.store(isVisible());
+}
+
 void SpectrumAnalyzerComponent::setHostSampleRate(float sr)
 {
     if (sr <= 0.f)

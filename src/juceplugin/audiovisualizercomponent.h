@@ -65,7 +65,7 @@ struct SpectrumAnalyzerComponent : juce::Component, private juce::AsyncUpdater
     // Pushed by the editor when the host sample rate changes; rebuilds buffers if needed.
     void setHostSampleRate(float sr);
     std::atomic<bool> visibleAtomic{false};
-    void visibilityChanged() override { visibleAtomic.store(isVisible()); }
+    void visibilityChanged() override;
 
   private:
     void handleAsyncUpdate() override;

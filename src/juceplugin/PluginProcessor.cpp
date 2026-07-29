@@ -526,6 +526,9 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     procnumoutchs = granulator.num_out_chans;
     buffer.clear();
     auto channelDatas = buffer.getArrayOfWritePointers();
+    bool pushAnalysisData = false;
+    if (baconSpectrum && baconSpectrum->visibleAtomic.load())
+        pushAnalysisData = true;
     if (totalNumOutputChannels == 2)
     {
         // super simple decode for stereo monitoring, we should probably just bite
@@ -538,7 +541,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             float s = adapter_block[1];
             channelDatas[0][j] = std::clamp((m + s) * 0.5f, -1.0f, 1.0f);
             channelDatas[1][j] = std::clamp((m - s) * 0.5f, -1.0f, 1.0f);
-            if (baconSpectrum)
+            if (pushAnalysisData)
                 baconSpectrum->pushSample(m);
         }
         // for convenience stereo output, visualize the MS decoded stereo
@@ -558,6 +561,8 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                     channelDatas[i][j] = std::clamp(s, -1.0f, 1.0f);
                 }
             }
+            if (pushAnalysisData)
+                baconSpectrum->pushSample(adapter_block[0]);
         }
         // for ambisonic output, just show the W channel because with increasing ambisonic orders
         // the number of channels explodes and we have just a tiny waveform visualizer at the moment
