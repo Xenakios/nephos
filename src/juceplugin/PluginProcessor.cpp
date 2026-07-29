@@ -39,13 +39,17 @@ void AudioPluginAudioProcessor::setMidiAssignmentParameterRange(uint32_t parid,
                                                                 std::optional<float> minval,
                                                                 std::optional<float> maxval)
 {
-    // not thread safe!! fix!
-    for (auto &b : midiBindings)
+    for (size_t i = 0; i < midiBindings.size(); ++i)
     {
+        const auto &b = midiBindings[i];
         if (b.target_param != parid)
             continue;
-        b.par_range.first = minval.value_or(b.par_range.first);
-        b.par_range.second = maxval.value_or(b.par_range.second);
+        ThreadMessage msg;
+        msg.opcode = ThreadMessage::OP_MIDILEARNRANGE;
+        msg.depth = minval.value_or(b.par_range.first);
+        msg.modcurvepar0 = maxval.value_or(b.par_range.second);
+        msg.modslot = i;
+        from_gui_fifo.push(msg);
     }
 }
 
@@ -419,6 +423,11 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     ThreadMessage msg;
     while (from_gui_fifo.pop(msg))
     {
+        if (msg.opcode == ThreadMessage::OP_MIDILEARNRANGE)
+        {
+            midiBindings[msg.modslot].par_range.first = msg.depth;
+            midiBindings[msg.modslot].par_range.second = msg.modcurvepar0;
+        }
         if (msg.opcode == ThreadMessage::OP_UNLEARNMIDI)
         {
             if (msg.parid != CLAP_INVALID_ID)
@@ -426,7 +435,8 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 std::erase_if(midiBindings, [parid = msg.parid](const MIDIBinding &b) {
                     return b.target_param == parid;
                 });
-            } else
+            }
+            else
             {
                 midiBindings.clear();
             }

@@ -283,6 +283,7 @@ void XapSlider::showTextEditor()
     else
         m_ed.setText(juce::String(m_value));
     m_ed.selectAll();
+    m_ed.onFocusLost = [this]() { m_ed.setVisible(false); };
     m_ed.onEscapeKey = [this]() { m_ed.setVisible(false); };
     m_ed.onReturnKey = [this]() {
         std::string err;
