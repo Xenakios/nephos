@@ -123,8 +123,6 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     juce::AudioProcessLoadMeasurer perfMeasurer;
     std::atomic<float> cpu_load{0.0f};
     juce::ThreadPool tpool{juce::ThreadPool::Options{"granulatorworker", 1}};
-    juce::TimeSliceThread sliceThread{"granulatortimeslicethread"};
-
     choc::value::Value getState();
     void setState(choc::value::ValueView state);
     void changeStateImpl(choc::value::ValueView state);

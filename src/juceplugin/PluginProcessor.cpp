@@ -103,7 +103,6 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         macroMidiMappings[41 + i] = 8 + i;
     }
 
-    sliceThread.startThread();
     buffer_adapter.reset(1024);
     from_gui_fifo.reset(1024);
     params_from_gui_fifo.reset(2048);
