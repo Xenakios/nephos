@@ -1,9 +1,27 @@
 #pragma once
 
+/*
+ * Six Sines
+ *
+ * A synth with audio rate modulation.
+ *
+ * Copyright 2024-2025, Paul Walker and Various authors, as described in the github
+ * transaction log.
+ *
+ * This source repo is released under the MIT license, but has
+ * GPL3 dependencies, as such the combined work will be
+ * released under GPL3.
+ *
+ * The source code and license are at https://github.com/baconpaul/six-sines
+ * adapted 28th July 2026 by Xenakios to work without the SST GUI library etc
+ */
+
 #include "juce_graphics/juce_graphics.h"
 #include "juce_gui_basics/juce_gui_basics.h"
 #include "juce_dsp/juce_dsp.h"
 #include "containers/choc_SingleReaderSingleWriterFIFO.h"
+
+// #define BPANALYZERSCOPE
 
 namespace baconpaul::six_sines::ui
 {
@@ -40,6 +58,8 @@ struct SpectrumAnalyzerComponent : juce::Component, private juce::AsyncUpdater
 
     // Pushed by the editor when the host sample rate changes; rebuilds buffers if needed.
     void setHostSampleRate(float sr);
+    std::atomic<bool> visibleAtomic{false};
+    void visibilityChanged() override { visibleAtomic.store(isVisible()); }
 
   private:
     void handleAsyncUpdate() override;

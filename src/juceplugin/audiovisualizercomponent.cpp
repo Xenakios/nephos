@@ -312,7 +312,11 @@ void SpectrumAnalyzerComponent::paint(juce::Graphics &g)
     constexpr int leftMargin = 38;
     constexpr int bottomMargin = 14;
     constexpr int splitGap = 4;
+#ifdef BPANALYZERSCOPE
     constexpr int scopeHeight = 132;
+#else
+    constexpr int scopeHeight = 0;
+#endif
     constexpr int lineHeight = 186;
 
     auto bounds = getLocalBounds();
