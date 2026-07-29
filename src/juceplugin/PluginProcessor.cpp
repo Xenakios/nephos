@@ -11,7 +11,6 @@
 #include <exception>
 #include <float.h>
 #include "../../Common/xap_breakpoint_envelope.h"
-#include "xap_slider.h"
 
 void AudioPluginAudioProcessor::setMidiAssignmentMappingCurve(uint32_t parid, int curveid)
 {
@@ -169,30 +168,6 @@ void AudioPluginAudioProcessor::loadSnapShot(int index)
     }
 }
 
-const juce::String AudioPluginAudioProcessor::getName() const { return JucePlugin_Name; }
-
-int AudioPluginAudioProcessor::getNumPrograms()
-{
-    return 1; // NB: some hosts don't cope very well if you tell them there are 0 programs,
-              // so this should be at least 1, even if you're not really implementing programs.
-}
-
-int AudioPluginAudioProcessor::getCurrentProgram() { return 0; }
-
-void AudioPluginAudioProcessor::setCurrentProgram(int index) { juce::ignoreUnused(index); }
-
-const juce::String AudioPluginAudioProcessor::getProgramName(int index)
-{
-    juce::ignoreUnused(index);
-    return {};
-}
-
-void AudioPluginAudioProcessor::changeProgramName(int index, const juce::String &newName)
-{
-    juce::ignoreUnused(index, newName);
-}
-
-//==============================================================================
 void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     DBG("prepareToPlay " << sampleRate << " Hz, " << samplesPerBlock << " max samples per block");
