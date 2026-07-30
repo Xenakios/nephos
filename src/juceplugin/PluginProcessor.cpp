@@ -182,6 +182,7 @@ void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerB
     workBuffer.resize(granul_block_size * 64);
     granulator.prepare(sampleRate, GranulatorVoice::FR_ALLSERIAL, 0.002f, 0.002f);
     currentSampleRate = sampleRate;
+    /*
     if (!baconSpectrum)
     {
         baconSpectrum =
@@ -191,6 +192,7 @@ void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerB
     {
         baconSpectrum->setHostSampleRate(sampleRate);
     }
+    */
 }
 
 void AudioPluginAudioProcessor::releaseResources() {}
