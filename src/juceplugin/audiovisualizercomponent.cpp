@@ -109,6 +109,7 @@ void SpectrumAnalyzerComponent::mouseDown(const juce::MouseEvent &e)
                           w->applyMode(i);
                   });
     }
+#ifdef BPANALYZERSCOPE
     m.addSeparator();
     m.addSectionHeader("Waveform Scale");
     for (auto s : scopeScales)
@@ -119,6 +120,7 @@ void SpectrumAnalyzerComponent::mouseDown(const juce::MouseEvent &e)
                           w->setScopeScale(s);
                   });
     }
+#endif
     m.showMenuAsync(juce::PopupMenu::Options());
 }
 
@@ -537,7 +539,7 @@ void SpectrumAnalyzerComponent::paint(juce::Graphics &g)
         g.drawText(juce::String(db), leftLabels.getX(), (int)y - 6, leftMargin - 4, 12,
                    juce::Justification::centredRight);
     }
-
+#ifdef BPANALYZERSCOPE
     // Scope: 20 ms left-to-right, retriggered at the next positive zero crossing.
     // Samples beyond ±1 are clipped by the scope rect.
     g.setColour(insetBg);
@@ -575,7 +577,7 @@ void SpectrumAnalyzerComponent::paint(juce::Graphics &g)
             g.strokePath(tracePath, juce::PathStrokeType(1.f));
         }
     }
-
+#endif
     // Info overlays in the upper-left of each plot.
     auto drawInfo = [&](juce::Rectangle<int> area, const juce::String &txt) {
         auto pad = 4;
