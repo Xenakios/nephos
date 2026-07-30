@@ -491,6 +491,7 @@ struct GrainEvent
     float azimuth = 0.0f;
     float ambi_spread = 0.0f;
     float ambi_rotate = 0.0f;
+    float ambi_omni_boost = 0.0f;
     float elevation = 0.0f;
     float sync_ratio = 1.0f;
     float pulse_width = 0.5f;
@@ -754,6 +755,7 @@ class GranulatorVoice
     float fmpitch = 0.0f;
     float fmmodamount = 0.0f;
     float fmfeedback = 0.0f;
+    float omniboostinverse = 1.0f;
     void start(GrainEvent &evpars)
     {
         active = true;
@@ -906,6 +908,8 @@ class GranulatorVoice
         };
         calc_ambicoeffs(0, azi0, ele0);
         calc_ambicoeffs(1, azi1, ele1);
+        omniboostinverse = -std::clamp(evpars.ambi_omni_boost, 0.0f, 18.0f);
+        omniboostinverse = xenakios::decibelsToGain(omniboostinverse);
         phase = 0;
         float actdur = std::clamp(evpars.duration, 0.0f, 1.0f);
         actdur = actdur * actdur * actdur;
@@ -1200,6 +1204,11 @@ class GranulatorVoice
                 outputs[i * 64 + chan] =
                     outsample0 * ambcoeffs[chan] + outsample1 * ambcoeffs[chan + 64];
             }
+            for (chan = 1; chan < num_outputchans; ++chan)
+            {
+                outputs[i * 64 + chan] *= omniboostinverse;
+            }
+
 #else
             for (int chan = 0; chan < num_outputchans; ++chan)
             {
@@ -1357,6 +1366,7 @@ class ToneGranulator
         PAR_ELEVATION = 700,
         PAR_AMBSPREAD = 710,
         PAR_AMBROTATE = 720,
+        PAR_AMBOMNIBOOST = 730,
         PAR_DURATION = 800,
         PAR_GRAINTAIL = 850,
         PAR_INSERTAFIRST = 900,
@@ -1969,6 +1979,14 @@ class ToneGranulator
                                    .withID(PAR_AMBROTATE)
                                    .withFlags(CLAP_PARAM_IS_MODULATABLE));
         parmetadatas.push_back(pmd()
+                                   .withRange(0.0f, 18.0f)
+                                   .withDefault(0.0)
+                                   .withLinearScaleFormatting("dB")
+                                   .withName("Omni Boost")
+                                   .withGroupName("Spatialization")
+                                   .withID(PAR_AMBOMNIBOOST)
+                                   .withFlags(CLAP_PARAM_IS_MODULATABLE));
+        parmetadatas.push_back(pmd()
                                    .asInt()
                                    .withRange(1.0f, 16.0f)
                                    .withDefault(1.0)
@@ -2094,33 +2112,33 @@ class ToneGranulator
         for (uint32_t i = 0; i < GranulatorModMatrix::numLfos; ++i)
         {
             modSourceInfos.emplace_back(fmt::format("LFO {}", i + 1), "LFO",
-                                    GranulatorModConfig::SourceIdentifier{i + 1});
+                                        GranulatorModConfig::SourceIdentifier{i + 1});
         }
         for (uint32_t i = 0; i < 8; ++i)
         {
             modSourceInfos.emplace_back(fmt::format("StepSeq {}", i + 1), "Step Sequencer",
-                                    GranulatorModConfig::SourceIdentifier{STEPS0 + i});
+                                        GranulatorModConfig::SourceIdentifier{STEPS0 + i});
         }
         for (uint32_t i = 0; i < 4; ++i)
         {
             modSourceInfos.emplace_back(fmt::format("Random {}", i + 1), "Random",
-                                    GranulatorModConfig::SourceIdentifier{RANDOM0 + i});
+                                        GranulatorModConfig::SourceIdentifier{RANDOM0 + i});
         }
         for (uint32_t i = 0; i < 16; ++i)
         {
             modSourceInfos.emplace_back(fmt::format("Host Parameter {}", i + 1), "Host Parameter",
-                                    GranulatorModConfig::SourceIdentifier{HOSTPARAMSTART + i});
+                                        GranulatorModConfig::SourceIdentifier{HOSTPARAMSTART + i});
         }
         modSourceInfos.emplace_back("MIDI KEY", "MIDI NOTES",
-                                GranulatorModConfig::SourceIdentifier{MIDINOTE});
+                                    GranulatorModConfig::SourceIdentifier{MIDINOTE});
         modSourceInfos.emplace_back("MIDI VELOCITY", "MIDI NOTES",
-                                GranulatorModConfig::SourceIdentifier{MIDIVELO});
+                                    GranulatorModConfig::SourceIdentifier{MIDIVELO});
         modSourceInfos.emplace_back("MIDI AFTERTOUCH", "MIDI NOTES",
-                                GranulatorModConfig::SourceIdentifier{MIDIAT});
+                                    GranulatorModConfig::SourceIdentifier{MIDIAT});
         for (uint32_t i = 1; i < 128; ++i)
         {
             modSourceInfos.emplace_back(fmt::format("MIDI CC {}", i), "MIDI CC",
-                                    GranulatorModConfig::SourceIdentifier{i + MIDICCSTART});
+                                        GranulatorModConfig::SourceIdentifier{i + MIDICCSTART});
         }
         std::cout << "num mod sources " << modSourceInfos.size() << "\n";
         for (auto &v : modSourceValues)
@@ -2354,6 +2372,8 @@ class ToneGranulator
                     GranulatorModConfig::TargetIdentifier{PAR_AMBROTATE});
                 float elevation = modmatrix.m.getTargetValue(
                     GranulatorModConfig::TargetIdentifier{PAR_ELEVATION});
+                float omniboost = modmatrix.m.getTargetValue(
+                    GranulatorModConfig::TargetIdentifier{PAR_AMBOMNIBOOST});
                 genev.generator_type =
                     std::round(0.1f + modmatrix.m.getTargetValue(
                                           GranulatorModConfig::TargetIdentifier{PAR_OSCTYPE}));
@@ -2426,6 +2446,7 @@ class ToneGranulator
                         genev.ambi_spread = amb_spread;
                         genev.ambi_rotate = amb_rotate;
                         genev.elevation = elevation;
+                        genev.ambi_omni_boost = omniboost;
                     }
                     else
                     {

@@ -721,7 +721,9 @@ class SpatializationModuleComponent : public juce::GroupComponent
           spreadKnob(XapSlider::SS_Knob,
                      *p.granulator.idtoparmetadata[ToneGranulator::PAR_AMBSPREAD]),
           rotateKnob(XapSlider::SS_Knob,
-                     *p.granulator.idtoparmetadata[ToneGranulator::PAR_AMBROTATE])
+                     *p.granulator.idtoparmetadata[ToneGranulator::PAR_AMBROTATE]),
+          omniboostKnob(XapSlider::SS_Knob,
+                        *p.granulator.idtoparmetadata[ToneGranulator::PAR_AMBOMNIBOOST])
     {
         addAndMakeVisible(ambOrderDrop);
         ambOrderDrop.OnValueChanged = [this]() {
@@ -743,6 +745,10 @@ class SpatializationModuleComponent : public juce::GroupComponent
         rotateKnob.OnValueChanged = [this]() {
             onParamChanged(ToneGranulator::PAR_AMBROTATE, rotateKnob.getValue());
         };
+        addAndMakeVisible(omniboostKnob);
+        omniboostKnob.OnValueChanged = [this]() {
+            onParamChanged(ToneGranulator::PAR_AMBOMNIBOOST, omniboostKnob.getValue());
+        };
     }
     void onParamChanged(uint32_t id, float val)
     {
@@ -760,6 +766,7 @@ class SpatializationModuleComponent : public juce::GroupComponent
         flex.items.add(juce::FlexItem(elevationKnob).withFlex(1.0).withMargin(2));
         flex.items.add(juce::FlexItem(spreadKnob).withFlex(1.0).withMargin(2));
         flex.items.add(juce::FlexItem(rotateKnob).withFlex(1.0).withMargin(2));
+        flex.items.add(juce::FlexItem(omniboostKnob).withFlex(1.0).withMargin(2));
         flex.performLayout(juce::Rectangle<int>(7, 17 + 26, getWidth() - 16, getHeight() - 48));
     }
     AudioPluginAudioProcessor &processorRef;
@@ -768,6 +775,7 @@ class SpatializationModuleComponent : public juce::GroupComponent
     XapSlider elevationKnob;
     XapSlider spreadKnob;
     XapSlider rotateKnob;
+    XapSlider omniboostKnob;
 };
 
 class ParameterGroupComponent : public juce::GroupComponent
