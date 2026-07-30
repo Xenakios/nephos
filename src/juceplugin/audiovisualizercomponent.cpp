@@ -58,7 +58,7 @@ SpectrumAnalyzerComponent::SpectrumAnalyzerComponent(float hostSr)
     scopeScale = savedScale;
     lastSavedModeIdx = savedMode;
 
-    applyMode(savedMode);
+    // applyMode(savedMode);
 }
 
 void SpectrumAnalyzerComponent::visibilityChanged()
