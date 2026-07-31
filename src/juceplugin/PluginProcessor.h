@@ -69,6 +69,7 @@ struct MacroKnobBinding
 
 struct MIDIBinding
 {
+    uint32_t midichan = CLAP_INVALID_ID;
     uint32_t midicc = CLAP_INVALID_ID;
     uint32_t target_param = CLAP_INVALID_ID;
     std::pair<float, float> par_range{0.0f, 0.0f};

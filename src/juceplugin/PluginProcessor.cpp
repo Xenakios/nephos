@@ -269,7 +269,7 @@ void AudioPluginAudioProcessor::handleMIDICCMessage(int channel, int ccnumber, i
     {
         for (const auto &binding : midiBindings)
         {
-            if (binding.midicc == ccnum)
+            if (binding.midicc == channel && binding.midicc == ccnum)
             {
                 auto md = granulator.idtoparmetadata[binding.target_param];
                 float minval = std::clamp(binding.par_range.first, md->minVal, md->maxVal);
@@ -288,12 +288,17 @@ void AudioPluginAudioProcessor::handleMIDICCMessage(int channel, int ccnumber, i
     }
     else
     {
-        auto md = granulator.idtoparmetadata[midiLearnParam];
-        midiBindings.emplace_back(MIDIBinding{ccnum, midiLearnParam, {md->minVal, md->maxVal}});
-        midiLearnParam = CLAP_INVALID_ID;
-        ThreadMessage msg;
-        msg.opcode = ThreadMessage::OP_PARAMREMOTE;
-        to_gui_fifo.push(msg);
+        auto it = granulator.idtoparmetadata.find(midiLearnParam);
+        if (it != granulator.idtoparmetadata.end())
+        {
+            auto md = it->second;
+            midiBindings.emplace_back(
+                MIDIBinding{(uint32_t)channel, ccnum, midiLearnParam, {md->minVal, md->maxVal}});
+            midiLearnParam = CLAP_INVALID_ID;
+            ThreadMessage msg;
+            msg.opcode = ThreadMessage::OP_PARAMREMOTE;
+            to_gui_fifo.push(msg);
+        }
     }
 
     auto dmit = macroMidiMappings.find(ccnum);
@@ -687,6 +692,7 @@ choc::value::Value AudioPluginAudioProcessor::getState()
     {
         auto midibind = choc::value::createObject("midibinding");
         midibind.setMember("midicc", (int64_t)b.midicc);
+        midibind.setMember("midichan", (int64_t)b.midichan);
         midibind.setMember("targetpar", (int64_t)b.target_param);
         midibind.setMember("parmin", b.par_range.first);
         midibind.setMember("parmax", b.par_range.second);
@@ -713,6 +719,7 @@ void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
         {
             auto b = binds[i];
             uint32_t cc = b["midicc"].getWithDefault(CLAP_INVALID_ID);
+            uint32_t chan = b["midichan"].getWithDefault(CLAP_INVALID_ID);
             uint32_t parid = b["targetpar"].getWithDefault(CLAP_INVALID_ID);
             auto it = granulator.idtoparmetadata.find(parid);
             if (it != granulator.idtoparmetadata.end())
