@@ -15,9 +15,9 @@ class XapSlider : public juce::Component
   public:
     enum RemoteControlStatus
     {
-        RCS_NONE,
-        RCS_MIDI,
-        RCS_MODULATED
+        RCS_NONE = 0,
+        RCS_MIDI = 1 << 0,
+        RCS_MODULATED = 1 << 1
     };
     enum Style
     {

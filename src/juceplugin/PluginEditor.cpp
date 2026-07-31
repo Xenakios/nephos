@@ -116,12 +116,12 @@ void AudioPluginAudioProcessorEditor::updateParameterRemoteStates()
     DBG("updating knob remote control status leds");
     for (auto &c : idToSlider)
     {
-        XapSlider::RemoteControlStatus s = XapSlider::RCS_NONE;
+        uint32_t s = XapSlider::RCS_NONE;
         for (auto &binding : processorRef.midiBindings)
         {
             if (binding.target_param == c.first)
             {
-                s = XapSlider::RCS_MIDI;
+                s |= XapSlider::RCS_MIDI;
                 break;
             }
         }
@@ -129,11 +129,11 @@ void AudioPluginAudioProcessorEditor::updateParameterRemoteStates()
         {
             if (r.target && r.target->target == c.first)
             {
-                s = XapSlider::RCS_MODULATED;
+                s |= XapSlider::RCS_MODULATED;
                 break;
             }
         }
-        c.second->setRemoteControlMode(s);
+        c.second->setRemoteControlMode((XapSlider::RemoteControlStatus)s);
     }
 }
 
@@ -260,8 +260,7 @@ void MainPageComponent::mouseDown(const juce::MouseEvent &ev)
     if (ev.mods.isRightButtonDown())
     {
         juce::PopupMenu menu;
-        menu.addItem("Reset MIDI assignments", [this]() 
-        { 
+        menu.addItem("Reset MIDI assignments", [this]() {
             ThreadMessage msg;
             msg.opcode = ThreadMessage::OP_UNLEARNMIDI;
             msg.parid = CLAP_INVALID_ID;
@@ -275,7 +274,7 @@ void MainPageComponent::resized()
 {
     oscModuleComponent.setBounds(0, 0, 920, 280);
     volumeModuleComponent.setBounds(0, oscModuleComponent.getBottom() + 1, 700, 150);
-    
+
     timeModuleComponent.setBounds(oscModuleComponent.getRight() + 2, 0, 300, 125);
 
     spatModuleComponent.setBounds(0, volumeModuleComponent.getBottom() + 2, 600, 125);

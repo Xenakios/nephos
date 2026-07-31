@@ -719,7 +719,7 @@ void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
         {
             auto b = binds[i];
             uint32_t cc = b["midicc"].getWithDefault(CLAP_INVALID_ID);
-            uint32_t chan = b["midichan"].getWithDefault(CLAP_INVALID_ID);
+            uint32_t chan = b["midichan"].getWithDefault(1);
             uint32_t parid = b["targetpar"].getWithDefault(CLAP_INVALID_ID);
             auto it = granulator.idtoparmetadata.find(parid);
             if (it != granulator.idtoparmetadata.end())
@@ -728,6 +728,7 @@ void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
                 float parmax = b["parmax"].getWithDefault(it->second->maxVal);
                 int curveid = b["curveid"].getWithDefault(0);
                 MIDIBinding binding;
+                binding.midichan = chan;
                 binding.midicc = cc;
                 binding.target_param = parid;
                 binding.par_range = {parmin, parmax};
