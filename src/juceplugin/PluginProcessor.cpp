@@ -269,7 +269,7 @@ void AudioPluginAudioProcessor::handleMIDICCMessage(int channel, int ccnumber, i
     {
         for (const auto &binding : midiBindings)
         {
-            if (binding.midicc == channel && binding.midicc == ccnum)
+            if (binding.midichan == channel && binding.midicc == ccnum)
             {
                 auto md = granulator.idtoparmetadata[binding.target_param];
                 float minval = std::clamp(binding.par_range.first, md->minVal, md->maxVal);
