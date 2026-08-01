@@ -53,6 +53,58 @@ inline void addMidiLearnToMenu(juce::PopupMenu &menu, AudioPluginAudioProcessor 
     }
 }
 
+class AnalysisSourceComponent : public juce::Component
+{
+  public:
+    AudioPluginAudioProcessor &processorRef;
+    juce::ComboBox fftModeCombo;
+    XapSlider attackTimeKnob;
+    XapSlider releaseTimeKnob;
+    AnalysisSourceComponent(AudioPluginAudioProcessor &proc)
+        : processorRef(proc),
+          attackTimeKnob(XapSlider::SS_Knob, ParamDesc()
+                                                 .withName("Attack")
+                                                 .asFloat()
+                                                 .withRange(1.0, 500.0)
+                                                 .withDefault(5.0)
+                                                 .withLinearScaleFormatting("ms")),
+          releaseTimeKnob(XapSlider::SS_Knob, ParamDesc()
+                                                  .withName("Release")
+                                                  .asFloat()
+                                                  .withRange(1.0, 500.0)
+                                                  .withDefault(5.0)
+                                                  .withLinearScaleFormatting("ms"))
+    {
+        addAndMakeVisible(attackTimeKnob);
+        addAndMakeVisible(releaseTimeKnob);
+        addAndMakeVisible(fftModeCombo);
+        attackTimeKnob.OnValueChanged = [this]() {
+            processorRef.modulationAnalyzer.setEnvelopeFollowerParameters(
+                attackTimeKnob.getValue(), releaseTimeKnob.getValue());
+        };
+        releaseTimeKnob.OnValueChanged = [this]() {
+            processorRef.modulationAnalyzer.setEnvelopeFollowerParameters(
+                attackTimeKnob.getValue(), releaseTimeKnob.getValue());
+        };
+        auto &modes = processorRef.modulationAnalyzer.modes;
+        for (int i = 0; i < modes.size(); ++i)
+        {
+            fftModeCombo.addItem(modes[i].label, i + 1);
+        }
+        fftModeCombo.onChange = [this]() {
+            processorRef.modulationAnalyzer.applyMode(fftModeCombo.getSelectedId() - 1);
+        };
+        fftModeCombo.setSelectedItemIndex(0);
+    }
+    void resized() override
+    {
+        fftModeCombo.setBounds(1, 1, 200, 24);
+        attackTimeKnob.setBounds(1, fftModeCombo.getBottom() + 1, 60, 60);
+        releaseTimeKnob.setBounds(attackTimeKnob.getRight() + 1, fftModeCombo.getBottom() + 1, 60,
+                                  60);
+    }
+};
+
 #ifdef CLAUDEGENERATEDRANDOMSOURCEGUI
 /*
     TriggeredRandomSourceEditor

@@ -538,7 +538,7 @@ struct ModulationRowComponent : public juce::Component
         float depth = 0.0f;
         uint32_t target;
     };
-    
+
     int modslotindex = -1;
     juce::Label slotLabel;
     DropDownComponent sourceDrop;
@@ -560,8 +560,8 @@ class MainPageComponent final : public juce::Component
     //==============================================================================
     void paint(juce::Graphics &) override;
     void resized() override;
-    void mouseDown(const juce::MouseEvent&) override;
-    
+    void mouseDown(const juce::MouseEvent &) override;
+
     AudioPluginAudioProcessor &processorRef;
     OscillatorModuleComponent oscModuleComponent;
     MainOutputModule mainOutModuleComponent;
@@ -572,7 +572,7 @@ class MainPageComponent final : public juce::Component
     std::vector<std::unique_ptr<InsertModuleComponent>> insertComponents;
 
     juce::MidiKeyboardComponent keyboardComponent;
-    
+
     // juce::TreeView testTree;
     struct MyTreeItem : public juce::TreeViewItem
     {
@@ -645,7 +645,8 @@ class ModulationPage : public juce::Component
 {
   public:
     ModulationPage(AudioPluginAudioProcessor &p)
-        : processorRef(p), stepSeqTabs(juce::TabbedButtonBar::Orientation::TabsAtTop)
+        : processorRef(p), analysisComponen(p),
+          stepSeqTabs(juce::TabbedButtonBar::Orientation::TabsAtTop)
     {
         for (int i = 0; i < 8; ++i)
         {
@@ -667,6 +668,8 @@ class ModulationPage : public juce::Component
                                stepcomp.get(), false);
             stepcomps.push_back(std::move(stepcomp));
         }
+        stepSeqTabs.addTab("Audio Input Analysis", juce::Colours::darkgrey, &analysisComponen,
+                           false);
         addAndMakeVisible(stepSeqTabs);
         for (int i = 0; i < 16; ++i)
         {
@@ -701,6 +704,7 @@ class ModulationPage : public juce::Component
     }
     AudioPluginAudioProcessor &processorRef;
     juce::TabbedComponent stepSeqTabs;
+    AnalysisSourceComponent analysisComponen;
     std::vector<std::unique_ptr<LFOComponent>> lfocomps;
     std::vector<std::unique_ptr<StepSeqComponent>> stepcomps;
     std::vector<std::unique_ptr<ModulationRowComponent>> modRowComps;
@@ -713,7 +717,7 @@ class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor,
     float analysisSpread = 0.0f;
     explicit AudioPluginAudioProcessorEditor(AudioPluginAudioProcessor &);
     ~AudioPluginAudioProcessorEditor() override;
-    void paint(juce::Graphics& g) override;
+    void paint(juce::Graphics &g) override;
     void resized() override;
     void timerCallback() override;
     void updateParameterRemoteStates();

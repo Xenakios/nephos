@@ -210,8 +210,8 @@ class SpectralModulationAnalyzer
     int hopSize = 0;
 
     std::unique_ptr<juce::dsp::FFT> fft;
-
     std::unique_ptr<juce::dsp::WindowingFunction<float>> window;
+    juce::dsp::BallisticsFilter<float> envFollower;
 
     // Circular input buffer, sized generously (a few frames' worth)
     juce::AudioBuffer<float> circularBuffer;
@@ -255,10 +255,21 @@ class SpectralModulationAnalyzer
     void prepareToPlay(double sampleRate_, int samplesPerBlock)
     {
         sampleRate = sampleRate_;
+        juce::dsp::ProcessSpec spec;
+        spec.sampleRate = sampleRate_;
+        spec.maximumBlockSize = samplesPerBlock;
+        spec.numChannels = 1;
+        envFollower.prepare(spec);
         auto mode = lastModeIdx;
         if (mode == -1)
             mode = defaultModeIdx;
         applyMode(mode);
+    }
+    void setEnvelopeFollowerParameters(float atta, float rele)
+    {
+        juce::ScopedLock locker(cs);
+        envFollower.setAttackTime(atta);
+        envFollower.setReleaseTime(rele);
     }
     void processBlock(juce::AudioBuffer<float> &buffer)
     {
@@ -269,6 +280,7 @@ class SpectralModulationAnalyzer
 
         for (int i = 0; i < numSamples; ++i)
         {
+            latestRMS = envFollower.processSample(0, in[i]);
             // Write incoming sample into circular buffer
             circularBuffer.setSample(0, circularBufferWritePos, in[i]);
             circularBufferWritePos = (circularBufferWritePos + 1) % circularBufferSize;
@@ -293,12 +305,12 @@ class SpectralModulationAnalyzer
         for (int i = 0; i < fftSize; ++i)
         {
             float sample = circularBuffer.getSample(0, readPos);
-            levelsum += sample * sample;
+            // levelsum += sample * sample;
             fftWorkBuffer[i] = sample;
             readPos = (readPos + 1) % circularBufferSize;
         }
-        if (levelsum > 0.0)
-            latestRMS = std::sqrt(levelsum / fftSize);
+        // if (levelsum > 0.0)
+        //     latestRMS = std::sqrt(levelsum / fftSize);
         window->multiplyWithWindowingTable(fftWorkBuffer.data(), fftSize);
         fft->performFrequencyOnlyForwardTransform(fftWorkBuffer.data());
 

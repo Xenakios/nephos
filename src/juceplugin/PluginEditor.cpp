@@ -277,13 +277,6 @@ void MainPageComponent::mouseDown(const juce::MouseEvent &ev)
             msg.parid = CLAP_INVALID_ID;
             processorRef.from_gui_fifo.push(msg);
         });
-        menu.addSectionHeader("Analysis modulation source settings");
-        auto &modes = processorRef.modulationAnalyzer.modes;
-        for (size_t i = 0; i < modes.size(); ++i)
-        {
-            menu.addItem(modes[i].label,
-                         [i, this]() { processorRef.modulationAnalyzer.applyMode(i); });
-        }
         menu.showMenuAsync({});
     }
 }
