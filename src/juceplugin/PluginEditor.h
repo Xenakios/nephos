@@ -709,8 +709,11 @@ class ModulationPage : public juce::Component
 class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor, public juce::Timer
 {
   public:
+    float analysisCentroid = 0.0f;
+    float analysisSpread = 0.0f;
     explicit AudioPluginAudioProcessorEditor(AudioPluginAudioProcessor &);
     ~AudioPluginAudioProcessorEditor() override;
+    void paint(juce::Graphics& g) override;
     void resized() override;
     void timerCallback() override;
     void updateParameterRemoteStates();

@@ -88,6 +88,185 @@ static constexpr auto ambisonicOrder = "ignore_ambiorder"sv;
 static constexpr auto midiBinds = "ignore_midibindings"sv;
 } // namespace StateIgnoreStrings
 
+class SpectralDescriptors
+{
+  public:
+    void prepare(int fftSizeIn, double sampleRateIn)
+    {
+        fftSize = fftSizeIn;
+        samplerate = sampleRateIn;
+        numBins = fftSize / 2 + 1;
+
+        freqBins.resize(numBins);
+        logFreqBins.resize(numBins);
+        for (int k = 0; k < numBins; ++k)
+        {
+            freqBins[k] = (float)(k * samplerate / fftSize);
+            // k=0 (DC) is undefined in log space; floor it to avoid -inf
+            double f = (k == 0) ? (0.5 * samplerate / fftSize) : freqBins[k];
+            logFreqBins[k] = (float)std::log2(f / reference_frequency);
+        }
+        prevMagnitude.assign(numBins, 0.0f);
+    }
+    // fftData must be the buffer you passed to performFrequencyOnlyForwardTransform,
+    // sized 2 * fftSize, with the first numBins entries holding magnitudes.
+    void processFrame(const float *mag)
+    {
+        double sumMag = 0.0, sumMagF = 0.0;
+        for (int k = 1; k < numBins; ++k)
+        {
+            sumMag += mag[k];
+            sumMagF += mag[k] * logFreqBins[k];
+        }
+        const double eps = 0.000001;
+        logCentroid_ = sumMagF / (sumMag + eps); // now directly in octaves re 440Hz
+
+        double sumDev2 = 0.0;
+        for (int k = 1; k < numBins; ++k)
+        {
+            double d = logFreqBins[k] - logCentroid_;
+            sumDev2 += mag[k] * d * d;
+        }
+        logSpread_ = std::sqrt(sumDev2 / (sumMag + eps)); // now directly in octaves
+        return;
+        double spread3 = spread_ * spread_ * spread_;
+        double spread4 = spread3 * spread_;
+        skew_ = (spread_ > eps) ? (spread3 / (sumMag + eps)) / spread3 : 0.0;
+        kurt_ = (spread_ > eps) ? (spread4 / (sumMag + eps)) / spread4 - 3.0 : 0.0;
+
+        double logSum = 0.0;
+        for (int k = 0; k < numBins; ++k)
+            logSum += std::log(mag[k] + eps);
+        double geoMean = std::exp(logSum / numBins);
+        double arithMean = sumMag / numBins;
+        flat_ = geoMean / (arithMean + eps);
+
+        double target = 0.85 * sumMag;
+        double cum = 0.0;
+        rolloff_ = freqBins[numBins - 1];
+        for (int k = 0; k < numBins; ++k)
+        {
+            cum += mag[k];
+            if (cum >= target)
+            {
+                rolloff_ = freqBins[k];
+                break;
+            }
+        }
+
+        double fluxSum = 0.0;
+        for (int k = 0; k < numBins; ++k)
+        {
+            double d = mag[k] - prevMagnitude[k];
+            fluxSum += d * d;
+        }
+        flux_ = std::sqrt(fluxSum);
+
+        std::copy(mag, mag + numBins, prevMagnitude.begin());
+    }
+    static constexpr double reference_frequency = 440.0;
+    double getCentroid() const { return logCentroid_; }
+    double getSpread() const { return logSpread_; }
+    double getSkewness() const;
+    double getKurtosis() const;
+    double getFlatness() const;
+    double getRolloff(float percentage = 0.85f) const;
+    double getFlux() const; // needs previous frame internally
+
+  private:
+    std::vector<double> freqBins;
+    std::vector<float> prevMagnitude;
+    std::vector<double> logFreqBins;
+    double centroid_, spread_, skew_, kurt_, flat_, rolloff_, flux_ = 0.0;
+    double logCentroid_ = 0.0;
+    double logSpread_ = 0.0f;
+    double samplerate = 0;
+    size_t fftSize = 0;
+    size_t numBins = 0;
+};
+
+class SpectralModulationAnalyzer
+{
+  public:
+    static constexpr int fftOrder = 11; // 2048-point FFT
+    static constexpr int fftSize = 1 << fftOrder;
+    int hopSize = fftSize / 2; // 50% overlap
+
+    juce::dsp::FFT fft{fftOrder};
+    juce::dsp::WindowingFunction<float> window{fftSize, juce::dsp::WindowingFunction<float>::hann};
+
+    // Circular input buffer, sized generously (a few frames' worth)
+    juce::AudioBuffer<float> circularBuffer;
+    int circularBufferWritePos = 0;
+    int samplesSinceLastAnalysis = 0;
+    int circularBufferSize = fftSize * 4; // headroom
+
+    std::vector<float> fftWorkBuffer; // fftSize * 2, scratch for FFT
+    SpectralDescriptors descriptors;
+
+    float latestCentroid{0.0f};
+    float latestSpread{0.0f};
+    float latestRMS{0.0f};
+    // ... etc for other descriptors
+    void prepareToPlay(double sampleRate, int samplesPerBlock)
+    {
+        circularBuffer.setSize(1, circularBufferSize);
+        circularBuffer.clear();
+        circularBufferWritePos = 0;
+        samplesSinceLastAnalysis = 0;
+
+        fftWorkBuffer.assign(fftSize * 2, 0.0f);
+        descriptors.prepare(fftSize, sampleRate);
+    }
+    void processBlock(juce::AudioBuffer<float> &buffer)
+    {
+        const int numSamples = buffer.getNumSamples();
+        const float *in = buffer.getReadPointer(0); // mono/first channel for analysis
+
+        for (int i = 0; i < numSamples; ++i)
+        {
+            // Write incoming sample into circular buffer
+            circularBuffer.setSample(0, circularBufferWritePos, in[i]);
+            circularBufferWritePos = (circularBufferWritePos + 1) % circularBufferSize;
+            ++samplesSinceLastAnalysis;
+
+            // Once we've accumulated a full hop of new samples, analyze
+            if (samplesSinceLastAnalysis >= hopSize)
+            {
+                samplesSinceLastAnalysis = 0;
+                analyzeFrame();
+            }
+        }
+    }
+
+    void analyzeFrame()
+    {
+        std::fill(fftWorkBuffer.begin(), fftWorkBuffer.end(), 0.0f);
+
+        // Read the last fftSize samples out of the circular buffer, in order
+        int readPos = (circularBufferWritePos - fftSize + circularBufferSize) % circularBufferSize;
+        double levelsum = 0.0;
+        for (int i = 0; i < fftSize; ++i)
+        {
+            float sample = circularBuffer.getSample(0, readPos);
+            levelsum += sample * sample;
+            fftWorkBuffer[i] = sample;
+            readPos = (readPos + 1) % circularBufferSize;
+        }
+        if (levelsum > 0.0)
+            latestRMS = std::sqrt(levelsum / fftSize);
+        window.multiplyWithWindowingTable(fftWorkBuffer.data(), fftSize);
+        fft.performFrequencyOnlyForwardTransform(fftWorkBuffer.data());
+
+        descriptors.processFrame(fftWorkBuffer.data());
+
+        // Publish results for the GUI/message thread to read
+        latestCentroid = descriptors.getCentroid();
+        latestSpread = descriptors.getSpread();
+        // ... etc
+    }
+};
+
 class AudioPluginAudioProcessor final : public juce::AudioProcessor
 {
   public:
@@ -165,6 +344,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     std::unique_ptr<baconpaul::six_sines::ui::SpectrumAnalyzerComponent> baconSpectrum;
     juce::AudioBuffer<float> visualizerAudioBuffer;
     juce::MidiKeyboardState keyboardState;
+    SpectralModulationAnalyzer modulationAnalyzer;
 
   private:
     alignas(32) std::vector<float> workBuffer;

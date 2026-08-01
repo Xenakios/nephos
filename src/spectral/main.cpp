@@ -57,7 +57,7 @@ class SpectralDescriptors
         {
             freqBins[k] = (float)(k * samplerate / fftSize);
             // k=0 (DC) is undefined in log space; floor it to avoid -inf
-            double f = (k == 0) ? freqBins[1] * 0.5 : freqBins[k];
+            double f = (k == 0) ? (0.5 * samplerate / fftSize) : freqBins[k];
             logFreqBins[k] = (float)std::log2(f / reference_frequency);
         }
         prevMagnitude.assign(numBins, 0.0f);
@@ -143,7 +143,7 @@ inline void test_spectral_descriptors()
 {
     juce::AudioFormatManager formatManager;
     formatManager.registerBasicFormats();
-    juce::File infile(R"(E:\MusicAudio\sourcesamples\OvenNarinaa\ovinarina02.wav)");
+    juce::File infile(R"(E:\MusicAudio\sourcesamples\test_signals\sweep3.wav)");
     std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(infile));
     const size_t fftOrder = 11;
     const size_t fftSize = 1 << fftOrder;

@@ -3,6 +3,7 @@
 #include "audiovisualizercomponent.h"
 #include "clap/id.h"
 #include "containers/choc_Value.h"
+#include "juce_audio_basics/juce_audio_basics.h"
 #include "juce_audio_utils/juce_audio_utils.h"
 #include "juce_core/juce_core.h"
 #include "text/choc_Files.h"
@@ -171,6 +172,7 @@ void AudioPluginAudioProcessor::loadSnapShot(int index)
 void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     DBG("prepareToPlay " << sampleRate << " Hz, " << samplesPerBlock << " max samples per block");
+    modulationAnalyzer.prepareToPlay(sampleRate, samplesPerBlock);
     int avisnumchannels = getTotalNumOutputChannels();
     if (getTotalNumOutputChannels() > 2)
         avisnumchannels = 1;
@@ -401,6 +403,16 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
     keyboardState.processNextMidiBuffer(midiMessages, 0, buffer.getNumSamples(), true);
+    modulationAnalyzer.processBlock(buffer);
+    float modcentroid = std::clamp(modulationAnalyzer.latestCentroid, -4.0f, 4.0f);
+    granulator.modSourceValues[ToneGranulator::AA_CENTROID] =
+        juce::jmap<float>(modcentroid, -4.0f, 4.0f, -1.0f, 1.0f);
+    float modspread = std::clamp(modulationAnalyzer.latestSpread, 0.0f, 5.0f);
+    granulator.modSourceValues[ToneGranulator::AA_SPEAD] =
+        juce::jmap<float>(modspread, 0.0f, 5.0f, 0.0f, 1.0f);
+    float modlevel = juce::Decibels::gainToDecibels(modulationAnalyzer.latestRMS);
+    granulator.modSourceValues[ToneGranulator::AA_LEVEL] =
+        juce::jmap<float>(modlevel, -100.0f, 0.0f, 0.0f, 1.0f);
     processMidiMessages(midiMessages);
     bool statechanged = false;
     ThreadMessage msg;

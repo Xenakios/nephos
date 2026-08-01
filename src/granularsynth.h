@@ -1435,6 +1435,9 @@ class ToneGranulator
         RANDOM1,
         RANDOM2,
         RANDOM3,
+        AA_CENTROID,
+        AA_SPEAD,
+        AA_LEVEL,
         HOSTPARAMSTART,
         MIDINOTE = HOSTPARAMSTART + 16,
         MIDIVELO,
@@ -2124,6 +2127,12 @@ class ToneGranulator
             modSourceInfos.emplace_back(fmt::format("Random {}", i + 1), "Random",
                                         GranulatorModConfig::SourceIdentifier{RANDOM0 + i});
         }
+        modSourceInfos.emplace_back("Spectral Centroid", "Audio Input Analysis",
+                                    GranulatorModConfig::SourceIdentifier{AA_CENTROID});
+        modSourceInfos.emplace_back("Spectral Spread", "Audio Input Analysis",
+                                    GranulatorModConfig::SourceIdentifier{AA_SPEAD});
+        modSourceInfos.emplace_back("Volume Level", "Audio Input Analysis",
+                                    GranulatorModConfig::SourceIdentifier{AA_LEVEL});
         for (uint32_t i = 0; i < 16; ++i)
         {
             modSourceInfos.emplace_back(fmt::format("Host Parameter {}", i + 1), "Host Parameter",
