@@ -8,6 +8,8 @@
 #include "clap/id.h"
 #include "containers/choc_SingleReaderSingleWriterFIFO.h"
 #include "juce_audio_basics/juce_audio_basics.h"
+#include "juce_core/juce_core.h"
+#include "juce_dsp/juce_dsp.h"
 #include "threading/choc_SpinLock.h"
 #include "xap_slider.h"
 #include "audiovisualizercomponent.h"
@@ -188,18 +190,34 @@ class SpectralDescriptors
 class SpectralModulationAnalyzer
 {
   public:
-    static constexpr int fftOrder = 11; // 2048-point FFT
-    static constexpr int fftSize = 1 << fftOrder;
-    int hopSize = fftSize / 2; // 50% overlap
+    struct Mode
+    {
+        int fftOrder;
+        int hopSize;
+        const char *label;
+    };
+    static constexpr std::array<Mode, 5> modes{{
+        {10, 512, "1024 / 512"},
+        {11, 512, "2048 / 512"},
+        {12, 512, "4096 / 512"},
+        {13, 512, "8192 / 512"},
+        {14, 1024, "16384 / 1024"},
+    }};
+    static constexpr int defaultModeIdx = 1;
+    int lastModeIdx = -1;
+    int fftOrder = 0; // 2048-point FFT
+    int fftSize = 0;
+    int hopSize = 0;
 
-    juce::dsp::FFT fft{fftOrder};
-    juce::dsp::WindowingFunction<float> window{fftSize, juce::dsp::WindowingFunction<float>::hann};
+    std::unique_ptr<juce::dsp::FFT> fft;
+
+    std::unique_ptr<juce::dsp::WindowingFunction<float>> window;
 
     // Circular input buffer, sized generously (a few frames' worth)
     juce::AudioBuffer<float> circularBuffer;
     int circularBufferWritePos = 0;
     int samplesSinceLastAnalysis = 0;
-    int circularBufferSize = fftSize * 4; // headroom
+    int circularBufferSize = 0; // headroom
 
     std::vector<float> fftWorkBuffer; // fftSize * 2, scratch for FFT
     SpectralDescriptors descriptors;
@@ -208,18 +226,44 @@ class SpectralModulationAnalyzer
     float latestSpread{0.0f};
     float latestRMS{0.0f};
     // ... etc for other descriptors
-    void prepareToPlay(double sampleRate, int samplesPerBlock)
+    juce::CriticalSection cs;
+    void applyMode(int m)
     {
+        juce::ScopedLock locker(cs);
+        if (m == lastModeIdx)
+            return;
+        lastModeIdx = m;
+        auto temporder = modes[m].fftOrder;
+        auto tempsize = 1 << temporder;
+        fftSize = tempsize;
+        hopSize = modes[m].hopSize;
+        fft = std::make_unique<juce::dsp::FFT>(temporder);
+        window = std::make_unique<juce::dsp::WindowingFunction<float>>(
+            tempsize, juce::dsp::WindowingFunction<float>::hann);
+        circularBufferSize = fftSize * 4;
         circularBuffer.setSize(1, circularBufferSize);
         circularBuffer.clear();
         circularBufferWritePos = 0;
         samplesSinceLastAnalysis = 0;
-
         fftWorkBuffer.assign(fftSize * 2, 0.0f);
         descriptors.prepare(fftSize, sampleRate);
+        latestRMS = 0.0f;
+        latestCentroid = 0.0f;
+        latestSpread = 0.0f;
+    }
+    float sampleRate = 0.0f;
+    void prepareToPlay(double sampleRate_, int samplesPerBlock)
+    {
+        sampleRate = sampleRate_;
+        auto mode = lastModeIdx;
+        if (mode == -1)
+            mode = defaultModeIdx;
+        applyMode(mode);
     }
     void processBlock(juce::AudioBuffer<float> &buffer)
     {
+        // yes yes, nasty but will do for now...
+        juce::ScopedLock locker(cs);
         const int numSamples = buffer.getNumSamples();
         const float *in = buffer.getReadPointer(0); // mono/first channel for analysis
 
@@ -255,8 +299,8 @@ class SpectralModulationAnalyzer
         }
         if (levelsum > 0.0)
             latestRMS = std::sqrt(levelsum / fftSize);
-        window.multiplyWithWindowingTable(fftWorkBuffer.data(), fftSize);
-        fft.performFrequencyOnlyForwardTransform(fftWorkBuffer.data());
+        window->multiplyWithWindowingTable(fftWorkBuffer.data(), fftSize);
+        fft->performFrequencyOnlyForwardTransform(fftWorkBuffer.data());
 
         descriptors.processFrame(fftWorkBuffer.data());
 
