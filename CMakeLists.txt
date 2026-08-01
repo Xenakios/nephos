@@ -74,6 +74,36 @@ add_executable(NephosCLI
     src/grainfx.cpp
 )
 
+juce_add_console_app(SpectralTesting
+    PRODUCT_NAME "Console App Example"
+) 
+
+target_sources(SpectralTesting
+    PRIVATE
+        src/spectral/main.cpp)
+    
+target_compile_definitions(SpectralTesting
+PRIVATE
+    NOJUCE=0
+    # JUCE_WEB_BROWSER and JUCE_USE_CURL would be on by default, but you might not need them.
+    JUCE_WEB_BROWSER=0  # If you remove this, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_console_app` call
+    _USE_MATH_DEFINES=1
+    JUCE_PLUGINHOST_VST3=1
+    JUCE_DISPLAY_SPLASH_SCREEN=0
+    JUCE_USE_CURL=0)    # If you remove this, add `NEEDS_CURL TRUE` to the `juce_add_console_app` call
+    
+target_link_libraries(SpectralTesting
+    PRIVATE
+        # ConsoleAppData            # If you'd created a binary data target, you'd link to it here
+        juce::juce_core
+        juce::juce_audio_utils
+        juce::juce_dsp
+        fmt
+    PUBLIC
+        # juce::juce_recommended_config_flags
+        # juce::juce_recommended_warning_flags)
+)    
+
 juce_add_plugin(NephosPlugin
     VERSION 0.1                               # Set this if the plugin version is different to the project version
     ICON_BIG Assets/tgicon01.png                              # ICON_* arguments specify a path to an image file to use as an icon for the Standalone
