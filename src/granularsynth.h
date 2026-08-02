@@ -2190,7 +2190,8 @@ class ToneGranulator
     std::array<sfpp::FilterModel, 2> filtersModels{sfpp::FilterModel(), sfpp::FilterModel()};
     std::array<sfpp::ModelConfig, 2> filtersConfigs{sfpp::ModelConfig(), sfpp::ModelConfig()};
     alignas(32) EasingLUTS eluts;
-    bool insertPMDPending = false;
+    // this is not super ideal but maybe we can live with this...
+    GrainInsertFX fxInstanceForMetadata;
     void set_filter(int which, uint8_t mainmode, uint8_t awtype, sfpp::FilterModel mo,
                     sfpp::ModelConfig conf)
     {
@@ -2199,27 +2200,29 @@ class ToneGranulator
         int oldmainmode = insertsMainModes[which];
         insertsMainModes[which] = mainmode;
         insertsAWTypes[which] = awtype;
+        GrainInsertFX::ModeInfo gmode;
+        gmode.mainmode = mainmode;
+        gmode.awtype = awtype;
+        gmode.sstconfig = conf;
+        gmode.sstmodel = mo;
+        fxInstanceForMetadata.setMode(gmode);
+        for (size_t j = 0; j < GranulatorVoice::maxParamsPerInsert; ++j)
+        {
+            int parid = PAR_INSERTAFIRST + 32 * which + j;
+            // if old mode was already sst filter, don't set the parameter
+            if (oldmainmode == GrainInsertFX::GFXNONE ||
+                oldmainmode == GrainInsertFX::GFXAIRWINDOWS ||
+                oldmainmode == GrainInsertFX::GFXXENAKIOS)
+            {
+                *idtoparvalptr[parid] = fxInstanceForMetadata.paramvalues[j];
+            }
+            idtoparmetadata[parid]->name = fxInstanceForMetadata.getParameterName(j);
+            idtoparmetadata[parid]->defaultVal = fxInstanceForMetadata.paramvalues[j];
+        }
         for (int i = 0; i < numvoices; ++i)
         {
             auto &v = voices[i];
             v->set_insert_type(which, mainmode, awtype, mo, conf);
-            insertPMDPending = true;
-            if (i == 0)
-            {
-                for (size_t j = 0; j < GranulatorVoice::maxParamsPerInsert; ++j)
-                {
-                    int parid = PAR_INSERTAFIRST + 32 * which + j;
-                    // if old mode was already sst filter, don't set the parameter
-                    if (oldmainmode == GrainInsertFX::GFXNONE ||
-                        oldmainmode == GrainInsertFX::GFXAIRWINDOWS ||
-                        oldmainmode == GrainInsertFX::GFXXENAKIOS)
-                    {
-                        *idtoparvalptr[parid] = v->insert_fx[which].paramvalues[j];
-                    }
-                    idtoparmetadata[parid]->name = v->insert_fx[which].getParameterName(j);
-                    idtoparmetadata[parid]->defaultVal = v->insert_fx[which].paramvalues[j];
-                }
-            }
         }
     }
 
@@ -2282,6 +2285,7 @@ class ToneGranulator
             modmatrix.set_sample_rate(samplerate);
             modmatrix.m.prepare(modmatrix.rt, samplerate, granul_block_size);
             masterHighPassFilter.prepare(m_sr);
+            fxInstanceForMetadata.prepareInstance(m_sr, granul_block_size);
         }
     }
     void set_ambisonics_order(int order)
@@ -2778,10 +2782,6 @@ class ToneGranulator
                     voices[j]->tail_len = taillen;
                     voices[j]->tail_fade_len = std::clamp(taillen * 0.5, 0.002, 1.0);
                     voices[j]->start(*ev);
-                    if (insertPMDPending)
-                    {
-                        insertPMDPending = false;
-                    }
                     voicewasfound = true;
                     if (gatherGrainVisData)
                     {
