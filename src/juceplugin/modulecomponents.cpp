@@ -1,4 +1,5 @@
 #include "modulecomponents.h"
+#include "PluginProcessor.h"
 #include "clap/id.h"
 #include "juce_core/juce_core.h"
 #include "juce_graphics/juce_graphics.h"
@@ -628,11 +629,12 @@ OscillatorModuleComponent::OscillatorModuleComponent(AudioPluginAudioProcessor &
             });
             for (int j = 0; j < GranulatorVoice::NUMMODTARGETS; ++j)
             {
-                targetmenu.addItem(
-                    processorRef.granulator.voices[0]->get_mod_target_name((GranulatorVoice::MODTARGET)j), true,
-                    curtarget == j, [this, i, j]() {
-                        processorRef.granulator.set_grain_modulation_routing(i, {}, j, false);
-                    });
+                targetmenu.addItem(processorRef.granulator.voices[0]->get_mod_target_name(
+                                       (GranulatorVoice::MODTARGET)j),
+                                   true, curtarget == j, [this, i, j]() {
+                                       processorRef.granulator.set_grain_modulation_routing(
+                                           i, {}, j, false);
+                                   });
             }
             menu.addSubMenu("Modulation target", targetmenu);
         });
@@ -697,30 +699,33 @@ void StackingModuleComponent::resized()
 void AnalysisSourceComponent::paint(juce::Graphics &g)
 {
     g.setColour(juce::Colours::green);
-    float w = getWidth() - 210;
+    float w = getWidth() - expThKnob.getRight() - 5;
+    float xoffset = expThKnob.getRight() + 2.0;
     float db = juce::Decibels::gainToDecibels(envFollowerLevel);
+    db =
+        SpectralModulationAnalyzer::envelopeExpand(db, processorRef.modulationAnalyzer.expander_th);
     float barw = juce::jmap<float>(db, -100.0f, 0.0f, 0.0f, w);
     float yoffset = 2.0f;
     float barh = 20.0f;
-    g.fillRect(205.0f, yoffset, barw, barh);
+    g.fillRect(xoffset, yoffset, barw, barh);
     g.setColour(juce::Colours::white);
-    g.drawRect(205.0f, yoffset, w, barh);
-    g.drawText("Envelope Follower", juce::Rectangle<float>(205.0f, yoffset, w, barh),
+    g.drawRect(xoffset, yoffset, w, barh);
+    g.drawText("Envelope Follower", juce::Rectangle<float>(xoffset, yoffset, w, barh),
                juce::Justification::centred);
     yoffset += barh + 2.0f;
     barw = juce::jmap<float>(spectralCentroid, -4.0f, 4.0f, 0.0, w);
     g.setColour(juce::Colours::green);
-    g.fillRect(205.0f, yoffset, barw, barh);
+    g.fillRect(xoffset, yoffset, barw, barh);
     g.setColour(juce::Colours::white);
-    g.drawRect(205.0f, yoffset, w, barh);
-    g.drawText("Spectral Centroid", juce::Rectangle<float>(205.0f, yoffset, w, barh),
+    g.drawRect(xoffset, yoffset, w, barh);
+    g.drawText("Spectral Centroid", juce::Rectangle<float>(xoffset, yoffset, w, barh),
                juce::Justification::centred);
     yoffset += barh + 2.0f;
     barw = juce::jmap<float>(spectralSpread, 0.0f, 4.0f, 0.0, w);
     g.setColour(juce::Colours::green);
-    g.fillRect(205.0f, yoffset, barw, barh);
+    g.fillRect(xoffset, yoffset, barw, barh);
     g.setColour(juce::Colours::white);
-    g.drawRect(205.0f, yoffset, w, barh);
-    g.drawText("Spectral Spread", juce::Rectangle<float>(205.0f, yoffset, w, barh),
+    g.drawRect(xoffset, yoffset, w, barh);
+    g.drawText("Spectral Spread", juce::Rectangle<float>(xoffset, yoffset, w, barh),
                juce::Justification::centred);
 }

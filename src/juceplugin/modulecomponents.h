@@ -61,6 +61,7 @@ class AnalysisSourceComponent : public juce::Component, public juce::Timer
     juce::ComboBox fftModeCombo;
     XapSlider attackTimeKnob;
     XapSlider releaseTimeKnob;
+    XapSlider expThKnob;
     float envFollowerLevel = 0.0f;
     float spectralCentroid = 0.0f;
     float spectralSpread = 0.0f;
@@ -79,10 +80,18 @@ class AnalysisSourceComponent : public juce::Component, public juce::Timer
                                                   .withRange(1.0, 500.0)
                                                   .withDefault(200.0)
                                                   .withDecimalPlaces(0)
-                                                  .withLinearScaleFormatting("ms"))
+                                                  .withLinearScaleFormatting("ms")),
+          expThKnob(XapSlider::SS_Knob, ParamDesc()
+                                            .withName("Threshold")
+                                            .asFloat()
+                                            .withRange(-60.0f, -12.0)
+                                            .withDefault(-40.0)
+                                            .withDecimalPlaces(0)
+                                            .withLinearScaleFormatting("dB"))
     {
         addAndMakeVisible(attackTimeKnob);
         addAndMakeVisible(releaseTimeKnob);
+        addAndMakeVisible(expThKnob);
         addAndMakeVisible(fftModeCombo);
         attackTimeKnob.OnValueChanged = [this]() {
             processorRef.modulationAnalyzer.setEnvelopeFollowerParameters(
@@ -91,6 +100,9 @@ class AnalysisSourceComponent : public juce::Component, public juce::Timer
         releaseTimeKnob.OnValueChanged = [this]() {
             processorRef.modulationAnalyzer.setEnvelopeFollowerParameters(
                 attackTimeKnob.getValue(), releaseTimeKnob.getValue());
+        };
+        expThKnob.OnValueChanged = [this]() {
+            processorRef.modulationAnalyzer.expander_th = expThKnob.getValue();
         };
         auto &modes = processorRef.modulationAnalyzer.modes;
         for (int i = 0; i < modes.size(); ++i)
@@ -114,9 +126,10 @@ class AnalysisSourceComponent : public juce::Component, public juce::Timer
     void resized() override
     {
         fftModeCombo.setBounds(1, 1, 200, 24);
-        attackTimeKnob.setBounds(1, fftModeCombo.getBottom() + 1, 60, 60);
-        releaseTimeKnob.setBounds(attackTimeKnob.getRight() + 1, fftModeCombo.getBottom() + 1, 60,
+        attackTimeKnob.setBounds(1, fftModeCombo.getBottom() + 1, 70, 60);
+        releaseTimeKnob.setBounds(attackTimeKnob.getRight() + 1, fftModeCombo.getBottom() + 1, 70,
                                   60);
+        expThKnob.setBounds(releaseTimeKnob.getRight() + 2, fftModeCombo.getBottom() + 1, 70, 60);
     }
 };
 

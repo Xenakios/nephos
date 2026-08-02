@@ -256,6 +256,22 @@ class SpectralModulationAnalyzer
         latestSpread = 0.0f;
     }
     float sampleRate = 0.0f;
+    float expander_th = -40.0f;
+    static float envelopeExpand(float db, float threshold)
+    {
+        constexpr float floorDb = -100.0f;
+        constexpr float transitionWidth = 12.0f;
+
+        if (db >= threshold)
+            return db;
+
+        // Clamp the input signal to the transition region [threshold - 12, threshold]
+        const float clampedDb = std::clamp(db, threshold - transitionWidth, threshold);
+
+        // Map from transition region to [floorDb, threshold]
+        return juce::jmap<float>(clampedDb, threshold - transitionWidth, threshold, floorDb,
+                                 threshold);
+    }
     juce::AudioBuffer<float> envfoloutputbuffer;
     void prepareToPlay(double sampleRate_, int samplesPerBlock)
     {

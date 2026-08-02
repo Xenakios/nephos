@@ -515,13 +515,18 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     int numoutsamples = buffer.getNumSamples();
     while (buffer_adapter.getUsedSlots() < numoutsamples)
     {
-        if (opos >= numoutsamples)
-            opos = numoutsamples - 1;
-        float modlevel = modulationAnalyzer.envfoloutputbuffer.getSample(0, opos);
+        // ok so this is a bit dodgy, can't be bothered to do input side
+        // buffering that adapts to the granulator internal block size
+        const int readPos = std::min(opos, numoutsamples - 1);
+        float modlevel = modulationAnalyzer.envfoloutputbuffer.getSample(0, readPos);
+
+        opos += granul_block_size;
         modlevel = juce::Decibels::gainToDecibels(modlevel);
+        modlevel =
+            SpectralModulationAnalyzer::envelopeExpand(modlevel, modulationAnalyzer.expander_th);
         granulator.modSourceValues[ToneGranulator::AA_LEVEL] =
             juce::jmap<float>(modlevel, -100.0f, 0.0f, 0.0f, 1.0f);
-        opos += granul_block_size;
+
         std::span<float> procspan{workBuffer};
         granulator.process_block(procspan);
         procnumoutchs = granulator.num_out_chans;
