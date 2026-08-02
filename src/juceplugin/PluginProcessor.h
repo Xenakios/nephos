@@ -146,7 +146,6 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     std::vector<MacroKnobBinding> macroBindings;
 
     std::vector<MIDIBinding> midiBindings;
-
     std::atomic<uint32_t> midiLearnParam{CLAP_INVALID_ID};
     void removeMIDIAssignmentForParam(uint32_t parid);
     void setMidiAssignmentParameterRange(uint32_t parid, std::optional<float> minval,

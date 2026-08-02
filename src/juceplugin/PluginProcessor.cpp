@@ -256,22 +256,26 @@ void AudioPluginAudioProcessor::setStateDirtyHack()
 
 void AudioPluginAudioProcessor::handleMIDICCMessage(int channel, int ccnumber, int ccvalue)
 {
-    if (ccnumber == 50 && ccvalue > 64)
-    {
-        int snapnumber = granulator.currentSnapShot + 1;
-        if (snapnumber >= snapshots.size())
-        {
-            snapnumber = 0;
-        }
-        // loadSnapShot(snapnumber);
-    }
     auto &mm = granulator.modmatrix;
     uint32_t ccnum = ccnumber;
     if (midiLearnParam == CLAP_INVALID_ID)
     {
+        // not in learn mode, so scan for matches
         for (const auto &binding : midiBindings)
         {
-            if (binding.midichan == channel && binding.midicc == ccnum)
+            if (binding.target_param == ToneGranulator::PAR_LEARN8SNAPSHOTS &&
+                binding.midichan == channel && ccvalue >= 64)
+            {
+                if (ccnum >= binding.midicc && ccnum < binding.midicc + 8)
+                {
+                    int snaptoload = ccnum - binding.midicc;
+                    DBG("going to load snapshot " << snaptoload << " triggered by CC "
+                                                  << (int)ccnum);
+                    loadSnapShot(ccnum - binding.midicc);
+                }
+            }
+            if (binding.target_param != ToneGranulator::PAR_LEARN8SNAPSHOTS &&
+                binding.midichan == channel && binding.midicc == ccnum)
             {
                 auto md = granulator.idtoparmetadata[binding.target_param];
                 float minval = std::clamp(binding.par_range.first, md->minVal, md->maxVal);
@@ -290,16 +294,23 @@ void AudioPluginAudioProcessor::handleMIDICCMessage(int channel, int ccnumber, i
     }
     else
     {
-        auto it = granulator.idtoparmetadata.find(midiLearnParam);
-        if (it != granulator.idtoparmetadata.end())
+        if (midiLearnParam != ToneGranulator::PAR_LEARN8SNAPSHOTS)
         {
-            auto md = it->second;
-            midiBindings.emplace_back(
-                MIDIBinding{(uint32_t)channel, ccnum, midiLearnParam, {md->minVal, md->maxVal}});
-            midiLearnParam = CLAP_INVALID_ID;
-            ThreadMessage msg;
-            msg.opcode = ThreadMessage::OP_PARAMREMOTE;
-            to_gui_fifo.push(msg);
+            auto it = granulator.idtoparmetadata.find(midiLearnParam);
+            if (it != granulator.idtoparmetadata.end())
+            {
+                auto md = it->second;
+                midiBindings.emplace_back(MIDIBinding{
+                    (uint32_t)channel, ccnum, midiLearnParam, {md->minVal, md->maxVal}});
+                midiLearnParam = CLAP_INVALID_ID;
+                ThreadMessage msg;
+                msg.opcode = ThreadMessage::OP_PARAMREMOTE;
+                to_gui_fifo.push(msg);
+            }
+        }
+        else
+        {
+            // implement
         }
     }
 
@@ -724,6 +735,11 @@ void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
         auto binds = state["midibindings"];
         if (binds.size() > 0)
             midiBindings.clear();
+        MIDIBinding b;
+        b.target_param = ToneGranulator::PAR_LEARN8SNAPSHOTS;
+        b.midichan = 1;
+        b.midicc = 50;
+        midiBindings.push_back(b);
         for (int i = 0; i < binds.size(); ++i)
         {
             auto b = binds[i];

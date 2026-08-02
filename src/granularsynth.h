@@ -1410,7 +1410,8 @@ class ToneGranulator
         PAR_LFOSHIFTS = 100200,
         PAR_LFOWARPS = 100300,
         PAR_LFOSHAPES = 100400,
-        PAR_LFOUNIPOLARS = 100500
+        PAR_LFOUNIPOLARS = 100500,
+        PAR_LEARN8SNAPSHOTS = 8000000
     };
     enum SI
     {
