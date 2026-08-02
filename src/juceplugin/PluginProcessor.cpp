@@ -410,9 +410,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     float modspread = std::clamp(modulationAnalyzer.latestSpread, 0.0f, 5.0f);
     granulator.modSourceValues[ToneGranulator::AA_SPEAD] =
         juce::jmap<float>(modspread, 0.0f, 5.0f, 0.0f, 1.0f);
-    float modlevel = juce::Decibels::gainToDecibels(modulationAnalyzer.latestRMS);
-    granulator.modSourceValues[ToneGranulator::AA_LEVEL] =
-        juce::jmap<float>(modlevel, -100.0f, 0.0f, 0.0f, 1.0f);
+
     processMidiMessages(midiMessages);
     bool statechanged = false;
     ThreadMessage msg;
@@ -507,29 +505,23 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     const auto &pars = getParameters();
     for (int i = 0; i < 16; ++i)
     {
-        auto rpar = dynamic_cast<juce::AudioParameterFloat *>(pars[i + 1]);
-        granulator.modSourceValues[ToneGranulator::HOSTPARAMSTART + i] = *rpar;
+        // auto rpar = dynamic_cast<juce::AudioParameterFloat *>(pars[i + 1]);
+        // granulator.modSourceValues[ToneGranulator::HOSTPARAMSTART + i] = *rpar;
     }
-    /*
-    const auto &pars = getParameters();
-    for (auto &p : pars)
-    {
-        auto it = jucepartoindex.find(p);
-        if (it != jucepartoindex.end())
-        {
-            int parid = it->second;
-            auto rpar = dynamic_cast<juce::RangedAudioParameter *>(p);
-            jassert(rpar);
-            *granulator.idtoparvalptr[parid] = rpar->convertFrom0to1(rpar->getValue());
-        }
-    }
-    */
-
     alignas(16) std::array<float, ambisonicOrderNumChannels(maxAmbiSonicOrder)> adapter_block;
     std::fill(adapter_block.begin(), adapter_block.end(), 0.0f);
     int procnumoutchs = 0;
-    while (buffer_adapter.getUsedSlots() < buffer.getNumSamples())
+    int opos = 0;
+    int numoutsamples = buffer.getNumSamples();
+    while (buffer_adapter.getUsedSlots() < numoutsamples)
     {
+        if (opos >= numoutsamples)
+            opos = numoutsamples - 1;
+        float modlevel = modulationAnalyzer.envfoloutputbuffer.getSample(0, opos);
+        modlevel = juce::Decibels::gainToDecibels(modlevel);
+        granulator.modSourceValues[ToneGranulator::AA_LEVEL] =
+            juce::jmap<float>(modlevel, -100.0f, 0.0f, 0.0f, 1.0f);
+        opos += granul_block_size;
         std::span<float> procspan{workBuffer};
         granulator.process_block(procspan);
         procnumoutchs = granulator.num_out_chans;

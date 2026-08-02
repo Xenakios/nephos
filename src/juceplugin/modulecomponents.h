@@ -2,6 +2,7 @@
 
 #include "PluginProcessor.h"
 #include "clap/id.h"
+#include "juce_audio_basics/juce_audio_basics.h"
 #include "juce_core/juce_core.h"
 #include "juce_events/juce_events.h"
 #include "juce_graphics/juce_graphics.h"
@@ -53,13 +54,16 @@ inline void addMidiLearnToMenu(juce::PopupMenu &menu, AudioPluginAudioProcessor 
     }
 }
 
-class AnalysisSourceComponent : public juce::Component
+class AnalysisSourceComponent : public juce::Component, public juce::Timer
 {
   public:
     AudioPluginAudioProcessor &processorRef;
     juce::ComboBox fftModeCombo;
     XapSlider attackTimeKnob;
     XapSlider releaseTimeKnob;
+    float envFollowerLevel = 0.0f;
+    float spectralCentroid = 0.0f;
+    float spectralSpread = 0.0f;
     AnalysisSourceComponent(AudioPluginAudioProcessor &proc)
         : processorRef(proc),
           attackTimeKnob(XapSlider::SS_Knob, ParamDesc()
@@ -67,12 +71,14 @@ class AnalysisSourceComponent : public juce::Component
                                                  .asFloat()
                                                  .withRange(1.0, 500.0)
                                                  .withDefault(5.0)
+                                                 .withDecimalPlaces(0)
                                                  .withLinearScaleFormatting("ms")),
           releaseTimeKnob(XapSlider::SS_Knob, ParamDesc()
                                                   .withName("Release")
                                                   .asFloat()
                                                   .withRange(1.0, 500.0)
-                                                  .withDefault(5.0)
+                                                  .withDefault(200.0)
+                                                  .withDecimalPlaces(0)
                                                   .withLinearScaleFormatting("ms"))
     {
         addAndMakeVisible(attackTimeKnob);
@@ -95,7 +101,16 @@ class AnalysisSourceComponent : public juce::Component
             processorRef.modulationAnalyzer.applyMode(fftModeCombo.getSelectedId() - 1);
         };
         fftModeCombo.setSelectedItemIndex(0);
+        startTimerHz(25);
     }
+    void timerCallback() override
+    {
+        envFollowerLevel = processorRef.modulationAnalyzer.latestRMS;
+        spectralCentroid = processorRef.modulationAnalyzer.latestCentroid;
+        spectralSpread = processorRef.modulationAnalyzer.latestSpread;
+        repaint();
+    }
+    void paint(juce::Graphics &g) override;
     void resized() override
     {
         fftModeCombo.setBounds(1, 1, 200, 24);

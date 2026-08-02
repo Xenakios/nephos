@@ -137,14 +137,7 @@ void AudioPluginAudioProcessorEditor::updateParameterRemoteStates()
     }
 }
 
-void AudioPluginAudioProcessorEditor::paint(juce::Graphics &g)
-{
-    float w = juce::jmap<float>(analysisCentroid, -4.0f, 4.0f, 0.0, getWidth());
-    g.setColour(juce::Colours::green);
-    g.fillRect(0.0f, 0.0f, w, 5.0f);
-    w = juce::jmap<float>(analysisSpread, 0.0f, 4.0f, 0.0, getWidth());
-    g.fillRect(0.0f, 5.0f, w, 5.0f);
-}
+void AudioPluginAudioProcessorEditor::paint(juce::Graphics &g) {}
 
 void AudioPluginAudioProcessorEditor::timerCallback()
 {
@@ -211,7 +204,7 @@ void AudioPluginAudioProcessorEditor::timerCallback()
 
 void AudioPluginAudioProcessorEditor::resized()
 {
-    mainTabs.setBounds(0, 10, getWidth(), getHeight() - 10);
+    mainTabs.setBounds(0, 0, getWidth(), getHeight());
 }
 
 MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)

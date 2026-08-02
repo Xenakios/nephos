@@ -693,3 +693,34 @@ void StackingModuleComponent::resized()
     flex.items.add(juce::FlexItem(spatRandomKnob).withFlex(1.0).withMargin(2));
     flex.performLayout(juce::Rectangle<int>(7, 17, getWidth() - 14, getHeight() - 28));
 }
+
+void AnalysisSourceComponent::paint(juce::Graphics &g)
+{
+    g.setColour(juce::Colours::green);
+    float w = getWidth() - 210;
+    float db = juce::Decibels::gainToDecibels(envFollowerLevel);
+    float barw = juce::jmap<float>(db, -100.0f, 0.0f, 0.0f, w);
+    float yoffset = 2.0f;
+    float barh = 20.0f;
+    g.fillRect(205.0f, yoffset, barw, barh);
+    g.setColour(juce::Colours::white);
+    g.drawRect(205.0f, yoffset, w, barh);
+    g.drawText("Envelope Follower", juce::Rectangle<float>(205.0f, yoffset, w, barh),
+               juce::Justification::centred);
+    yoffset += barh + 2.0f;
+    barw = juce::jmap<float>(spectralCentroid, -4.0f, 4.0f, 0.0, w);
+    g.setColour(juce::Colours::green);
+    g.fillRect(205.0f, yoffset, barw, barh);
+    g.setColour(juce::Colours::white);
+    g.drawRect(205.0f, yoffset, w, barh);
+    g.drawText("Spectral Centroid", juce::Rectangle<float>(205.0f, yoffset, w, barh),
+               juce::Justification::centred);
+    yoffset += barh + 2.0f;
+    barw = juce::jmap<float>(spectralSpread, 0.0f, 4.0f, 0.0, w);
+    g.setColour(juce::Colours::green);
+    g.fillRect(205.0f, yoffset, barw, barh);
+    g.setColour(juce::Colours::white);
+    g.drawRect(205.0f, yoffset, w, barh);
+    g.drawText("Spectral Spread", juce::Rectangle<float>(205.0f, yoffset, w, barh),
+               juce::Justification::centred);
+}

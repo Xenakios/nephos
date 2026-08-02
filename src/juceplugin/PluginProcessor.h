@@ -227,6 +227,10 @@ class SpectralModulationAnalyzer
     float latestRMS{0.0f};
     // ... etc for other descriptors
     juce::CriticalSection cs;
+    SpectralModulationAnalyzer()
+    {
+        // envFollower.set
+    }
     void applyMode(int m)
     {
         juce::ScopedLock locker(cs);
@@ -252,13 +256,16 @@ class SpectralModulationAnalyzer
         latestSpread = 0.0f;
     }
     float sampleRate = 0.0f;
+    juce::AudioBuffer<float> envfoloutputbuffer;
     void prepareToPlay(double sampleRate_, int samplesPerBlock)
     {
+        envfoloutputbuffer.setSize(2, samplesPerBlock);
+        envfoloutputbuffer.clear();
         sampleRate = sampleRate_;
         juce::dsp::ProcessSpec spec;
         spec.sampleRate = sampleRate_;
         spec.maximumBlockSize = samplesPerBlock;
-        spec.numChannels = 1;
+        spec.numChannels = 2;
         envFollower.prepare(spec);
         auto mode = lastModeIdx;
         if (mode == -1)
@@ -278,9 +285,14 @@ class SpectralModulationAnalyzer
         const int numSamples = buffer.getNumSamples();
         const float *in = buffer.getReadPointer(0); // mono/first channel for analysis
 
+        juce::dsp::AudioBlock<float> oblock{envfoloutputbuffer.getArrayOfWritePointers(), 2,
+                                            (size_t)buffer.getNumSamples()};
+        juce::dsp::ProcessContextNonReplacing<float> ctx{buffer, oblock};
+        envFollower.process(ctx);
+        latestRMS = envfoloutputbuffer.getSample(0, 0);
         for (int i = 0; i < numSamples; ++i)
         {
-            latestRMS = envFollower.processSample(0, in[i]);
+            // latestRMS = envFollower.processSample(0, in[i]);
             // Write incoming sample into circular buffer
             circularBuffer.setSample(0, circularBufferWritePos, in[i]);
             circularBufferWritePos = (circularBufferWritePos + 1) % circularBufferSize;
