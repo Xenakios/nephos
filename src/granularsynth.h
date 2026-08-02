@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <initializer_list>
 #include <mutex>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 #include <span>
@@ -712,15 +713,24 @@ class GranulatorVoice
             fx.prepareInstance(sr, granul_block_size);
         samplerate_was_changed = true;
     }
+    struct PendingInsertConf
+    {
+        bool is_pending = false;
+        uint8_t mainmode = 0;
+        uint8_t awtype = 0;
+        sst::filtersplusplus::FilterModel sstmodel;
+        sst::filtersplusplus::ModelConfig sstconfig;
+    };
+    std::array<PendingInsertConf, 4> pendingInsertConfs;
     void set_insert_type(size_t filtindex, uint8_t mainmode, uint8_t awtype,
                          sfpp::FilterModel model, sfpp::ModelConfig config)
     {
-        GrainInsertFX::ModeInfo gmode;
-        gmode.mainmode = mainmode;
-        gmode.awtype = awtype;
-        gmode.sstmodel = model;
-        gmode.sstconfig = config;
-        insert_fx[filtindex].setMode(gmode);
+        assert(filtindex < pendingInsertConfs.size());
+        pendingInsertConfs[filtindex].is_pending = true;
+        pendingInsertConfs[filtindex].mainmode = mainmode;
+        pendingInsertConfs[filtindex].awtype = awtype;
+        pendingInsertConfs[filtindex].sstconfig = config;
+        pendingInsertConfs[filtindex].sstmodel = model;
     }
     void calculate_ambisonic_coeffs(float *destarray, float azimuth, float elevation)
     {
@@ -758,6 +768,19 @@ class GranulatorVoice
     float omniboostinverse = 1.0f;
     void start(GrainEvent &evpars)
     {
+        for (size_t i = 0; i < pendingInsertConfs.size(); ++i)
+        {
+            if (pendingInsertConfs[i].is_pending)
+            {
+                GrainInsertFX::ModeInfo gmode;
+                gmode.mainmode = pendingInsertConfs[i].mainmode;
+                gmode.awtype = pendingInsertConfs[i].awtype;
+                gmode.sstconfig = pendingInsertConfs[i].sstconfig;
+                gmode.sstmodel = pendingInsertConfs[i].sstmodel;
+                insert_fx[i].setMode(gmode);
+                pendingInsertConfs[i].is_pending = false;
+            }
+        }
         active = true;
         int newosctype = std::clamp(evpars.generator_type, 0, 6);
         assert(osctypemapping.size() == 7);
@@ -2178,8 +2201,6 @@ class ToneGranulator
         for (int i = 0; i < numvoices; ++i)
         {
             auto &v = voices[i];
-            // v->set_samplerate(sr);
-
             v->set_insert_type(which, mainmode, awtype, mo, conf);
             if (i == 0)
             {
