@@ -143,7 +143,12 @@ class SpectralModulationAnalyzer
     float latestRMS{0.0f};
     // ... etc for other descriptors
 
-    SpectralModulationAnalyzer() { fifo_from_gui.reset(256); }
+    SpectralModulationAnalyzer()
+    {
+        fifo_from_gui.reset(256);
+        post_parameter_change(PAR_ATTACK, 5);
+        post_parameter_change(PAR_RELEASE, 200);
+    }
     void applyMode(int m)
     {
         if (m == lastModeIdx)

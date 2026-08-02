@@ -2,6 +2,7 @@
 
 #include "PluginProcessor.h"
 #include "clap/id.h"
+#include "inputanalyzer.h"
 #include "juce_audio_basics/juce_audio_basics.h"
 #include "juce_core/juce_core.h"
 #include "juce_events/juce_events.h"
@@ -129,7 +130,8 @@ class AnalysisSourceComponent : public juce::Component, public juce::Timer
                 fftModeCombo.getSelectedId() - 1};
             processorRef.modulationAnalyzer.fifo_from_gui.push(msg);
         };
-        fftModeCombo.setSelectedItemIndex(0, juce::dontSendNotification);
+        fftModeCombo.setSelectedItemIndex(SpectralModulationAnalyzer::defaultModeIdx,
+                                          juce::dontSendNotification);
         startTimerHz(25);
     }
     void timerCallback() override
