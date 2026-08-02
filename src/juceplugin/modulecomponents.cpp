@@ -704,13 +704,13 @@ void AnalysisSourceComponent::paint(juce::Graphics &g)
 
     const auto &pars = processorRef.modulationAnalyzer.expanderParams;
     juce::Path path;
-    float curvew = 60;
-    juce::Rectangle<float> curverect{xoffset, (float)expUpThKnob.getY(), curvew, curvew};
+    float curvew = 80.0;
+    juce::Rectangle<float> curverect{xoffset, (float)1.0f, curvew, curvew};
     for (int i = 0; i < curvew; ++i)
     {
         float db = juce::jmap<float>(i, 0, curvew - 1, -80.0f, 0.0f);
         db = SpectralModulationAnalyzer::envelopeExpand(db, pars);
-        float ycor = curverect.getY() + juce::jmap<float>(db, -100.0f, 0.0f, curvew, 0);
+        float ycor = curverect.getY() + juce::jmap<float>(db, -80.0f, 0.0f, curvew, 0);
         if (i == 0)
             path.startNewSubPath(curverect.getX() + i, ycor);
         else
@@ -719,11 +719,18 @@ void AnalysisSourceComponent::paint(juce::Graphics &g)
     g.setColour(juce::Colours::white);
     g.strokePath(path, juce::PathStrokeType{1.0f});
     g.drawRect(curverect, 2.0f);
-    xoffset += 63.0;
+
+    xoffset += 102.0;
+
+    float indb = juce::Decibels::gainToDecibels(envFollowerLevel);
+
+    float outdb = SpectralModulationAnalyzer::envelopeExpand(indb, pars);
+    float circxcor = curverect.getX() + juce::jmap<float>(indb, -80.0f, 0.0f, 0, curvew);
+    float circycor = curverect.getY() + juce::jmap<float>(outdb, -80.0f, 0.0f, curvew, 0);
+    g.setColour(juce::Colours::yellow);
+    g.fillEllipse(circxcor - 3.0f, circycor - 3.0f, 6.0f, 6.0f);
     g.setColour(juce::Colours::green);
-    float db = juce::Decibels::gainToDecibels(envFollowerLevel);
-    db = SpectralModulationAnalyzer::envelopeExpand(db, pars);
-    float barw = juce::jmap<float>(db, -100.0f, 0.0f, 0.0f, w);
+    float barw = juce::jmap<float>(outdb, -100.0f, 0.0f, 0.0f, w);
     float yoffset = 2.0f;
     float barh = 20.0f;
     g.fillRect(xoffset, yoffset, barw, barh);
