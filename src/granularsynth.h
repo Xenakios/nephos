@@ -2190,6 +2190,7 @@ class ToneGranulator
     std::array<sfpp::FilterModel, 2> filtersModels{sfpp::FilterModel(), sfpp::FilterModel()};
     std::array<sfpp::ModelConfig, 2> filtersConfigs{sfpp::ModelConfig(), sfpp::ModelConfig()};
     alignas(32) EasingLUTS eluts;
+    bool insertPMDPending = false;
     void set_filter(int which, uint8_t mainmode, uint8_t awtype, sfpp::FilterModel mo,
                     sfpp::ModelConfig conf)
     {
@@ -2202,6 +2203,7 @@ class ToneGranulator
         {
             auto &v = voices[i];
             v->set_insert_type(which, mainmode, awtype, mo, conf);
+            insertPMDPending = true;
             if (i == 0)
             {
                 for (size_t j = 0; j < GranulatorVoice::maxParamsPerInsert; ++j)
@@ -2211,7 +2213,9 @@ class ToneGranulator
                     if (oldmainmode == GrainInsertFX::GFXNONE ||
                         oldmainmode == GrainInsertFX::GFXAIRWINDOWS ||
                         oldmainmode == GrainInsertFX::GFXXENAKIOS)
+                    {
                         *idtoparvalptr[parid] = v->insert_fx[which].paramvalues[j];
+                    }
                     idtoparmetadata[parid]->name = v->insert_fx[which].getParameterName(j);
                     idtoparmetadata[parid]->defaultVal = v->insert_fx[which].paramvalues[j];
                 }
@@ -2774,6 +2778,10 @@ class ToneGranulator
                     voices[j]->tail_len = taillen;
                     voices[j]->tail_fade_len = std::clamp(taillen * 0.5, 0.002, 1.0);
                     voices[j]->start(*ev);
+                    if (insertPMDPending)
+                    {
+                        insertPMDPending = false;
+                    }
                     voicewasfound = true;
                     if (gatherGrainVisData)
                     {
