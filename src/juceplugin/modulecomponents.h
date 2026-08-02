@@ -103,18 +103,28 @@ class AnalysisSourceComponent : public juce::Component, public juce::Timer
         addAndMakeVisible(expUpThKnob);
         addAndMakeVisible(fftModeCombo);
         attackTimeKnob.OnValueChanged = [this]() {
-            processorRef.modulationAnalyzer.setEnvelopeFollowerParameters(
-                attackTimeKnob.getValue(), releaseTimeKnob.getValue());
+            SpectralModulationAnalyzer::Message msg{
+                SpectralModulationAnalyzer::Message::OP_CHANGEPARAM,
+                SpectralModulationAnalyzer::PAR_ATTACK, 0, attackTimeKnob.getValue()};
+            processorRef.modulationAnalyzer.fifo_from_gui.push(msg);
         };
         releaseTimeKnob.OnValueChanged = [this]() {
-            processorRef.modulationAnalyzer.setEnvelopeFollowerParameters(
-                attackTimeKnob.getValue(), releaseTimeKnob.getValue());
+            SpectralModulationAnalyzer::Message msg{
+                SpectralModulationAnalyzer::Message::OP_CHANGEPARAM,
+                SpectralModulationAnalyzer::PAR_RELEASE, 0, releaseTimeKnob.getValue()};
+            processorRef.modulationAnalyzer.fifo_from_gui.push(msg);
         };
         expDownThKnob.OnValueChanged = [this]() {
-            processorRef.modulationAnalyzer.expanderParams.downThreshold = expDownThKnob.getValue();
+            SpectralModulationAnalyzer::Message msg{
+                SpectralModulationAnalyzer::Message::OP_CHANGEPARAM,
+                SpectralModulationAnalyzer::PAR_DOWNTHRESHOLD, 0, expDownThKnob.getValue()};
+            processorRef.modulationAnalyzer.fifo_from_gui.push(msg);
         };
         expUpThKnob.OnValueChanged = [this]() {
-            processorRef.modulationAnalyzer.expanderParams.upThreshold = expUpThKnob.getValue();
+            SpectralModulationAnalyzer::Message msg{
+                SpectralModulationAnalyzer::Message::OP_CHANGEPARAM,
+                SpectralModulationAnalyzer::PAR_UPTHRESHOLD, 0, expUpThKnob.getValue()};
+            processorRef.modulationAnalyzer.fifo_from_gui.push(msg);
         };
         auto &modes = processorRef.modulationAnalyzer.modes;
         for (int i = 0; i < modes.size(); ++i)
@@ -122,9 +132,12 @@ class AnalysisSourceComponent : public juce::Component, public juce::Timer
             fftModeCombo.addItem(modes[i].label, i + 1);
         }
         fftModeCombo.onChange = [this]() {
-            processorRef.modulationAnalyzer.applyMode(fftModeCombo.getSelectedId() - 1);
+            SpectralModulationAnalyzer::Message msg{
+                SpectralModulationAnalyzer::Message::OP_CHANGEFFTMODE, CLAP_INVALID_ID,
+                fftModeCombo.getSelectedId() - 1};
+            processorRef.modulationAnalyzer.fifo_from_gui.push(msg);
         };
-        fftModeCombo.setSelectedItemIndex(0);
+        fftModeCombo.setSelectedItemIndex(0, juce::dontSendNotification);
         startTimerHz(25);
     }
     void timerCallback() override

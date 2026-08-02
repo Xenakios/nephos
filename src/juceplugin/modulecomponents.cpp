@@ -704,7 +704,7 @@ void AnalysisSourceComponent::paint(juce::Graphics &g)
 
     const auto &pars = processorRef.modulationAnalyzer.expanderParams;
     juce::Path path;
-    float curvew = 80.0;
+    float curvew = 85.0;
     float floordb = -80.0f;
     juce::Rectangle<float> curverect{xoffset, (float)1.0f, curvew, curvew};
     for (int i = 0; i < curvew; ++i)
@@ -718,8 +718,9 @@ void AnalysisSourceComponent::paint(juce::Graphics &g)
         else
             path.lineTo(curverect.getX() + i, ycor);
     }
-    g.setColour(juce::Colours::white);
+    g.setColour(juce::Colours::black);
     g.strokePath(path, juce::PathStrokeType{2.0f});
+    g.setColour(juce::Colours::white);
     g.drawRect(curverect, 2.0f);
 
     xoffset += 102.0;

@@ -226,16 +226,13 @@ class SpectralModulationAnalyzer
     float latestSpread{0.0f};
     float latestRMS{0.0f};
     // ... etc for other descriptors
-    juce::CriticalSection cs;
-    SpectralModulationAnalyzer()
-    {
-        // envFollower.set
-    }
+
+    SpectralModulationAnalyzer() { fifo_from_gui.reset(256); }
     void applyMode(int m)
     {
-        juce::ScopedLock locker(cs);
         if (m == lastModeIdx)
             return;
+        m = std::clamp(m, 0, 4);
         lastModeIdx = m;
         auto temporder = modes[m].fftOrder;
         auto tempsize = 1 << temporder;
@@ -271,6 +268,27 @@ class SpectralModulationAnalyzer
         float floorDb = -100.0f;  // Floor level (-100 dBFS)
     };
     ExpansionParams expanderParams;
+    enum PARAMS
+    {
+        PAR_ATTACK = 1,
+        PAR_RELEASE = 2,
+        PAR_DOWNTHRESHOLD = 3,
+        PAR_UPTHRESHOLD = 4,
+    };
+    struct Message
+    {
+        enum Opcode
+        {
+            OP_NONE,
+            OP_CHANGEPARAM,
+            OP_CHANGEFFTMODE
+        };
+        Opcode opcode = OP_NONE;
+        uint32_t parid = CLAP_INVALID_ID;
+        int fftmode = CLAP_INVALID_ID;
+        double val = 0.0f;
+    };
+    choc::fifo::SingleReaderSingleWriterFIFO<Message> fifo_from_gui;
     static inline float smoothstep(float x) noexcept
     {
         x = std::clamp(x, 0.0f, 1.0f);
@@ -366,16 +384,27 @@ class SpectralModulationAnalyzer
             mode = defaultModeIdx;
         applyMode(mode);
     }
-    void setEnvelopeFollowerParameters(float atta, float rele)
-    {
-        juce::ScopedLock locker(cs);
-        envFollower.setAttackTime(atta);
-        envFollower.setReleaseTime(rele);
-    }
     void processBlock(juce::AudioBuffer<float> &buffer)
     {
-        // yes yes, nasty but will do for now...
-        juce::ScopedLock locker(cs);
+        Message msg;
+        while (fifo_from_gui.pop(msg))
+        {
+            if (msg.opcode == Message::OP_CHANGEPARAM)
+            {
+                if (msg.parid == PAR_ATTACK)
+                    envFollower.setAttackTime(msg.val);
+                else if (msg.parid == PAR_RELEASE)
+                    envFollower.setReleaseTime(msg.val);
+                else if (msg.parid == PAR_DOWNTHRESHOLD)
+                    expanderParams.downThreshold = msg.val;
+                else if (msg.parid == PAR_UPTHRESHOLD)
+                    expanderParams.upThreshold = msg.val;
+            }
+            if (msg.opcode == Message::OP_CHANGEFFTMODE)
+            {
+                applyMode(msg.fftmode);
+            }
+        }
         const int numSamples = buffer.getNumSamples();
         const float *in = buffer.getReadPointer(0); // mono/first channel for analysis
 
