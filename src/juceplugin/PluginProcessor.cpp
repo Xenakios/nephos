@@ -161,9 +161,14 @@ void AudioPluginAudioProcessor::loadSnapShot(int index)
 {
     if (index >= 0 && index < snapshots.size())
     {
-        if (!snapshots[index].isVoid())
+        auto& state = snapshots[index];
+        if (!state.isVoid())
         {
-            setState(snapshots[index]);
+            state.setMember(StateIgnoreStrings::masterVolume, true);
+            state.setMember(StateIgnoreStrings::dashboardsettings, true);
+            state.setMember(StateIgnoreStrings::ambisonicOrder, true);
+            state.setMember(StateIgnoreStrings::midiBinds, true);
+            setState(state);
         }
         granulator.currentSnapShot = index;
     }
