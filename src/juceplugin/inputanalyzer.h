@@ -111,14 +111,15 @@ class SpectralModulationAnalyzer
         int hopSize;
         const char *label;
     };
-    static constexpr std::array<Mode, 5> modes{{
+    static constexpr std::array<Mode, 6> modes{{
+        {9, 256, "512 / 256"},
         {10, 512, "1024 / 512"},
         {11, 512, "2048 / 512"},
         {12, 512, "4096 / 512"},
         {13, 512, "8192 / 512"},
         {14, 1024, "16384 / 1024"},
     }};
-    static constexpr int defaultModeIdx = 1;
+    static constexpr int defaultModeIdx = 2;
     int lastModeIdx = -1;
     int fftOrder = 0; // 2048-point FFT
     int fftSize = 0;
@@ -147,7 +148,7 @@ class SpectralModulationAnalyzer
     {
         if (m == lastModeIdx)
             return;
-        m = std::clamp(m, 0, 4);
+        m = std::clamp(m, 0, (int)modes.size() - 1);
         lastModeIdx = m;
         auto temporder = modes[m].fftOrder;
         auto tempsize = 1 << temporder;
@@ -175,7 +176,7 @@ class SpectralModulationAnalyzer
         float downKneeWidth = 6.0f;   // Soft knee width in dB
 
         float upThreshold = -10.0f; // dB level where upward expansion begins
-        float upRatio = 1.5f;       // Ratio above upThreshold (e.g. 1.5:1)
+        float upRatio = 2.0f;       // Ratio above upThreshold (e.g. 1.5:1)
         float upKneeWidth = 6.0f;   // Soft knee width in dB
 
         float ceilingDb = 0.0f;   // Hard max ceiling limit (0 dBFS)
