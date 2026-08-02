@@ -705,40 +705,37 @@ void AnalysisSourceComponent::paint(juce::Graphics &g)
     const auto &pars = processorRef.modulationAnalyzer.expanderParams;
     juce::Path path;
     float curvew = 80.0;
+    float floordb = -80.0f;
     juce::Rectangle<float> curverect{xoffset, (float)1.0f, curvew, curvew};
     for (int i = 0; i < curvew; ++i)
     {
-        float db = juce::jmap<float>(i, 0, curvew - 1, -80.0f, 0.0f);
+        float db = juce::jmap<float>(i, 0, curvew - 1, floordb, 0.0f);
         db = SpectralModulationAnalyzer::envelopeExpand(db, pars);
-        float ycor = curverect.getY() + juce::jmap<float>(db, -80.0f, 0.0f, curvew, 0);
+        db = std::clamp(db, floordb, 0.0f);
+        float ycor = curverect.getY() + juce::jmap<float>(db, floordb, 0.0f, curvew, 0);
         if (i == 0)
             path.startNewSubPath(curverect.getX() + i, ycor);
         else
             path.lineTo(curverect.getX() + i, ycor);
     }
     g.setColour(juce::Colours::white);
-    g.strokePath(path, juce::PathStrokeType{1.0f});
+    g.strokePath(path, juce::PathStrokeType{2.0f});
     g.drawRect(curverect, 2.0f);
 
     xoffset += 102.0;
 
     float indb = juce::Decibels::gainToDecibels(envFollowerLevel);
-
+    indb = std::clamp(indb, floordb, 0.0f);
     float outdb = SpectralModulationAnalyzer::envelopeExpand(indb, pars);
-    float circxcor = curverect.getX() + juce::jmap<float>(indb, -80.0f, 0.0f, 0, curvew);
-    float circycor = curverect.getY() + juce::jmap<float>(outdb, -80.0f, 0.0f, curvew, 0);
+    outdb = std::clamp(outdb, floordb, 0.0f);
+    float circxcor = curverect.getX() + juce::jmap<float>(indb, floordb, 0.0f, 0, curvew);
+    float circycor = curverect.getY() + juce::jmap<float>(outdb, floordb, 0.0f, curvew, 0);
     g.setColour(juce::Colours::yellow);
     g.fillEllipse(circxcor - 3.0f, circycor - 3.0f, 6.0f, 6.0f);
     g.setColour(juce::Colours::green);
-    float barw = juce::jmap<float>(outdb, -100.0f, 0.0f, 0.0f, w);
+    float barw = 0.0f;
     float yoffset = 2.0f;
     float barh = 20.0f;
-    g.fillRect(xoffset, yoffset, barw, barh);
-    g.setColour(juce::Colours::white);
-    g.drawRect(xoffset, yoffset, w, barh);
-    g.drawText("Envelope Follower", juce::Rectangle<float>(xoffset, yoffset, w, barh),
-               juce::Justification::centred);
-    yoffset += barh + 2.0f;
     barw = juce::jmap<float>(spectralCentroid, -4.0f, 4.0f, 0.0, w);
     g.setColour(juce::Colours::green);
     g.fillRect(xoffset, yoffset, barw, barh);
