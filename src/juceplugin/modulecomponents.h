@@ -103,28 +103,20 @@ class AnalysisSourceComponent : public juce::Component, public juce::Timer
         addAndMakeVisible(expUpThKnob);
         addAndMakeVisible(fftModeCombo);
         attackTimeKnob.OnValueChanged = [this]() {
-            SpectralModulationAnalyzer::Message msg{
-                SpectralModulationAnalyzer::Message::OP_CHANGEPARAM,
-                SpectralModulationAnalyzer::PAR_ATTACK, 0, attackTimeKnob.getValue()};
-            processorRef.modulationAnalyzer.fifo_from_gui.push(msg);
+            processorRef.modulationAnalyzer.post_parameter_change(
+                SpectralModulationAnalyzer::PAR_ATTACK, attackTimeKnob.getValue());
         };
         releaseTimeKnob.OnValueChanged = [this]() {
-            SpectralModulationAnalyzer::Message msg{
-                SpectralModulationAnalyzer::Message::OP_CHANGEPARAM,
-                SpectralModulationAnalyzer::PAR_RELEASE, 0, releaseTimeKnob.getValue()};
-            processorRef.modulationAnalyzer.fifo_from_gui.push(msg);
+            processorRef.modulationAnalyzer.post_parameter_change(
+                SpectralModulationAnalyzer::PAR_RELEASE, releaseTimeKnob.getValue());
         };
         expDownThKnob.OnValueChanged = [this]() {
-            SpectralModulationAnalyzer::Message msg{
-                SpectralModulationAnalyzer::Message::OP_CHANGEPARAM,
-                SpectralModulationAnalyzer::PAR_DOWNTHRESHOLD, 0, expDownThKnob.getValue()};
-            processorRef.modulationAnalyzer.fifo_from_gui.push(msg);
+            processorRef.modulationAnalyzer.post_parameter_change(
+                SpectralModulationAnalyzer::PAR_DOWNTHRESHOLD, expDownThKnob.getValue());
         };
         expUpThKnob.OnValueChanged = [this]() {
-            SpectralModulationAnalyzer::Message msg{
-                SpectralModulationAnalyzer::Message::OP_CHANGEPARAM,
-                SpectralModulationAnalyzer::PAR_UPTHRESHOLD, 0, expUpThKnob.getValue()};
-            processorRef.modulationAnalyzer.fifo_from_gui.push(msg);
+            processorRef.modulationAnalyzer.post_parameter_change(
+                SpectralModulationAnalyzer::PAR_UPTHRESHOLD, expUpThKnob.getValue());
         };
         auto &modes = processorRef.modulationAnalyzer.modes;
         for (int i = 0; i < modes.size(); ++i)

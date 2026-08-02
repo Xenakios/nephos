@@ -205,6 +205,14 @@ class SpectralModulationAnalyzer
         double val = 0.0f;
     };
     choc::fifo::SingleReaderSingleWriterFIFO<Message> fifo_from_gui;
+    void post_parameter_change(uint32_t parid, float value)
+    {
+        Message msg;
+        msg.opcode = Message::OP_CHANGEPARAM;
+        msg.parid = parid;
+        msg.val = value;
+        fifo_from_gui.push(msg);
+    }
     static inline float smoothstep(float x) noexcept
     {
         x = std::clamp(x, 0.0f, 1.0f);
