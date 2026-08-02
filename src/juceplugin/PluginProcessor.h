@@ -256,21 +256,99 @@ class SpectralModulationAnalyzer
         latestSpread = 0.0f;
     }
     float sampleRate = 0.0f;
-    float expander_th = -40.0f;
-    static float envelopeExpand(float db, float threshold)
+    struct ExpansionParams
     {
-        constexpr float floorDb = -100.0f;
-        constexpr float transitionWidth = 12.0f;
+        float downThreshold = -40.0f; // dB level where downward expansion begins
+        float downRatio = 2.0f;       // Ratio below downThreshold (e.g. 2:1)
+        float downKneeWidth = 6.0f;   // Soft knee width in dB
 
-        if (db >= threshold)
-            return db;
+        float upThreshold = -10.0f; // dB level where upward expansion begins
+        float upRatio = 1.5f;       // Ratio above upThreshold (e.g. 1.5:1)
+        float upKneeWidth = 6.0f;   // Soft knee width in dB
 
-        // Clamp the input signal to the transition region [threshold - 12, threshold]
-        const float clampedDb = std::clamp(db, threshold - transitionWidth, threshold);
+        float ceilingDb = 0.0f;   // Hard max ceiling limit (0 dBFS)
+        float ceilingKnee = 3.0f; // Soft ceiling transition knee in dB
+        float floorDb = -100.0f;  // Floor level (-100 dBFS)
+    };
+    ExpansionParams expanderParams;
+    static inline float smoothstep(float x) noexcept
+    {
+        x = std::clamp(x, 0.0f, 1.0f);
+        return x * x * (3.0f - 2.0f * x);
+    }
+    static float envelopeExpand(float db, const ExpansionParams &p) noexcept
+    {
+        if (db <= p.floorDb)
+            return p.floorDb;
 
-        // Map from transition region to [floorDb, threshold]
-        return juce::jmap<float>(clampedDb, threshold - transitionWidth, threshold, floorDb,
-                                 threshold);
+        float gainChangeDb = 0.0f;
+
+        // --- 1. Downward Expansion ---
+        const float halfDownKnee = p.downKneeWidth * 0.5f;
+        const float downKneeStart = p.downThreshold + halfDownKnee;
+        const float downKneeEnd = p.downThreshold - halfDownKnee;
+
+        if (db < downKneeStart)
+        {
+            const float fullDelta = (1.0f - p.downRatio) * (p.downThreshold - db);
+
+            if (p.downKneeWidth > 0.001f && db > downKneeEnd)
+            {
+                const float t = (downKneeStart - db) / p.downKneeWidth;
+                gainChangeDb += fullDelta * smoothstep(t);
+            }
+            else
+            {
+                gainChangeDb += fullDelta;
+            }
+        }
+
+        // --- 2. Upward Expansion ---
+        const float halfUpKnee = p.upKneeWidth * 0.5f;
+        const float upKneeStart = p.upThreshold - halfUpKnee;
+        const float upKneeEnd = p.upThreshold + halfUpKnee;
+
+        if (db > upKneeStart)
+        {
+            const float fullDelta = (p.upRatio - 1.0f) * (db - p.upThreshold);
+
+            if (p.upKneeWidth > 0.001f && db < upKneeEnd)
+            {
+                const float t = (db - upKneeStart) / p.upKneeWidth;
+                gainChangeDb += fullDelta * smoothstep(t);
+            }
+            else
+            {
+                gainChangeDb += fullDelta;
+            }
+        }
+
+        // Unclamped output level
+        float targetDb = db + gainChangeDb;
+
+        // --- 3. Soft Ceiling / Limiting at 0 dBFS ---
+        const float ceilingStart = p.ceilingDb - p.ceilingKnee;
+
+        if (targetDb > ceilingStart)
+        {
+            if (targetDb >= p.ceilingDb)
+            {
+                // Hard clamp at ceiling
+                targetDb = p.ceilingDb;
+            }
+            else if (p.ceilingKnee > 0.001f)
+            {
+                // Smoothly ease output into 0 dBFS using hyperbolic tangent (tanh) soft knee
+                const float overshoot = targetDb - ceilingStart;
+                const float normalizedOvershoot = overshoot / p.ceilingKnee;
+
+                // Compresses the top knee range smoothly toward 0 dBFS
+                targetDb = ceilingStart + p.ceilingKnee * std::tanh(normalizedOvershoot);
+            }
+        }
+
+        // Final safety floor clamp
+        return std::max(p.floorDb, targetDb);
     }
     juce::AudioBuffer<float> envfoloutputbuffer;
     void prepareToPlay(double sampleRate_, int samplesPerBlock)

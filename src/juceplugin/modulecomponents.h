@@ -61,7 +61,8 @@ class AnalysisSourceComponent : public juce::Component, public juce::Timer
     juce::ComboBox fftModeCombo;
     XapSlider attackTimeKnob;
     XapSlider releaseTimeKnob;
-    XapSlider expThKnob;
+    XapSlider expDownThKnob;
+    XapSlider expUpThKnob;
     float envFollowerLevel = 0.0f;
     float spectralCentroid = 0.0f;
     float spectralSpread = 0.0f;
@@ -81,17 +82,25 @@ class AnalysisSourceComponent : public juce::Component, public juce::Timer
                                                   .withDefault(200.0)
                                                   .withDecimalPlaces(0)
                                                   .withLinearScaleFormatting("ms")),
-          expThKnob(XapSlider::SS_Knob, ParamDesc()
-                                            .withName("Threshold")
-                                            .asFloat()
-                                            .withRange(-60.0f, -12.0)
-                                            .withDefault(-40.0)
-                                            .withDecimalPlaces(0)
-                                            .withLinearScaleFormatting("dB"))
+          expDownThKnob(XapSlider::SS_Knob, ParamDesc()
+                                                .withName("Downward Threshold")
+                                                .asFloat()
+                                                .withRange(-80.0f, -12.0)
+                                                .withDefault(-40.0)
+                                                .withDecimalPlaces(0)
+                                                .withLinearScaleFormatting("dB")),
+          expUpThKnob(XapSlider::SS_Knob, ParamDesc()
+                                              .withName("Upward Threshold")
+                                              .asFloat()
+                                              .withRange(-40.0f, -6.0)
+                                              .withDefault(-20.0)
+                                              .withDecimalPlaces(0)
+                                              .withLinearScaleFormatting("dB"))
     {
         addAndMakeVisible(attackTimeKnob);
         addAndMakeVisible(releaseTimeKnob);
-        addAndMakeVisible(expThKnob);
+        addAndMakeVisible(expDownThKnob);
+        addAndMakeVisible(expUpThKnob);
         addAndMakeVisible(fftModeCombo);
         attackTimeKnob.OnValueChanged = [this]() {
             processorRef.modulationAnalyzer.setEnvelopeFollowerParameters(
@@ -101,8 +110,11 @@ class AnalysisSourceComponent : public juce::Component, public juce::Timer
             processorRef.modulationAnalyzer.setEnvelopeFollowerParameters(
                 attackTimeKnob.getValue(), releaseTimeKnob.getValue());
         };
-        expThKnob.OnValueChanged = [this]() {
-            processorRef.modulationAnalyzer.expander_th = expThKnob.getValue();
+        expDownThKnob.OnValueChanged = [this]() {
+            processorRef.modulationAnalyzer.expanderParams.downThreshold = expDownThKnob.getValue();
+        };
+        expUpThKnob.OnValueChanged = [this]() {
+            processorRef.modulationAnalyzer.expanderParams.upThreshold = expUpThKnob.getValue();
         };
         auto &modes = processorRef.modulationAnalyzer.modes;
         for (int i = 0; i < modes.size(); ++i)
@@ -129,7 +141,9 @@ class AnalysisSourceComponent : public juce::Component, public juce::Timer
         attackTimeKnob.setBounds(1, fftModeCombo.getBottom() + 1, 70, 60);
         releaseTimeKnob.setBounds(attackTimeKnob.getRight() + 1, fftModeCombo.getBottom() + 1, 70,
                                   60);
-        expThKnob.setBounds(releaseTimeKnob.getRight() + 2, fftModeCombo.getBottom() + 1, 70, 60);
+        expDownThKnob.setBounds(releaseTimeKnob.getRight() + 2, fftModeCombo.getBottom() + 1, 70,
+                                60);
+        expUpThKnob.setBounds(expDownThKnob.getRight() + 2, fftModeCombo.getBottom() + 1, 70, 60);
     }
 };
 

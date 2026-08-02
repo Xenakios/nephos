@@ -698,12 +698,31 @@ void StackingModuleComponent::resized()
 
 void AnalysisSourceComponent::paint(juce::Graphics &g)
 {
+
+    float w = getWidth() - expUpThKnob.getRight() - 10;
+    float xoffset = expUpThKnob.getRight() + 2.0;
+
+    const auto &pars = processorRef.modulationAnalyzer.expanderParams;
+    juce::Path path;
+    float curvew = 60;
+    juce::Rectangle<float> curverect{xoffset, (float)expUpThKnob.getY(), curvew, curvew};
+    for (int i = 0; i < curvew; ++i)
+    {
+        float db = juce::jmap<float>(i, 0, curvew - 1, -80.0f, 0.0f);
+        db = SpectralModulationAnalyzer::envelopeExpand(db, pars);
+        float ycor = curverect.getY() + juce::jmap<float>(db, -100.0f, 0.0f, curvew, 0);
+        if (i == 0)
+            path.startNewSubPath(curverect.getX() + i, ycor);
+        else
+            path.lineTo(curverect.getX() + i, ycor);
+    }
+    g.setColour(juce::Colours::white);
+    g.strokePath(path, juce::PathStrokeType{1.0f});
+    g.drawRect(curverect, 2.0f);
+    xoffset += 63.0;
     g.setColour(juce::Colours::green);
-    float w = getWidth() - expThKnob.getRight() - 5;
-    float xoffset = expThKnob.getRight() + 2.0;
     float db = juce::Decibels::gainToDecibels(envFollowerLevel);
-    db =
-        SpectralModulationAnalyzer::envelopeExpand(db, processorRef.modulationAnalyzer.expander_th);
+    db = SpectralModulationAnalyzer::envelopeExpand(db, pars);
     float barw = juce::jmap<float>(db, -100.0f, 0.0f, 0.0f, w);
     float yoffset = 2.0f;
     float barh = 20.0f;

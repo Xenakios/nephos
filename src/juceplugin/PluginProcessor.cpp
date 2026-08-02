@@ -523,7 +523,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         opos += granul_block_size;
         modlevel = juce::Decibels::gainToDecibels(modlevel);
         modlevel =
-            SpectralModulationAnalyzer::envelopeExpand(modlevel, modulationAnalyzer.expander_th);
+            SpectralModulationAnalyzer::envelopeExpand(modlevel, modulationAnalyzer.expanderParams);
         granulator.modSourceValues[ToneGranulator::AA_LEVEL] =
             juce::jmap<float>(modlevel, -100.0f, 0.0f, 0.0f, 1.0f);
 
