@@ -274,12 +274,27 @@ void AudioPluginAudioProcessor::handleMIDICCMessage(int channel, int ccnumber, i
                 if (ccnum >= binding.midicc && ccnum < binding.midicc + 8)
                 {
                     int snaptoload = ccnum - binding.midicc;
-                    DBG("going to load snapshot " << snaptoload << " triggered by CC "
-                                                  << (int)ccnum);
+                    // DBG("going to load snapshot " << snaptoload << " triggered by CC "
+                    //                               << (int)ccnum);
                     loadSnapShot(ccnum - binding.midicc);
                 }
             }
-            if (binding.target_param != ToneGranulator::PAR_LEARN8SNAPSHOTS &&
+            if (binding.target_param >= ToneGranulator::PAR_LEARNPREVIOUSSNAPSHOT &&
+                binding.target_param <= ToneGranulator::PAR_LEARNNEXTSNAPSHOT &&
+                binding.midichan == channel && ccvalue >= 64)
+            {
+                int nextsnap = granulator.currentSnapShot;
+                if (binding.target_param == ToneGranulator::PAR_LEARNNEXTSNAPSHOT)
+                    ++nextsnap;
+                if (binding.target_param == ToneGranulator::PAR_LEARNPREVIOUSSNAPSHOT)
+                    --nextsnap;
+                if (nextsnap < 0)
+                    nextsnap = snapshots.size() - 1;
+                if (nextsnap >= snapshots.size())
+                    nextsnap = 0;
+                loadSnapShot(nextsnap);
+            }
+            if (binding.target_param < ToneGranulator::PAR_LEARN8SNAPSHOTS &&
                 binding.midichan == channel && binding.midicc == ccnum)
             {
                 auto md = granulator.idtoparmetadata[binding.target_param];
@@ -299,7 +314,9 @@ void AudioPluginAudioProcessor::handleMIDICCMessage(int channel, int ccnumber, i
     }
     else
     {
-        if (midiLearnParam != ToneGranulator::PAR_LEARN8SNAPSHOTS)
+        if (midiLearnParam != ToneGranulator::PAR_LEARN8SNAPSHOTS &&
+            midiLearnParam != ToneGranulator::PAR_LEARNPREVIOUSSNAPSHOT &&
+            midiLearnParam != ToneGranulator::PAR_LEARNNEXTSNAPSHOT)
         {
             auto it = granulator.idtoparmetadata.find(midiLearnParam);
             if (it != granulator.idtoparmetadata.end())
@@ -318,7 +335,7 @@ void AudioPluginAudioProcessor::handleMIDICCMessage(int channel, int ccnumber, i
             MIDIBinding b;
             b.midichan = channel;
             b.midicc = ccnum;
-            b.target_param = ToneGranulator::PAR_LEARN8SNAPSHOTS;
+            b.target_param = midiLearnParam;
             midiBindings.push_back(b);
             midiLearnParam = CLAP_INVALID_ID;
         }

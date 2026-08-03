@@ -649,32 +649,58 @@ void PresetsComponent::mouseDown(const juce::MouseEvent &ev)
         juce::PopupMenu menu;
         int foundchan = -1;
         int foundcc = -1;
+        std::map<uint32_t, bool> foundbinds;
+        foundbinds[ToneGranulator::PAR_LEARN8SNAPSHOTS] = false;
+        foundbinds[ToneGranulator::PAR_LEARNPREVIOUSSNAPSHOT] = false;
+        foundbinds[ToneGranulator::PAR_LEARNNEXTSNAPSHOT] = false;
         for (auto &b : processorRef.midiBindings)
         {
-            if (b.target_param == ToneGranulator::PAR_LEARN8SNAPSHOTS)
+            if (b.target_param == ToneGranulator::PAR_LEARN8SNAPSHOTS ||
+                b.target_param == ToneGranulator::PAR_LEARNPREVIOUSSNAPSHOT ||
+                b.target_param == ToneGranulator::PAR_LEARNNEXTSNAPSHOT)
             {
-                foundcc = b.midicc;
                 foundchan = b.midichan;
+                foundcc = b.midicc;
+                foundbinds[b.target_param] = true;
+                // foundparids.push_back(b.target_param);
             }
         }
-        if (foundcc == -1 && foundchan == -1)
+        for (auto &b : foundbinds)
         {
-            menu.addItem("Learn MIDI CC range to load snapshots 1-8", [this]() {
-                processorRef.midiLearnParam = ToneGranulator::PAR_LEARN8SNAPSHOTS;
-            });
-        }
-        else
-        {
-            if (foundcc >= 0)
+            if (b.first == ToneGranulator::PAR_LEARNNEXTSNAPSHOT)
             {
-                menu.addItem("Unlearn MIDI CCs " + juce::String(foundcc) + "-" +
-                                 juce::String(foundcc + 7) + " to load snapshots 1-8",
-                             [this]() {
-                                 processorRef.removeMIDIAssignmentForParam(
-                                     ToneGranulator::PAR_LEARN8SNAPSHOTS);
-                             });
+                if (!b.second)
+                {
+                    menu.addItem("Learn MIDI CC to load next snapshot", [this]() {
+                        processorRef.midiLearnParam = ToneGranulator::PAR_LEARNNEXTSNAPSHOT;
+                    });
+                }
+                else
+                {
+                    menu.addItem("Unlearn MIDI CC to load next snapshot", [this]() {
+                        processorRef.removeMIDIAssignmentForParam(
+                            ToneGranulator::PAR_LEARNNEXTSNAPSHOT);
+                    });
+                }
+            }
+            if (b.first == ToneGranulator::PAR_LEARN8SNAPSHOTS)
+            {
+                if (!b.second)
+                {
+                    menu.addItem("Learn MIDI CC range to load snapshots 1-8", [this]() {
+                        processorRef.midiLearnParam = ToneGranulator::PAR_LEARN8SNAPSHOTS;
+                    });
+                }
+                else
+                {
+                    menu.addItem("Unlearn MIDI CC range to load snapshots 1-8", [this]() {
+                        processorRef.removeMIDIAssignmentForParam(
+                            ToneGranulator::PAR_LEARN8SNAPSHOTS);
+                    });
+                }
             }
         }
+
         menu.showMenuAsync({});
     }
 }
