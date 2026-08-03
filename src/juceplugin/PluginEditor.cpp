@@ -668,12 +668,23 @@ void PresetsComponent::mouseDown(const juce::MouseEvent &ev)
     if (ev.mods.isPopupMenu())
     {
         juce::PopupMenu menu;
-        menu.addItem("Learn MIDI CC range to load snapshots 1-8",[this](){
-            processorRef.midiLearnAction = MIDIBinding::NPA_LOADSNAP0108;
-        });
-        menu.addItem("Learn MIDI CC range to load snapshots 9-16",[this](){
-            processorRef.midiLearnAction = MIDIBinding::NPA_LOADSNAP0916;
-        });
+        menu.addItem("Learn MIDI CC range to load snapshots 1-8",
+                     [this]() { processorRef.midiLearnAction = MIDIBinding::NPA_LOADSNAP0108; });
+        menu.addItem("Learn MIDI CC range to load snapshots 9-16",
+                     [this]() { processorRef.midiLearnAction = MIDIBinding::NPA_LOADSNAP0916; });
+        for (auto &b : processorRef.midiBindings)
+        {
+            if (b.npa == MIDIBinding::NPA_LOADSNAP0108 || b.npa == MIDIBinding::NPA_LOADSNAP0916)
+            {
+                std::string rtxt = "1-8";
+                if (b.npa == MIDIBinding::NPA_LOADSNAP0916)
+                    rtxt = "9-16";
+                menu.addItem(
+                    fmt::format("Remove MIDI CC range {}-{} to load snapshots {}", b.midicc,
+                                b.midicc + 7, rtxt),
+                    [this, npa = b.npa]() { processorRef.removeMidiAssignmentForAction(npa); });
+            }
+        }
         menu.showMenuAsync({});
     }
 }
