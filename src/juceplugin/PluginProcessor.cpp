@@ -268,33 +268,36 @@ void AudioPluginAudioProcessor::handleMIDICCMessage(int channel, int ccnumber, i
         // not in learn mode, so scan for matches
         for (const auto &binding : midiBindings)
         {
-            if (binding.target_param == ToneGranulator::PAR_LEARN8SNAPSHOTS &&
-                binding.midichan == channel && ccvalue >= 64)
+            if (binding.target_param == ToneGranulator::PAR_LEARNSNAPSHOTS0108 ||
+                binding.target_param == ToneGranulator::PAR_LEARNSNAPSHOTS0916 &&
+                    binding.midichan == channel && ccvalue >= 64)
             {
                 if (ccnum >= binding.midicc && ccnum < binding.midicc + 8)
                 {
                     int snaptoload = ccnum - binding.midicc;
+                    if (binding.target_param == ToneGranulator::PAR_LEARNSNAPSHOTS0916)
+                        snaptoload += 8;
                     // DBG("going to load snapshot " << snaptoload << " triggered by CC "
                     //                               << (int)ccnum);
-                    loadSnapShot(ccnum - binding.midicc);
+                    loadSnapShot(snaptoload);
                 }
             }
             if (binding.target_param >= ToneGranulator::PAR_LEARNPREVIOUSSNAPSHOT &&
                 binding.target_param <= ToneGranulator::PAR_LEARNNEXTSNAPSHOT &&
                 binding.midichan == channel && ccvalue >= 64)
             {
-                int nextsnap = granulator.currentSnapShot;
-                if (binding.target_param == ToneGranulator::PAR_LEARNNEXTSNAPSHOT)
-                    ++nextsnap;
-                if (binding.target_param == ToneGranulator::PAR_LEARNPREVIOUSSNAPSHOT)
-                    --nextsnap;
-                if (nextsnap < 0)
-                    nextsnap = snapshots.size() - 1;
-                if (nextsnap >= snapshots.size())
-                    nextsnap = 0;
-                loadSnapShot(nextsnap);
+                if (!snapshots.empty())
+                {
+                    const int count = static_cast<int>(snapshots.size());
+                    int nextsnap = granulator.currentSnapShot;
+                    if (binding.target_param == ToneGranulator::PAR_LEARNNEXTSNAPSHOT)
+                        nextsnap = (nextsnap + 1) % count;
+                    else if (binding.target_param == ToneGranulator::PAR_LEARNPREVIOUSSNAPSHOT)
+                        nextsnap = (nextsnap - 1 + count) % count;
+                    loadSnapShot(nextsnap);
+                }
             }
-            if (binding.target_param < ToneGranulator::PAR_LEARN8SNAPSHOTS &&
+            if (binding.target_param < ToneGranulator::PAR_LEARNSNAPSHOTS0108 &&
                 binding.midichan == channel && binding.midicc == ccnum)
             {
                 auto md = granulator.idtoparmetadata[binding.target_param];
@@ -314,13 +317,14 @@ void AudioPluginAudioProcessor::handleMIDICCMessage(int channel, int ccnumber, i
     }
     else
     {
-        if (midiLearnParam != ToneGranulator::PAR_LEARN8SNAPSHOTS &&
-            midiLearnParam != ToneGranulator::PAR_LEARNPREVIOUSSNAPSHOT &&
-            midiLearnParam != ToneGranulator::PAR_LEARNNEXTSNAPSHOT)
+        if (midiLearnParam < ToneGranulator::PAR_LEARNSNAPSHOTS0108)
         {
             auto it = granulator.idtoparmetadata.find(midiLearnParam);
             if (it != granulator.idtoparmetadata.end())
             {
+                std::erase_if(midiBindings, [this](const MIDIBinding &b) {
+                    return b.target_param == midiLearnParam;
+                });
                 auto md = it->second;
                 midiBindings.emplace_back(MIDIBinding{
                     (uint32_t)channel, ccnum, midiLearnParam, {md->minVal, md->maxVal}});
@@ -775,7 +779,8 @@ void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
             uint32_t cc = b["midicc"].getWithDefault(CLAP_INVALID_ID);
             uint32_t chan = b["midichan"].getWithDefault(1);
             uint32_t parid = b["targetpar"].getWithDefault(CLAP_INVALID_ID);
-            if (parid == ToneGranulator::PAR_LEARN8SNAPSHOTS)
+            if (parid >= ToneGranulator::PAR_LEARNSNAPSHOTS0108 &&
+                parid <= ToneGranulator::PAR_LEARNNEXTSNAPSHOT)
             {
                 MIDIBinding binding;
                 binding.midichan = chan;

@@ -12,6 +12,7 @@
 #include "text/choc_JSON.h"
 #include "xap_slider.h"
 #include <exception>
+#include <fstream>
 #include <memory>
 
 void init_step_sequencer_js();
@@ -274,11 +275,31 @@ void MainPageComponent::mouseDown(const juce::MouseEvent &ev)
     if (ev.mods.isRightButtonDown())
     {
         juce::PopupMenu menu;
-        menu.addItem("Reset MIDI assignments", [this]() {
+        menu.addItem("Reset all MIDI assignments", [this]() {
             ThreadMessage msg;
             msg.opcode = ThreadMessage::OP_UNLEARNMIDI;
             msg.parid = CLAP_INVALID_ID;
             processorRef.from_gui_fifo.push(msg);
+        });
+        menu.addItem("Copy MIDI assignments to clipboard", [this]() {
+            juce::String result;
+            result << "CHAN\t" << "CC\t" << "PARID\t" << "NAME\n";
+            for (auto &e : processorRef.midiBindings)
+            {
+                auto it = processorRef.granulator.idtoparmetadata.find(e.target_param);
+                juce::String name;
+                if (it != processorRef.granulator.idtoparmetadata.end())
+                {
+                    name = it->second->name;
+                }
+                if (e.target_param == ToneGranulator::PAR_LEARNSNAPSHOTS0108)
+                    name = "SNAPSHOTS 1-8";
+                if (e.target_param == ToneGranulator::PAR_LEARNSNAPSHOTS0916)
+                    name = "SNAPSHOTS 9-16";
+                result << (int)e.midichan << "\t" << (int)e.midicc << "\t" << (int)e.target_param
+                       << "\t" << name << "\n";
+            }
+            juce::SystemClipboard::copyTextToClipboard(result);
         });
         menu.showMenuAsync({});
     }
@@ -650,14 +671,14 @@ void PresetsComponent::mouseDown(const juce::MouseEvent &ev)
         int foundchan = -1;
         int foundcc = -1;
         std::map<uint32_t, bool> foundbinds;
-        foundbinds[ToneGranulator::PAR_LEARN8SNAPSHOTS] = false;
+        foundbinds[ToneGranulator::PAR_LEARNSNAPSHOTS0108] = false;
+        foundbinds[ToneGranulator::PAR_LEARNSNAPSHOTS0916] = false;
         foundbinds[ToneGranulator::PAR_LEARNPREVIOUSSNAPSHOT] = false;
         foundbinds[ToneGranulator::PAR_LEARNNEXTSNAPSHOT] = false;
         for (auto &b : processorRef.midiBindings)
         {
-            if (b.target_param == ToneGranulator::PAR_LEARN8SNAPSHOTS ||
-                b.target_param == ToneGranulator::PAR_LEARNPREVIOUSSNAPSHOT ||
-                b.target_param == ToneGranulator::PAR_LEARNNEXTSNAPSHOT)
+            if (b.target_param >= ToneGranulator::PAR_LEARNSNAPSHOTS0108 &&
+                b.target_param <= ToneGranulator::PAR_LEARNNEXTSNAPSHOT)
             {
                 foundchan = b.midichan;
                 foundcc = b.midicc;
@@ -683,20 +704,26 @@ void PresetsComponent::mouseDown(const juce::MouseEvent &ev)
                     });
                 }
             }
-            if (b.first == ToneGranulator::PAR_LEARN8SNAPSHOTS)
+            if (b.first == ToneGranulator::PAR_LEARNSNAPSHOTS0108 ||
+                ToneGranulator::PAR_LEARNSNAPSHOTS0916)
             {
+                juce::String rangetext;
+                if (b.first == ToneGranulator::PAR_LEARNSNAPSHOTS0108)
+                    rangetext = "1-8";
+                if (b.first == ToneGranulator::PAR_LEARNSNAPSHOTS0916)
+                    rangetext = "9-16";
                 if (!b.second)
                 {
-                    menu.addItem("Learn MIDI CC range to load snapshots 1-8", [this]() {
-                        processorRef.midiLearnParam = ToneGranulator::PAR_LEARN8SNAPSHOTS;
-                    });
+                    menu.addItem(
+                        "Learn MIDI CC range to load snapshots " + rangetext,
+                        [this, parid = b.first]() { processorRef.midiLearnParam = parid; });
                 }
                 else
                 {
-                    menu.addItem("Unlearn MIDI CC range to load snapshots 1-8", [this]() {
-                        processorRef.removeMIDIAssignmentForParam(
-                            ToneGranulator::PAR_LEARN8SNAPSHOTS);
-                    });
+                    menu.addItem("Unlearn MIDI CC range to load snapshots "+rangetext,
+                                 [this, parid = b.first]() {
+                                     processorRef.removeMIDIAssignmentForParam(parid);
+                                 });
                 }
             }
         }

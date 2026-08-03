@@ -17,19 +17,19 @@
 inline void addMidiLearnToMenu(juce::PopupMenu &menu, AudioPluginAudioProcessor &processorRef,
                                uint32_t parid)
 {
-    menu.addSectionHeader("MIDI CONTROL " + processorRef.granulator.idtoparmetadata[parid]->name);
+    auto it = processorRef.granulator.idtoparmetadata.find(parid);
+    if (it == processorRef.granulator.idtoparmetadata.end())
+        return;
+    menu.addSectionHeader("MIDI CONTROL : " + it->second->groupName + "/" + it->second->name);
     uint32_t assigned = CLAP_INVALID_ID;
     for (auto &b : processorRef.midiBindings)
     {
         if (b.target_param == parid)
             assigned = b.midicc;
     }
-    if (assigned == CLAP_INVALID_ID)
-    {
-        menu.addItem("Learn MIDI CC",
-                     [&processorRef, parid]() { processorRef.midiLearnParam = parid; });
-    }
-    else
+    menu.addItem("Learn MIDI CC",
+                 [&processorRef, parid]() { processorRef.midiLearnParam = parid; });
+    if (assigned != CLAP_INVALID_ID)
     {
         juce::PopupMenu curvemenu;
         auto curveinfos = GranulatorModConfig::get_curve_metadata();
