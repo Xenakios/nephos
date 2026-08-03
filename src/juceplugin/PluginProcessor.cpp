@@ -49,6 +49,15 @@ void AudioPluginAudioProcessor::setMidiAssignmentParameterRange(uint32_t parid,
     }
 }
 
+void AudioPluginAudioProcessor::removeMidiAssignmentForAction(uint32_t action)
+{
+    ThreadMessage msg;
+    msg.opcode = ThreadMessage::OP_UNLEARNMIDI;
+    msg.awtype = 1;
+    msg.parid = action;
+    from_gui_fifo.push(msg);
+}
+
 void AudioPluginAudioProcessor::removeMIDIAssignmentForParam(uint32_t parid)
 {
     ThreadMessage msg;
@@ -263,42 +272,55 @@ void AudioPluginAudioProcessor::handleMIDICCMessage(int channel, int ccnumber, i
 {
     auto &mm = granulator.modmatrix;
     uint32_t ccnum = ccnumber;
-    if (midiLearnParam == CLAP_INVALID_ID)
+    if (midiLearnAction != MIDIBinding::NPA_NONE)
+    {
+        std::erase_if(midiBindings,
+                      [this](const MIDIBinding &b) { return b.npa == midiLearnAction; });
+        MIDIBinding b;
+        b.midichan = channel;
+        b.midicc = ccnumber;
+        b.npa = (MIDIBinding::NonParamAction)midiLearnAction.load();
+        midiBindings.push_back(b);
+        midiLearnAction = 0;
+        midiLearnParam = CLAP_INVALID_ID;
+        return;
+    }
+    if (midiLearnParam == CLAP_INVALID_ID && midiLearnAction == 0)
     {
         // not in learn mode, so scan for matches
         for (const auto &binding : midiBindings)
         {
-            if (binding.target_param == ToneGranulator::PAR_LEARNSNAPSHOTS0108 ||
-                binding.target_param == ToneGranulator::PAR_LEARNSNAPSHOTS0916 &&
-                    binding.midichan == channel && ccvalue >= 64)
+            if (binding.npa == MIDIBinding::NPA_LOADSNAP0108 ||
+                binding.npa == MIDIBinding::NPA_LOADSNAP0916 && binding.midichan == channel &&
+                    ccvalue >= 64)
             {
                 if (ccnum >= binding.midicc && ccnum < binding.midicc + 8)
                 {
                     int snaptoload = ccnum - binding.midicc;
-                    if (binding.target_param == ToneGranulator::PAR_LEARNSNAPSHOTS0916)
+                    if (binding.npa == MIDIBinding::NPA_LOADSNAP0916)
                         snaptoload += 8;
                     // DBG("going to load snapshot " << snaptoload << " triggered by CC "
                     //                               << (int)ccnum);
                     loadSnapShot(snaptoload);
                 }
             }
-            if (binding.target_param >= ToneGranulator::PAR_LEARNPREVIOUSSNAPSHOT &&
-                binding.target_param <= ToneGranulator::PAR_LEARNNEXTSNAPSHOT &&
-                binding.midichan == channel && ccvalue >= 64)
+            if (binding.npa == MIDIBinding::NPA_LOADNEXTSNAP ||
+                binding.npa == MIDIBinding::NPA_LOADPREVSNAP && binding.midichan == channel &&
+                    ccvalue >= 64)
             {
                 if (!snapshots.empty())
                 {
                     const int count = static_cast<int>(snapshots.size());
                     int nextsnap = granulator.currentSnapShot;
-                    if (binding.target_param == ToneGranulator::PAR_LEARNNEXTSNAPSHOT)
+                    if (binding.npa == MIDIBinding::NPA_LOADNEXTSNAP)
                         nextsnap = (nextsnap + 1) % count;
-                    else if (binding.target_param == ToneGranulator::PAR_LEARNPREVIOUSSNAPSHOT)
+                    else if (binding.npa == MIDIBinding::NPA_LOADPREVSNAP)
                         nextsnap = (nextsnap - 1 + count) % count;
                     loadSnapShot(nextsnap);
                 }
             }
-            if (binding.target_param < ToneGranulator::PAR_LEARNSNAPSHOTS0108 &&
-                binding.midichan == channel && binding.midicc == ccnum)
+            if (binding.target_param != CLAP_INVALID_ID && binding.midichan == channel &&
+                binding.midicc == ccnum)
             {
                 auto md = granulator.idtoparmetadata[binding.target_param];
                 float minval = std::clamp(binding.par_range.first, md->minVal, md->maxVal);
@@ -317,34 +339,23 @@ void AudioPluginAudioProcessor::handleMIDICCMessage(int channel, int ccnumber, i
     }
     else
     {
-        if (midiLearnParam < ToneGranulator::PAR_LEARNSNAPSHOTS0108)
+        auto it = granulator.idtoparmetadata.find(midiLearnParam);
+        if (it != granulator.idtoparmetadata.end())
         {
-            auto it = granulator.idtoparmetadata.find(midiLearnParam);
-            if (it != granulator.idtoparmetadata.end())
-            {
-                std::erase_if(midiBindings, [this](const MIDIBinding &b) {
-                    return b.target_param == midiLearnParam;
-                });
-                auto md = it->second;
-                midiBindings.emplace_back(MIDIBinding{
-                    (uint32_t)channel, ccnum, midiLearnParam, {md->minVal, md->maxVal}});
-                midiLearnParam = CLAP_INVALID_ID;
-                ThreadMessage msg;
-                msg.opcode = ThreadMessage::OP_PARAMREMOTE;
-                to_gui_fifo.push(msg);
-            }
-        }
-        else
-        {
-            MIDIBinding b;
-            b.midichan = channel;
-            b.midicc = ccnum;
-            b.target_param = midiLearnParam;
-            midiBindings.push_back(b);
+            std::erase_if(midiBindings, [this](const MIDIBinding &b) {
+                return b.target_param == midiLearnParam;
+            });
+            auto md = it->second;
+            midiBindings.emplace_back(
+                MIDIBinding{(uint32_t)channel, ccnum, midiLearnParam, {md->minVal, md->maxVal}});
             midiLearnParam = CLAP_INVALID_ID;
+            midiLearnAction = 0;
+            ThreadMessage msg;
+            msg.opcode = ThreadMessage::OP_PARAMREMOTE;
+            to_gui_fifo.push(msg);
         }
     }
-
+    return;
     auto dmit = macroMidiMappings.find(ccnum);
     // if (dmit != macroMidiMappings.end())
     if (false)
@@ -478,7 +489,13 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         }
         if (msg.opcode == ThreadMessage::OP_UNLEARNMIDI)
         {
-            if (msg.parid != CLAP_INVALID_ID)
+            if (msg.awtype == 1)
+            {
+                std::erase_if(midiBindings, [action = msg.parid](const MIDIBinding &b) {
+                    return b.npa == action;
+                });
+            }
+            if (msg.awtype == 0 && msg.parid != CLAP_INVALID_ID)
             {
                 std::erase_if(midiBindings, [parid = msg.parid](const MIDIBinding &b) {
                     return b.target_param == parid;
@@ -752,6 +769,7 @@ choc::value::Value AudioPluginAudioProcessor::getState()
         midibind.setMember("midicc", (int64_t)b.midicc);
         midibind.setMember("midichan", (int64_t)b.midichan);
         midibind.setMember("targetpar", (int64_t)b.target_param);
+        midibind.setMember("targetaction", (int64_t)b.npa);
         midibind.setMember("parmin", b.par_range.first);
         midibind.setMember("parmax", b.par_range.second);
         midibind.setMember("curveid", b.mapfunctionid);
@@ -779,13 +797,13 @@ void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
             uint32_t cc = b["midicc"].getWithDefault(CLAP_INVALID_ID);
             uint32_t chan = b["midichan"].getWithDefault(1);
             uint32_t parid = b["targetpar"].getWithDefault(CLAP_INVALID_ID);
-            if (parid >= ToneGranulator::PAR_LEARNSNAPSHOTS0108 &&
-                parid <= ToneGranulator::PAR_LEARNNEXTSNAPSHOT)
+            uint32_t npa = b["targetaction"].getWithDefault(0);
+            if (npa)
             {
                 MIDIBinding binding;
                 binding.midichan = chan;
                 binding.midicc = cc;
-                binding.target_param = parid;
+                binding.npa = (MIDIBinding::NonParamAction)npa;
                 midiBindings.emplace_back(binding);
             }
             else

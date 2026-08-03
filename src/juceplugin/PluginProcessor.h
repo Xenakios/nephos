@@ -75,9 +75,21 @@ struct MIDIBinding
     uint32_t midichan = 1;
     uint32_t midicc = CLAP_INVALID_ID;
     uint32_t target_param = CLAP_INVALID_ID;
+    
     std::pair<float, float> par_range{0.0f, 0.0f};
     std::function<float(float)> mapfunction;
     int mapfunctionid = 0;
+    enum NonParamAction
+    {
+        NPA_NONE,
+        NPA_GRAINMANUALTRIG,
+        NPA_RESETMODULATORS,
+        NPA_LOADSNAP0108,
+        NPA_LOADSNAP0916,
+        NPA_LOADPREVSNAP,
+        NPA_LOADNEXTSNAP
+    };
+    NonParamAction npa = NPA_NONE;
 };
 
 namespace StateIgnoreStrings
@@ -90,7 +102,6 @@ static constexpr auto dashboardsettings = "ignore_dashboard"sv;
 static constexpr auto ambisonicOrder = "ignore_ambiorder"sv;
 static constexpr auto midiBinds = "ignore_midibindings"sv;
 } // namespace StateIgnoreStrings
-
 
 class AudioPluginAudioProcessor final : public juce::AudioProcessor
 {
@@ -148,7 +159,9 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
 
     std::vector<MIDIBinding> midiBindings;
     std::atomic<uint32_t> midiLearnParam{CLAP_INVALID_ID};
+    std::atomic<uint32_t> midiLearnAction{MIDIBinding::NPA_NONE};
     void removeMIDIAssignmentForParam(uint32_t parid);
+    void removeMidiAssignmentForAction(uint32_t action);
     void setMidiAssignmentParameterRange(uint32_t parid, std::optional<float> minval,
                                          std::optional<float> maxval);
     void setMidiAssignmentMappingCurve(uint32_t parid, int curveid);
