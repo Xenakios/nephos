@@ -2185,21 +2185,26 @@ class ToneGranulator
         }
         init_filter_infos();
     }
-    std::array<size_t, 2> insertsMainModes = {0, 0};
-    std::array<size_t, 2> insertsAWTypes = {0, 0};
-    std::array<sfpp::FilterModel, 2> filtersModels{sfpp::FilterModel(), sfpp::FilterModel()};
-    std::array<sfpp::ModelConfig, 2> filtersConfigs{sfpp::ModelConfig(), sfpp::ModelConfig()};
+    std::array<GranulatorVoice::PendingInsertConf, 2> currentInsertConfs;
     alignas(32) EasingLUTS eluts;
     // this is not super ideal but maybe we can live with this...
     GrainInsertFX fxInstanceForMetadata;
     void set_filter(int which, uint8_t mainmode, uint8_t awtype, sfpp::FilterModel mo,
                     sfpp::ModelConfig conf)
     {
-        filtersModels[which] = mo;
-        filtersConfigs[which] = conf;
-        int oldmainmode = insertsMainModes[which];
-        insertsMainModes[which] = mainmode;
-        insertsAWTypes[which] = awtype;
+        if (which < 0 || which >= currentInsertConfs.size())
+            return;
+        if (currentInsertConfs[which].mainmode == mainmode &&
+            currentInsertConfs[which].awtype == awtype &&
+            currentInsertConfs[which].sstmodel == mo && currentInsertConfs[which].sstconfig == conf)
+        {
+            return;
+        }
+        int oldmainmode = currentInsertConfs[which].mainmode;
+        currentInsertConfs[which].mainmode = mainmode;
+        currentInsertConfs[which].awtype = awtype;
+        currentInsertConfs[which].sstconfig = conf;
+        currentInsertConfs[which].sstmodel = mo;
         GrainInsertFX::ModeInfo gmode;
         gmode.mainmode = mainmode;
         gmode.awtype = awtype;

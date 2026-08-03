@@ -641,13 +641,13 @@ choc::value::Value AudioPluginAudioProcessor::getState()
     for (int i = 0; i < 2; ++i)
     {
         auto filterstate = choc::value::createObject("filterstate");
-        filterstate.setMember("mainmode", (int64_t)granulator.insertsMainModes[i]);
-        filterstate.setMember("awtype", (int64_t)granulator.insertsAWTypes[i]);
-        filterstate.setMember("model", (int64_t)granulator.filtersModels[i]);
-        filterstate.setMember("pt", (int64_t)granulator.filtersConfigs[i].pt);
-        filterstate.setMember("st", (int64_t)granulator.filtersConfigs[i].st);
-        filterstate.setMember("dt", (int64_t)granulator.filtersConfigs[i].dt);
-        filterstate.setMember("mt", (int64_t)granulator.filtersConfigs[i].mt);
+        filterstate.setMember("mainmode", (int64_t)granulator.currentInsertConfs[i].mainmode);
+        filterstate.setMember("awtype", (int64_t)granulator.currentInsertConfs[i].awtype);
+        filterstate.setMember("model", (int64_t)granulator.currentInsertConfs[i].sstmodel);
+        filterstate.setMember("pt", (int64_t)granulator.currentInsertConfs[i].sstconfig.pt);
+        filterstate.setMember("st", (int64_t)granulator.currentInsertConfs[i].sstconfig.st);
+        filterstate.setMember("dt", (int64_t)granulator.currentInsertConfs[i].sstconfig.dt);
+        filterstate.setMember("mt", (int64_t)granulator.currentInsertConfs[i].sstconfig.mt);
         filterstates.addArrayElement(filterstate);
     }
     state.setMember("filterstates", filterstates);
@@ -986,13 +986,13 @@ void AudioPluginAudioProcessor::sendExtraStatesToGUI()
     {
         ThreadMessage msg;
         msg.opcode = ThreadMessage::OP_FILTERTYPE;
-        for (int i = 0; i < granulator.filtersConfigs.size(); ++i)
+        for (int i = 0; i < granulator.currentInsertConfs.size(); ++i)
         {
             msg.filterindex = i;
-            msg.insertmainmode = granulator.insertsMainModes[i];
-            msg.awtype = granulator.insertsAWTypes[i];
-            msg.filtermodel = granulator.filtersModels[i];
-            msg.filterconfig = granulator.filtersConfigs[i];
+            msg.insertmainmode = granulator.currentInsertConfs[i].mainmode;
+            msg.awtype = granulator.currentInsertConfs[i].awtype;
+            msg.filtermodel = granulator.currentInsertConfs[i].sstmodel;
+            msg.filterconfig = granulator.currentInsertConfs[i].sstconfig;
             to_gui_fifo.push(msg);
         }
     }
