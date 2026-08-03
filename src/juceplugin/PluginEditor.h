@@ -629,6 +629,13 @@ class ModulationPage : public juce::Component
         : processorRef(p), analysisComponen(p),
           stepSeqTabs(juce::TabbedButtonBar::Orientation::TabsAtTop)
     {
+        addAndMakeVisible(resetModsButton);
+        resetModsButton.setButtonText("RESET MODULATOR PHASES");
+        resetModsButton.onClick = [this]() {
+            ThreadMessage msg;
+            msg.opcode = ThreadMessage::OP_RESET_MODULATORS;
+            processorRef.from_gui_fifo.push(msg);
+        };
         for (int i = 0; i < 8; ++i)
         {
             auto lfoc = std::make_unique<LFOComponent>(i, &processorRef.granulator);
@@ -662,6 +669,7 @@ class ModulationPage : public juce::Component
     }
     void resized() override
     {
+        resetModsButton.setBounds(1, 1, 200, 38);
         juce::FlexBox flex;
         flex.flexDirection = juce::FlexBox::Direction::column;
         flex.flexWrap = juce::FlexBox::Wrap::wrap;
@@ -670,7 +678,7 @@ class ModulationPage : public juce::Component
             flex.items.add(
                 juce::FlexItem(*lfocomps[i]).withFlex(1.0).withMargin(2.0).withMinHeight(80.0));
         }
-        flex.performLayout(juce::Rectangle<int>(0, 0, getWidth(), 175));
+        flex.performLayout(juce::Rectangle<int>(0, 40, getWidth(), 175));
         stepSeqTabs.setBounds(0, lfocomps.back()->getBottom() + 2, getWidth(), 120);
         juce::FlexBox modrowflex;
         modrowflex.flexDirection = juce::FlexBox::Direction::column;
@@ -689,6 +697,7 @@ class ModulationPage : public juce::Component
     std::vector<std::unique_ptr<LFOComponent>> lfocomps;
     std::vector<std::unique_ptr<StepSeqComponent>> stepcomps;
     std::vector<std::unique_ptr<ModulationRowComponent>> modRowComps;
+    juce::TextButton resetModsButton;
 };
 
 class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor, public juce::Timer

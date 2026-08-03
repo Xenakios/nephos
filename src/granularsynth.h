@@ -2185,6 +2185,21 @@ class ToneGranulator
         }
         init_filter_infos();
     }
+    void reset_lfos()
+    {
+        for (size_t i = 0; i < modmatrix.m_lfos.size(); ++i)
+        {
+            int shape = *idtoparvalptr[PAR_LFOSHAPES + i];
+            modmatrix.m_lfos[i]->attack(shape);
+        }
+    }
+    void reset_step_sequencers() 
+    {
+        for (auto& ss : stepModSources)
+        {
+            ss.reset();
+        }
+    }
     std::array<GranulatorVoice::PendingInsertConf, 2> currentInsertConfs;
     alignas(32) EasingLUTS eluts;
     // this is not super ideal but maybe we can live with this...

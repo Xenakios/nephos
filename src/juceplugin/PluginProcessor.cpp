@@ -412,6 +412,8 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             double t0 = juce::Time::getMillisecondCounterHiRes();
             changeStateImpl(pendingState);
             pendingState = choc::value::Value();
+            granulator.reset_lfos();
+            granulator.reset_step_sequencers();
             sendExtraStatesToGUI();
             double t1 = juce::Time::getMillisecondCounterHiRes();
             DBG("state change took " << t1 - t0 << " milliseconds");
@@ -437,6 +439,11 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     ThreadMessage msg;
     while (from_gui_fifo.pop(msg))
     {
+        if (msg.opcode == ThreadMessage::OP_RESET_MODULATORS)
+        {
+            granulator.reset_lfos();
+            granulator.reset_step_sequencers();
+        }
         if (msg.opcode == ThreadMessage::OP_MIDILEARNRANGE)
         {
             midiBindings[msg.modslot].par_range.first = msg.depth;

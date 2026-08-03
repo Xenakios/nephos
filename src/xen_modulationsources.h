@@ -96,6 +96,13 @@ class StepModSource
     std::atomic<bool> unipolar{false};
     std::vector<float> steps;
     xenakios::Xoroshiro128Plus rng;
+    void reset()
+    {
+        curstep = 0;
+        looppos = 0;
+        laststep = 0;
+        playdirection = 1;
+    }
     struct Message
     {
         enum Opcode

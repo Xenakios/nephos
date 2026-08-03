@@ -40,7 +40,8 @@ struct ThreadMessage
         OP_UNLEARNMIDI,
         OP_MIDILEARNRANGE,
         OP_MIDILEARNCURVE,
-        OP_PARAMREMOTE
+        OP_PARAMREMOTE,
+        OP_RESET_MODULATORS
     };
     OpCode opcode = OP_NOOP;
     // note that some of the fields have multiple meanings depending on
