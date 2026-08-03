@@ -270,10 +270,12 @@ void AudioPluginAudioProcessor::setStateDirtyHack()
 
 void AudioPluginAudioProcessor::handleMIDICCMessage(int channel, int ccnumber, int ccvalue)
 {
+    // DBG("handling midi message " << channel << " " << ccnumber << " " << ccvalue);
     auto &mm = granulator.modmatrix;
     uint32_t ccnum = ccnumber;
     if (midiLearnAction != MIDIBinding::NPA_NONE)
     {
+        // DBG("learning midi cc " << ccnumber << " to trigger action " << (int)midiLearnAction);
         std::erase_if(midiBindings,
                       [this](const MIDIBinding &b) { return b.npa == midiLearnAction; });
         MIDIBinding b;
@@ -290,9 +292,9 @@ void AudioPluginAudioProcessor::handleMIDICCMessage(int channel, int ccnumber, i
         // not in learn mode, so scan for matches
         for (const auto &binding : midiBindings)
         {
-            if (binding.npa == MIDIBinding::NPA_LOADSNAP0108 ||
-                binding.npa == MIDIBinding::NPA_LOADSNAP0916 && binding.midichan == channel &&
-                    ccvalue >= 64)
+            if ((binding.npa == MIDIBinding::NPA_LOADSNAP0108 ||
+                 binding.npa == MIDIBinding::NPA_LOADSNAP0916) &&
+                binding.midichan == channel && ccvalue >= 64)
             {
                 if (ccnum >= binding.midicc && ccnum < binding.midicc + 8)
                 {
