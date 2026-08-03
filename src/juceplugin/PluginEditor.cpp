@@ -43,6 +43,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
     : juce::AudioProcessorEditor(p), processorRef(p), mainPage(p), modulationPage(p), dashPage(p),
       mainTabs(juce::TabbedButtonBar::Orientation::TabsAtTop)
 {
+    addChildComponent(overlaylabel);
     mainTabs.addTab("MAIN", juce::Colours::grey, &mainPage, false);
     mainTabs.addTab("MODULATION", juce::Colours::grey, &modulationPage, false);
     mainTabs.addTab("DASHBOARD", juce::Colours::grey, &dashPage, false);
@@ -137,13 +138,19 @@ void AudioPluginAudioProcessorEditor::updateParameterRemoteStates()
     }
 }
 
-void AudioPluginAudioProcessorEditor::paint(juce::Graphics &g) {}
+void AudioPluginAudioProcessorEditor::setOverLaytext(juce::String txt, int delay_ms)
+{
+    overlaylabel.toFront(false);
+    overlaylabel.setVisible(true);
+    overlaylabel.setJustificationType(juce::Justification::centred);
+    overlaylabel.setColour(juce::Label::ColourIds::backgroundColourId, juce::Colours::black);
+    overlaylabel.setFont(overlaylabel.getFont().withHeight(50));
+    overlaylabel.setText(txt, juce::dontSendNotification);
+    juce::Timer::callAfterDelay(delay_ms, [this]() { overlaylabel.setVisible(false); });
+}
 
 void AudioPluginAudioProcessorEditor::timerCallback()
 {
-    analysisCentroid = processorRef.modulationAnalyzer.latestCentroid;
-    analysisSpread = processorRef.modulationAnalyzer.latestSpread;
-    repaint();
     mainPage.oscModuleComponent.pitchEnvelopeComponent.updateIfNeeded();
 
     for (auto &c : modulationPage.stepcomps)
@@ -166,6 +173,7 @@ void AudioPluginAudioProcessorEditor::timerCallback()
         if (msg.opcode == ThreadMessage::OP_PARAMREMOTE)
         {
             updateParameterRemoteStates();
+            // setOverLaytext("Updated remote control states", 1000);
         }
         if (msg.opcode == ThreadMessage::OP_STEPSEQUENCER)
         {
@@ -205,6 +213,8 @@ void AudioPluginAudioProcessorEditor::timerCallback()
 void AudioPluginAudioProcessorEditor::resized()
 {
     mainTabs.setBounds(0, 0, getWidth(), getHeight());
+    auto area = getLocalBounds().reduced(100, 300);
+    overlaylabel.setBounds(area);
 }
 
 MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
