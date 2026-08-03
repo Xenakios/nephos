@@ -161,7 +161,7 @@ void AudioPluginAudioProcessor::loadSnapShot(int index)
 {
     if (index >= 0 && index < snapshots.size())
     {
-        auto& state = snapshots[index];
+        auto &state = snapshots[index];
         if (!state.isVoid())
         {
             state.setMember(StateIgnoreStrings::masterVolume, true);
@@ -315,7 +315,12 @@ void AudioPluginAudioProcessor::handleMIDICCMessage(int channel, int ccnumber, i
         }
         else
         {
-            // implement
+            MIDIBinding b;
+            b.midichan = channel;
+            b.midicc = ccnum;
+            b.target_param = ToneGranulator::PAR_LEARN8SNAPSHOTS;
+            midiBindings.push_back(b);
+            midiLearnParam = CLAP_INVALID_ID;
         }
     }
 
@@ -740,34 +745,40 @@ void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
         auto binds = state["midibindings"];
         if (binds.size() > 0)
             midiBindings.clear();
-        MIDIBinding b;
-        b.target_param = ToneGranulator::PAR_LEARN8SNAPSHOTS;
-        b.midichan = 1;
-        b.midicc = 50;
-        midiBindings.push_back(b);
         for (int i = 0; i < binds.size(); ++i)
         {
             auto b = binds[i];
             uint32_t cc = b["midicc"].getWithDefault(CLAP_INVALID_ID);
             uint32_t chan = b["midichan"].getWithDefault(1);
             uint32_t parid = b["targetpar"].getWithDefault(CLAP_INVALID_ID);
-            auto it = granulator.idtoparmetadata.find(parid);
-            if (it != granulator.idtoparmetadata.end())
+            if (parid == ToneGranulator::PAR_LEARN8SNAPSHOTS)
             {
-                float parmin = b["parmin"].getWithDefault(it->second->minVal);
-                float parmax = b["parmax"].getWithDefault(it->second->maxVal);
-                int curveid = b["curveid"].getWithDefault(0);
                 MIDIBinding binding;
                 binding.midichan = chan;
                 binding.midicc = cc;
                 binding.target_param = parid;
-                binding.par_range = {parmin, parmax};
-                if (curveid > 0)
-                {
-                    binding.mapfunctionid = curveid;
-                    binding.mapfunction = GranulatorModConfig::getCurveOperator({curveid});
-                }
                 midiBindings.emplace_back(binding);
+            }
+            else
+            {
+                auto it = granulator.idtoparmetadata.find(parid);
+                if (it != granulator.idtoparmetadata.end())
+                {
+                    float parmin = b["parmin"].getWithDefault(it->second->minVal);
+                    float parmax = b["parmax"].getWithDefault(it->second->maxVal);
+                    int curveid = b["curveid"].getWithDefault(0);
+                    MIDIBinding binding;
+                    binding.midichan = chan;
+                    binding.midicc = cc;
+                    binding.target_param = parid;
+                    binding.par_range = {parmin, parmax};
+                    if (curveid > 0)
+                    {
+                        binding.mapfunctionid = curveid;
+                        binding.mapfunction = GranulatorModConfig::getCurveOperator({curveid});
+                    }
+                    midiBindings.emplace_back(binding);
+                }
             }
         }
     }

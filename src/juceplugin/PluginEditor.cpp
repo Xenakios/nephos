@@ -632,3 +632,62 @@ void DashPage::saveSnapShot(int index)
     choc::json::writeAsJSON(ostream, state, true);
     processorRef.saveSnapShot(index, state);
 }
+void PresetsComponent::mouseDown(const juce::MouseEvent &ev)
+{
+    if (ev.mods.isPopupMenu())
+    {
+        juce::PopupMenu menu;
+        int foundchan = -1;
+        int foundcc = -1;
+        for (auto &b : processorRef.midiBindings)
+        {
+            if (b.target_param == ToneGranulator::PAR_LEARN8SNAPSHOTS)
+            {
+                foundcc = b.midicc;
+                foundchan = b.midichan;
+            }
+        }
+        if (foundcc == -1 && foundchan == -1)
+        {
+            menu.addItem("Learn MIDI CC range to load snapshots 1-8", [this]() {
+                processorRef.midiLearnParam = ToneGranulator::PAR_LEARN8SNAPSHOTS;
+            });
+        }
+        else
+        {
+            if (foundcc >= 0)
+            {
+                menu.addItem("Unlearn MIDI CCs " + juce::String(foundcc) + "-" +
+                                 juce::String(foundcc + 7) + " to load snapshots 1-8",
+                             [this]() {
+                                 processorRef.removeMIDIAssignmentForParam(
+                                     ToneGranulator::PAR_LEARN8SNAPSHOTS);
+                             });
+            }
+        }
+        menu.showMenuAsync({});
+    }
+}
+void PresetsComponent::resized()
+{
+    juce::FlexBox flex;
+    flex.flexDirection = juce::FlexBox::Direction::row;
+    flex.flexWrap = juce::FlexBox::Wrap::wrap;
+    for (auto &b : buttons)
+    {
+        flex.items.add(juce::FlexItem(*b).withFlex(1.0).withMinWidth(40.0f).withMaxWidth(40.0f));
+    }
+    flex.performLayout(getLocalBounds());
+}
+void PresetsComponent::updateButtonColors()
+{
+    for (int i = 0; i < buttons.size(); ++i)
+    {
+        buttons[i]->setColour(juce::TextButton::ColourIds::buttonColourId, defaultButtonColor);
+        if (i == lastLoaded)
+            buttons[i]->setColour(juce::TextButton::ColourIds::buttonColourId,
+                                  juce::Colours::orange);
+        if (i == lastSaved)
+            buttons[i]->setColour(juce::TextButton::ColourIds::buttonColourId, juce::Colours::red);
+    }
+}

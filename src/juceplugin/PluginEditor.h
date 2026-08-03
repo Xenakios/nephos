@@ -2,6 +2,7 @@
 
 #include "PluginProcessor.h"
 #include "audiovisualizercomponent.h"
+#include "clap/id.h"
 #include "containers/choc_Value.h"
 #include "juce_audio_utils/juce_audio_utils.h"
 #include "juce_core/juce_core.h"
@@ -109,7 +110,8 @@ class MyCustomLNF : public juce::LookAndFeel_V4
 
 struct PresetsComponent : public juce::Component
 {
-    PresetsComponent()
+    AudioPluginAudioProcessor &processorRef;
+    PresetsComponent(AudioPluginAudioProcessor &p) : processorRef(p)
     {
         for (int i = 0; i < 64; ++i)
         {
@@ -137,31 +139,9 @@ struct PresetsComponent : public juce::Component
         defaultButtonColor =
             buttons.front()->findColour(juce::TextButton::ColourIds::buttonColourId);
     }
-    void resized() override
-    {
-        juce::FlexBox flex;
-        flex.flexDirection = juce::FlexBox::Direction::row;
-        flex.flexWrap = juce::FlexBox::Wrap::wrap;
-        for (auto &b : buttons)
-        {
-            flex.items.add(
-                juce::FlexItem(*b).withFlex(1.0).withMinWidth(40.0f).withMaxWidth(40.0f));
-        }
-        flex.performLayout(getLocalBounds());
-    }
-    void updateButtonColors()
-    {
-        for (int i = 0; i < buttons.size(); ++i)
-        {
-            buttons[i]->setColour(juce::TextButton::ColourIds::buttonColourId, defaultButtonColor);
-            if (i == lastLoaded)
-                buttons[i]->setColour(juce::TextButton::ColourIds::buttonColourId,
-                                      juce::Colours::orange);
-            if (i == lastSaved)
-                buttons[i]->setColour(juce::TextButton::ColourIds::buttonColourId,
-                                      juce::Colours::red);
-        }
-    }
+    void mouseDown(const juce::MouseEvent &ev) override;
+    void resized() override;
+    void updateButtonColors();
     std::function<void(int)> OnSave;
     std::function<void(int)> OnLoad;
     int lastSaved = -1;
@@ -596,7 +576,8 @@ class MainPageComponent final : public juce::Component
 class DashPage : public juce::Component
 {
   public:
-    DashPage(AudioPluginAudioProcessor &p) : processorRef(p), dashBoardComponent(p)
+    DashPage(AudioPluginAudioProcessor &p)
+        : processorRef(p), presetsComponent(p), dashBoardComponent(p)
     {
         presetsComponent.OnSave = [this](int index) { saveSnapShot(index); };
         presetsComponent.OnLoad = [this](int index) { loadSnapShot(index); };
