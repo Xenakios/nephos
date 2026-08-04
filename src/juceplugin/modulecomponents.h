@@ -510,7 +510,7 @@ class StackingModuleComponent : public juce::GroupComponent
     XapSlider pitchRandomKnob;
     XapSlider spatRandomKnob;
     StackingModuleComponent(AudioPluginAudioProcessor &p)
-        : juce::GroupComponent("", "Stacking"), processorRef(p),
+        : juce::GroupComponent("", "Repeats"), processorRef(p),
           countKnob(XapSlider::SS_Knob,
                     *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKCOUNT]),
           lengthKnob(XapSlider::SS_Knob,

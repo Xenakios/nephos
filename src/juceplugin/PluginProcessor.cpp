@@ -503,7 +503,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                     return b.target_param == parid;
                 });
             }
-            else if (msg.awtype == 0 && msg.parid == CLAP_INVALID_ID)
+            if (msg.awtype == 0 && msg.parid == CLAP_INVALID_ID)
             {
                 midiBindings.clear();
             }

@@ -2018,36 +2018,36 @@ class ToneGranulator
                                    .withDefault(1.0)
                                    .withIntegerQuantization()
                                    .withName("Count")
-                                   .withGroupName("Stacking")
+                                   .withGroupName("Repeats")
                                    .withID(PAR_STACKCOUNT));
         parmetadatas.push_back(pmd()
                                    .withRange(0.0f, 1.0f)
                                    .withDefault(0.5)
                                    .withOffsetPowerFormatting("s", 0.05f, 1.95, 2.0f, 1.0f)
                                    .withName("Time Span")
-                                   .withGroupName("Stacking")
+                                   .withGroupName("Repeats")
                                    .withID(PAR_STACKTIMESPAN));
         parmetadatas.push_back(pmd()
                                    .withRange(-1.0f, 1.0f)
                                    .withDefault(0.0)
                                    .withLinearScaleFormatting("", 1.0f)
                                    .withName("Time Curve")
-                                   .withGroupName("Stacking")
+                                   .withGroupName("Repeats")
                                    .withID(PAR_STACKTIMECURVE));
         parmetadatas.push_back(pmd()
                                    .withRange(0.0f, 1.0f)
                                    .withDefault(0.0)
-                                   .withOffsetPowerFormatting("st", 0.0f, 12.0f, 2.0f, 1.0f)
-                                   .withName("Pitch RND")
-                                   .withGroupName("Stacking")
+                                   .withLinearScaleFormatting("ST")
+                                   .withName("Pitch RW")
+                                   .withGroupName("Repeats")
                                    .withID(PAR_STACKRANDOMPITCH)
                                    .withFlags(CLAP_PARAM_IS_MODULATABLE));
         parmetadatas.push_back(pmd()
-                                   .withRange(0.0f, 90.0f)
+                                   .withRange(0.0f, 10.0f)
                                    .withDefault(0.0)
                                    .withLinearScaleFormatting("", 1.0f)
-                                   .withName("Spat RND")
-                                   .withGroupName("Stacking")
+                                   .withName("Spat RW")
+                                   .withGroupName("Repeats")
                                    .withID(PAR_STACKRANDOMSPATIALIZATION)
                                    .withFlags(CLAP_PARAM_IS_MODULATABLE));
         for (int i = 0; i < GranulatorModMatrix::numLfos; ++i)
@@ -2192,9 +2192,9 @@ class ToneGranulator
             modmatrix.m_lfos[i]->attack(shape);
         }
     }
-    void reset_step_sequencers() 
+    void reset_step_sequencers()
     {
-        for (auto& ss : stepModSources)
+        for (auto &ss : stepModSources)
         {
             ss.reset();
         }
@@ -2474,12 +2474,18 @@ class ToneGranulator
 
                 int numToSchedule = std::clamp(*idtoparvalptr[PAR_STACKCOUNT], 1.0f, 16.0f);
                 float pitchrand = std::clamp(*idtoparvalptr[PAR_STACKRANDOMPITCH], 0.0f, 1.0f);
-                pitchrand = 12.0f * std::pow(pitchrand, 2.0f);
+                // pitchrand = 12.0f * std::pow(pitchrand, 2.0f);
                 float timeSpanToSchedule =
                     std::clamp(*idtoparvalptr[PAR_STACKTIMESPAN], 0.0f, 1.0f);
                 timeSpanToSchedule = 0.05f + 1.95f * std::pow(timeSpanToSchedule, 2.0f);
                 float timeSpanCurve = *idtoparvalptr[PAR_STACKTIMECURVE];
                 float spatrand = *idtoparvalptr[PAR_STACKRANDOMSPATIALIZATION];
+                genev.ambi_spread = amb_spread;
+                genev.ambi_rotate = amb_rotate;
+                genev.ambi_omni_boost = omniboost;
+                float walkpitch = pitch;
+                float walkazi = azimuth;
+                float walkelev = elevation;
                 for (int j = 0; j < numToSchedule; ++j)
                 {
                     double tpos = playposframes / this->m_sr;
@@ -2496,22 +2502,12 @@ class ToneGranulator
                     }
                     tpos += timeSpanToSchedule * normpos;
                     genev.time_position = tpos;
-                    // main grain parameters without randomization
-                    if (j == 0)
-                    {
-                        genev.pitch_semitones = pitch;
-                        genev.azimuth = azimuth;
-                        genev.ambi_spread = amb_spread;
-                        genev.ambi_rotate = amb_rotate;
-                        genev.elevation = elevation;
-                        genev.ambi_omni_boost = omniboost;
-                    }
-                    else
-                    {
-                        genev.pitch_semitones = pitch + rng.nextFloatInRange(-pitchrand, pitchrand);
-                        genev.azimuth = azimuth + rng.nextFloatInRange(-spatrand, spatrand);
-                        genev.elevation = elevation + rng.nextFloatInRange(-spatrand, spatrand);
-                    }
+                    genev.pitch_semitones = walkpitch;
+                    walkpitch += rng.nextHypCos(0.0, pitchrand);
+                    genev.azimuth = walkazi;
+                    walkazi += rng.nextHypCos(0.0, spatrand);
+                    genev.elevation = walkelev;
+                    walkelev += rng.nextHypCos(0.0, spatrand);
                     // fading volume for now but should be more adjustable...
                     genev.volume = gvol * (1.0f - (0.5f * normpos));
                     scheduledGrains.push_back(genev);
