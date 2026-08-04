@@ -509,6 +509,7 @@ class StackingModuleComponent : public juce::GroupComponent
     XapSlider warpKnob;
     XapSlider pitchRandomKnob;
     XapSlider spatRandomKnob;
+    XapSlider endVolumeKnob;
     StackingModuleComponent(AudioPluginAudioProcessor &p)
         : juce::GroupComponent("", "Repeats"), processorRef(p),
           countKnob(XapSlider::SS_Knob,
@@ -521,13 +522,16 @@ class StackingModuleComponent : public juce::GroupComponent
                           *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKRANDOMPITCH]),
           spatRandomKnob(
               XapSlider::SS_Knob,
-              *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKRANDOMSPATIALIZATION])
+              *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKRANDOMSPATIALIZATION]),
+          endVolumeKnob(XapSlider::SS_Knob,
+                        *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKENDVOLUME])
     {
         initSlider(p, *this, countKnob);
         initSlider(p, *this, lengthKnob);
         initSlider(p, *this, warpKnob);
         initSlider(p, *this, pitchRandomKnob);
         initSlider(p, *this, spatRandomKnob);
+        initSlider(p, *this, endVolumeKnob);
     }
     void resized() override;
 };

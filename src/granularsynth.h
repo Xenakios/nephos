@@ -1418,6 +1418,7 @@ class ToneGranulator
         PAR_STACKRANDOMPITCH = 2500,
         PAR_STACKRANDOMSPATIALIZATION = 2600,
         PAR_STACKTIMECURVE = 2700,
+        PAR_STACKENDVOLUME = 2750,
         PAR_VOLENVEASINGSTART = 2800,
         PAR_VOLENVEASINGEND = 2900,
         PAR_GRAINMODSLOTAMOUNT0 = 3000,
@@ -2058,6 +2059,14 @@ class ToneGranulator
                                    .withGroupName("Repeats")
                                    .withID(PAR_STACKRANDOMSPATIALIZATION)
                                    .withFlags(CLAP_PARAM_IS_MODULATABLE));
+        parmetadatas.push_back(pmd()
+                                   .withRange(0.0f, 1.0f)
+                                   .withDefault(1.0)
+                                   .withLinearScaleFormatting("%", 100.0f)
+                                   .withName("End Volume")
+                                   .withGroupName("Repeats")
+                                   .withID(PAR_STACKENDVOLUME)
+                                   .withFlags(CLAP_PARAM_IS_MODULATABLE));
         for (int i = 0; i < GranulatorModMatrix::numLfos; ++i)
         {
             parmetadatas.push_back(pmd()
@@ -2513,6 +2522,7 @@ class ToneGranulator
                 float walkpitch = pitch;
                 float walkazi = azimuth;
                 float walkelev = elevation;
+                float endvol = *idtoparvalptr[PAR_STACKENDVOLUME];
                 for (int j = 0; j < numToSchedule; ++j)
                 {
                     double tpos = playposframes / this->m_sr;
@@ -2538,7 +2548,7 @@ class ToneGranulator
 
                     // walkcustom += rng.nextHypCos(0.0, 0.05);
                     // fading volume for now but should be more adjustable...
-                    genev.volume = gvol * (1.0f - (0.5f * normpos));
+                    genev.volume = gvol * (1.0f - ((1.0f - endvol) * normpos));
                     scheduledGrains.push_back(genev);
                 }
                 // need to sort because we may have previous unstarted events and our

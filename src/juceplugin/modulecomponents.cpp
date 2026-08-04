@@ -693,6 +693,7 @@ void StackingModuleComponent::resized()
     flex.items.add(juce::FlexItem(warpKnob).withFlex(1.0).withMargin(2));
     flex.items.add(juce::FlexItem(pitchRandomKnob).withFlex(1.0).withMargin(2));
     flex.items.add(juce::FlexItem(spatRandomKnob).withFlex(1.0).withMargin(2));
+    flex.items.add(juce::FlexItem(endVolumeKnob).withFlex(1.0).withMargin(2));
     flex.performLayout(juce::Rectangle<int>(7, 17, getWidth() - 14, getHeight() - 28));
 }
 
