@@ -2480,6 +2480,25 @@ class ToneGranulator
                 timeSpanToSchedule = 0.05f + 1.95f * std::pow(timeSpanToSchedule, 2.0f);
                 float timeSpanCurve = *idtoparvalptr[PAR_STACKTIMECURVE];
                 float spatrand = *idtoparvalptr[PAR_STACKRANDOMSPATIALIZATION];
+
+                uint32_t customrepeatwalkparam = PAR_OSC_SYNC;
+                float walkcustom = 0.0f;
+                float *customwalktarget = nullptr;
+                float customwalkspread = 0.0f;
+                if (customrepeatwalkparam == PAR_OSC_SYNC)
+                {
+                    customwalktarget = &genev.sync_ratio;
+                    walkcustom = genev.sync_ratio;
+                    customwalkspread = 0.5;
+                }
+                else if (customrepeatwalkparam == PAR_DURATION)
+                {   
+                    customwalktarget = &genev.duration;
+                    walkcustom = genev.duration;
+                    customwalkspread = 0.05;
+                }
+                    
+
                 genev.ambi_spread = amb_spread;
                 genev.ambi_rotate = amb_rotate;
                 genev.ambi_omni_boost = omniboost;
@@ -2508,6 +2527,8 @@ class ToneGranulator
                     walkazi += rng.nextHypCos(0.0, spatrand);
                     genev.elevation = walkelev;
                     walkelev += rng.nextHypCos(0.0, spatrand);
+
+                    // walkcustom += rng.nextHypCos(0.0, 0.05);
                     // fading volume for now but should be more adjustable...
                     genev.volume = gvol * (1.0f - (0.5f * normpos));
                     scheduledGrains.push_back(genev);
