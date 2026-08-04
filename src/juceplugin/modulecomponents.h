@@ -64,6 +64,7 @@ class AnalysisSourceComponent : public juce::Component, public juce::Timer
     XapSlider releaseTimeKnob;
     XapSlider expDownThKnob;
     XapSlider expUpThKnob;
+    juce::ToggleButton moduleEnabled;
     float envFollowerLevel = 0.0f;
     float spectralCentroid = 0.0f;
     float spectralSpread = 0.0f;
@@ -132,6 +133,11 @@ class AnalysisSourceComponent : public juce::Component, public juce::Timer
         };
         fftModeCombo.setSelectedItemIndex(SpectralModulationAnalyzer::defaultModeIdx,
                                           juce::dontSendNotification);
+        addAndMakeVisible(moduleEnabled);
+        moduleEnabled.setButtonText("Enabled");
+        moduleEnabled.onClick = [this]() {
+            processorRef.modulationAnalyzerEnabled = moduleEnabled.getToggleState();
+        };
         startTimerHz(25);
     }
     void timerCallback() override
@@ -144,6 +150,7 @@ class AnalysisSourceComponent : public juce::Component, public juce::Timer
     void paint(juce::Graphics &g) override;
     void resized() override
     {
+        moduleEnabled.setBounds(getWidth() - 150, getHeight() - 25, 148, 24);
         fftModeCombo.setBounds(1, 1, 200, 24);
         attackTimeKnob.setBounds(1, fftModeCombo.getBottom() + 1, 70, 60);
         releaseTimeKnob.setBounds(attackTimeKnob.getRight() + 1, fftModeCombo.getBottom() + 1, 70,

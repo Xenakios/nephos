@@ -340,10 +340,12 @@ class SpectralModulationAnalyzer
         }
         const int numSamples = buffer.getNumSamples();
         const float *in = buffer.getReadPointer(0); // mono/first channel for analysis
-
+        
+        juce::dsp::AudioBlock<float> iblock{buffer.getArrayOfWritePointers(), 2,
+                                            (size_t)buffer.getNumSamples()};
         juce::dsp::AudioBlock<float> oblock{envfoloutputbuffer.getArrayOfWritePointers(), 2,
                                             (size_t)buffer.getNumSamples()};
-        juce::dsp::ProcessContextNonReplacing<float> ctx{buffer, oblock};
+        juce::dsp::ProcessContextNonReplacing<float> ctx{iblock, oblock};
         envFollower.process(ctx);
         latestRMS = envfoloutputbuffer.getSample(0, 0);
         for (int i = 0; i < numSamples; ++i)

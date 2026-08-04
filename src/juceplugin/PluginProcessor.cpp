@@ -460,7 +460,8 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
     keyboardState.processNextMidiBuffer(midiMessages, 0, buffer.getNumSamples(), true);
-    modulationAnalyzer.processBlock(buffer);
+    if (modulationAnalyzerEnabled.load())
+        modulationAnalyzer.processBlock(buffer);
     float modcentroid = std::clamp(modulationAnalyzer.latestCentroid, -4.0f, 4.0f);
     granulator.modSourceValues[ToneGranulator::AA_CENTROID] =
         juce::jmap<float>(modcentroid, -4.0f, 4.0f, -1.0f, 1.0f);

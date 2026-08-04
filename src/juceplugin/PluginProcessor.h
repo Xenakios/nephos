@@ -182,7 +182,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     juce::AudioBuffer<float> visualizerAudioBuffer;
     juce::MidiKeyboardState keyboardState;
     SpectralModulationAnalyzer modulationAnalyzer;
-
+    std::atomic<bool> modulationAnalyzerEnabled{false};
   private:
     alignas(32) std::vector<float> workBuffer;
     alignas(32) choc::fifo::SingleReaderSingleWriterFIFO<
