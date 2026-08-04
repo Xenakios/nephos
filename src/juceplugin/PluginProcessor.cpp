@@ -8,6 +8,7 @@
 #include "juce_core/juce_core.h"
 #include "text/choc_Files.h"
 #include "text/choc_JSON.h"
+#include <cmath>
 #include <cstdint>
 #include <exception>
 #include <float.h>
@@ -582,6 +583,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     int procnumoutchs = 0;
     int opos = 0;
     int numoutsamples = buffer.getNumSamples();
+    bool corrupt_audio_detected = false;
     while (buffer_adapter.getUsedSlots() < numoutsamples)
     {
         // ok so this is a bit dodgy, can't be bothered to do input side
@@ -603,11 +605,21 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         {
             for (int i = 0; i < procnumoutchs; ++i)
             {
-                adapter_block[i] = workBuffer[j * procnumoutchs + i];
+                float gosa = workBuffer[j * procnumoutchs + i];
+                if (std::isfinite(gosa))
+                {
+                    adapter_block[i] = gosa;
+                }
+                else
+                {
+                    adapter_block[i] = 0.0f;
+                    corrupt_audio_detected = true;
+                }
             }
             buffer_adapter.push(adapter_block);
         }
     }
+    jassert(!corrupt_audio_detected);
     procnumoutchs = granulator.num_out_chans;
     buffer.clear();
     auto channelDatas = buffer.getArrayOfWritePointers();
