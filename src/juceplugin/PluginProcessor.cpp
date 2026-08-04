@@ -583,7 +583,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     int procnumoutchs = 0;
     int opos = 0;
     int numoutsamples = buffer.getNumSamples();
-    bool corrupt_audio_detected = false;
+
     while (buffer_adapter.getUsedSlots() < numoutsamples)
     {
         // ok so this is a bit dodgy, can't be bothered to do input side
@@ -606,26 +606,19 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             for (int i = 0; i < procnumoutchs; ++i)
             {
                 float gosa = workBuffer[j * procnumoutchs + i];
-                if (std::isfinite(gosa))
-                {
-                    adapter_block[i] = gosa;
-                }
-                else
-                {
-                    adapter_block[i] = 0.0f;
-                    corrupt_audio_detected = true;
-                }
+                adapter_block[i] = gosa;
             }
             buffer_adapter.push(adapter_block);
         }
     }
-    jassert(!corrupt_audio_detected);
+
     procnumoutchs = granulator.num_out_chans;
     buffer.clear();
     auto channelDatas = buffer.getArrayOfWritePointers();
     bool pushAnalysisData = false;
     if (baconSpectrum && baconSpectrum->visibleAtomic.load())
         pushAnalysisData = true;
+    bool corrupt_audio_detected = false;
     if (totalNumOutputChannels == 2)
     {
         // super simple decode for stereo monitoring, we should probably just bite
@@ -634,13 +627,25 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         for (int j = 0; j < buffer.getNumSamples(); ++j)
         {
             buffer_adapter.pop(adapter_block);
-            float m = adapter_block[0] * midGain;
+            float m = adapter_block[0];
             float s = adapter_block[1];
-            channelDatas[0][j] = std::clamp((m + s) * 0.5f, -1.0f, 1.0f);
-            channelDatas[1][j] = std::clamp((m - s) * 0.5f, -1.0f, 1.0f);
-            if (pushAnalysisData)
-                baconSpectrum->pushSample(m);
+            if (std::isfinite(m) && std::isfinite(s))
+            {
+                m = m * midGain;
+                channelDatas[0][j] = std::clamp((m + s) * 0.5f, -1.0f, 1.0f);
+                channelDatas[1][j] = std::clamp((m - s) * 0.5f, -1.0f, 1.0f);
+                if (pushAnalysisData)
+                    baconSpectrum->pushSample(m);
+            } else
+            {
+                channelDatas[0][j] = 0.0f;
+                channelDatas[1][j] = 0.0f;
+                if (pushAnalysisData)
+                    baconSpectrum->pushSample(0.0f);
+                corrupt_audio_detected = true;
+            }
         }
+        jassert(!corrupt_audio_detected);
         // for convenience stereo output, visualize the MS decoded stereo
         avisComponent.pushBuffer(buffer);
     }
@@ -655,12 +660,21 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 float s = adapter_block[i];
                 if (i < totalNumOutputChannels)
                 {
-                    channelDatas[i][j] = std::clamp(s, -1.0f, 1.0f);
+                    if (std::isfinite(s))
+                        channelDatas[i][j] = std::clamp(s, -1.0f, 1.0f);
+                    else 
+                    {
+                        channelDatas[i][j] = 0.0f;
+                        corrupt_audio_detected = true;
+                    }
                 }
             }
-            if (pushAnalysisData)
-                baconSpectrum->pushSample(adapter_block[0]);
+            //if (!corrupt_audio_detected && pushAnalysisData)
+            //    baconSpectrum->pushSample(adapter_block[0]);
+            //else
+            //    baconSpectrum->pushSample(0.0f);
         }
+        jassert(!corrupt_audio_detected);
         // for ambisonic output, just show the W channel because with increasing ambisonic orders
         // the number of channels explodes and we have just a tiny waveform visualizer at the moment
         jassert(visualizerAudioBuffer.getNumChannels() == 1);
