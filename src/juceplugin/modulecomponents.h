@@ -602,27 +602,24 @@ class TimeModuleComponent : public juce::GroupComponent
     XapSlider densityKnob;
     XapSlider durationKnob;
     XapSlider tailKnob;
+    XapSlider pauseKnob;
     TimeModuleComponent(AudioPluginAudioProcessor &p)
         : juce::GroupComponent("", "Time"), processorRef(p),
           densityKnob(XapSlider::SS_Knob,
                       *p.granulator.idtoparmetadata[ToneGranulator::PAR_DENSITY]),
           durationKnob(XapSlider::SS_Knob,
                        *p.granulator.idtoparmetadata[ToneGranulator::PAR_DURATION]),
-          tailKnob(XapSlider::SS_Knob, *p.granulator.idtoparmetadata[ToneGranulator::PAR_GRAINTAIL])
+          tailKnob(XapSlider::SS_Knob,
+                   *p.granulator.idtoparmetadata[ToneGranulator::PAR_GRAINTAIL]),
+          pauseKnob(XapSlider::SS_HorizontalSlider,
+                    *p.granulator.idtoparmetadata[ToneGranulator::PAR_PAUSEAUTOGEN])
     {
         initSlider(p, *this, densityKnob);
         initSlider(p, *this, durationKnob);
         initSlider(p, *this, tailKnob);
+        initSlider(p, *this, pauseKnob);
     }
-    void resized() override
-    {
-        juce::FlexBox flex;
-        flex.flexDirection = juce::FlexBox::Direction::row;
-        flex.items.add(juce::FlexItem(densityKnob).withFlex(1.0).withMargin(2));
-        flex.items.add(juce::FlexItem(durationKnob).withFlex(1.0).withMargin(2));
-        flex.items.add(juce::FlexItem(tailKnob).withFlex(1.0).withMargin(2));
-        flex.performLayout(juce::Rectangle<int>(7, 17, getWidth() - 14, getHeight() - 28));
-    }
+    void resized() override;
 };
 
 class InsertModuleComponent : public juce::GroupComponent

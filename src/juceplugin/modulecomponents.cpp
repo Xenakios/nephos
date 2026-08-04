@@ -753,3 +753,13 @@ void AnalysisSourceComponent::paint(juce::Graphics &g)
     g.drawText("Spectral Spread", juce::Rectangle<float>(xoffset, yoffset, w, barh),
                juce::Justification::centred);
 }
+void TimeModuleComponent::resized()
+{
+    pauseKnob.setBounds(7, 17, 140, 23);
+    juce::FlexBox flex;
+    flex.flexDirection = juce::FlexBox::Direction::row;
+    flex.items.add(juce::FlexItem(densityKnob).withFlex(1.0).withMargin(2));
+    flex.items.add(juce::FlexItem(durationKnob).withFlex(1.0).withMargin(2));
+    flex.items.add(juce::FlexItem(tailKnob).withFlex(1.0).withMargin(2));
+    flex.performLayout(juce::Rectangle<int>(7, 41, getWidth() - 14, getHeight() - 49));
+}
