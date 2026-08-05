@@ -2442,12 +2442,14 @@ class ToneGranulator
                     modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_ENVMORPH});
                 float azimuth =
                     modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_AZIMUTH});
+                genev.azimuth = azimuth;
                 float amb_spread = modmatrix.m.getTargetValue(
                     GranulatorModConfig::TargetIdentifier{PAR_AMBSPREAD});
                 float amb_rotate = modmatrix.m.getTargetValue(
                     GranulatorModConfig::TargetIdentifier{PAR_AMBROTATE});
                 float elevation = modmatrix.m.getTargetValue(
                     GranulatorModConfig::TargetIdentifier{PAR_ELEVATION});
+                genev.elevation = elevation;
                 float omniboost = modmatrix.m.getTargetValue(
                     GranulatorModConfig::TargetIdentifier{PAR_AMBOMNIBOOST});
                 genev.generator_type =
