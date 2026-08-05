@@ -494,7 +494,7 @@ struct GrainEvent
     float ambi_rotate = 0.0f;
     float ambi_omni_boost = 0.0f;
     float elevation = 0.0f;
-    float sync_ratio = 1.0f;
+    float sync_octaves = 0.0f;
     float pulse_width = 0.5f;
     float fm_pitch = 0.0f;
     float fm_amount = 0.0f;
@@ -826,7 +826,8 @@ class GranulatorVoice
         if (newosctype == 6)
             pitch_base += 12.0;
         pitch_base = std::clamp(pitch_base, -48.0f, 64.0f);
-        auto syncratio = std::clamp(evpars.sync_ratio, 1.0f, 16.0f);
+        auto syncratio = std::clamp(evpars.sync_octaves, 0.0f, 4.0f);
+        syncratio = std::pow(2.0f, syncratio);
         auto pw = evpars.pulse_width; // osc implementation clamps itself to 0..1
         fmpitch = evpars.fm_pitch;
         fmmodamount = std::clamp(evpars.fm_amount, 0.0f, 1.0f);
@@ -2464,9 +2465,8 @@ class ToneGranulator
                 genev.noisecorr = modmatrix.m.getTargetValue(
                     GranulatorModConfig::TargetIdentifier{PAR_NOISECORRELATION});
                 genev.noiseimode = *idtoparvalptr[PAR_NOISEMODE];
-                genev.sync_ratio =
-                    std::pow(2.0, modmatrix.m.getTargetValue(
-                                      GranulatorModConfig::TargetIdentifier{PAR_OSC_SYNC}));
+                genev.sync_octaves =
+                    modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_OSC_SYNC});
                 for (size_t j = 0; j < GranulatorVoice::numInsertSlots; ++j)
                 {
                     auto numpars = voices.front()->insert_fx[j].numParams;
@@ -2497,31 +2497,44 @@ class ToneGranulator
                 timeSpanToSchedule = 0.05f + 1.95f * std::pow(timeSpanToSchedule, 2.0f);
                 float timeSpanCurve = *idtoparvalptr[PAR_STACKTIMECURVE];
                 float spatrand = *idtoparvalptr[PAR_STACKRANDOMSPATIALIZATION];
-
-                uint32_t customrepeatwalkparam = PAR_OSC_SYNC;
-                float walkcustom = 0.0f;
-                float *customwalktarget = nullptr;
-                float customwalkspread = 0.0f;
+                // if we have no repeats, we could skip the loop and random walk stuff...
+                struct ParameterRandomWalk
+                {
+                    xenakios::Xoroshiro128Plus &rgen;
+                    float deviation = 0.0f;
+                    float *target = nullptr;
+                    float walk = 0.0f;
+                    ParameterRandomWalk(xenakios::Xoroshiro128Plus &r, float d, float *t)
+                        : rgen(r), deviation(d), target(t)
+                    {
+                        if (target)
+                            walk = *target;
+                    }
+                    void step()
+                    {
+                        if (target)
+                        {
+                            *target = walk;
+                            walk += rgen.nextHypCos(0.0, deviation);
+                        }
+                    }
+                };
+                uint32_t customrepeatwalkparam = CLAP_INVALID_ID;
+                float *cust_target = nullptr;
                 if (customrepeatwalkparam == PAR_OSC_SYNC)
-                {
-                    customwalktarget = &genev.sync_ratio;
-                    walkcustom = genev.sync_ratio;
-                    customwalkspread = 0.5;
-                }
+                    cust_target = &genev.sync_octaves;
                 else if (customrepeatwalkparam == PAR_DURATION)
-                {
-                    customwalktarget = &genev.duration;
-                    walkcustom = genev.duration;
-                    customwalkspread = 0.05;
-                }
+                    cust_target = &genev.duration;
+                std::array<ParameterRandomWalk, 4> walks{
+                    ParameterRandomWalk{rng, pitchrand, &genev.pitch_semitones},
+                    ParameterRandomWalk{rng, spatrand, &genev.azimuth},
+                    ParameterRandomWalk{rng, spatrand, &genev.elevation},
+                    ParameterRandomWalk{rng, 0.02, cust_target}};
 
                 genev.ambi_spread = amb_spread;
                 genev.ambi_rotate = amb_rotate;
                 genev.ambi_omni_boost = omniboost;
-                // if we have no repeats, we could skip the loop and random walk stuff...
-                float walkpitch = pitch;
-                float walkazi = azimuth;
-                float walkelev = elevation;
+
                 float endvol = *idtoparvalptr[PAR_STACKENDVOLUME];
                 for (int j = 0; j < numToSchedule; ++j)
                 {
@@ -2539,14 +2552,10 @@ class ToneGranulator
                     }
                     tpos += timeSpanToSchedule * normpos;
                     genev.time_position = tpos;
-                    genev.pitch_semitones = walkpitch;
-                    walkpitch += rng.nextHypCos(0.0, pitchrand);
-                    genev.azimuth = walkazi;
-                    walkazi += rng.nextHypCos(0.0, spatrand);
-                    genev.elevation = walkelev;
-                    walkelev += rng.nextHypCos(0.0, spatrand);
-
-                    // walkcustom += rng.nextHypCos(0.0, 0.05);
+                    for (auto &rwalk : walks)
+                    {
+                        rwalk.step();
+                    }
                     // fading volume for now but should be more adjustable...
                     genev.volume = gvol * (1.0f - ((1.0f - endvol) * normpos));
                     scheduledGrains.push_back(genev);
@@ -2690,7 +2699,7 @@ class ToneGranulator
                                 GranulatorModConfig::TargetIdentifier{PAR_OSCTYPE});
                             float syncoctaves = modmatrix.m.getTargetValue(
                                 GranulatorModConfig::TargetIdentifier{PAR_OSC_SYNC});
-                            gev.sync_ratio = std::pow(2.0, syncoctaves);
+                            gev.sync_octaves = syncoctaves;
                             gev.pulse_width = modmatrix.m.getTargetValue(
                                 GranulatorModConfig::TargetIdentifier{PAR_OSC_PW});
                             for (auto &pc : ev->param_modulations)
@@ -2710,7 +2719,7 @@ class ToneGranulator
                                 else if (pc.id == PAR_AZIMUTH)
                                     gev.azimuth = pc.value;
                                 else if (pc.id == PAR_OSC_SYNC)
-                                    gev.sync_ratio = pc.value;
+                                    gev.sync_octaves = pc.value;
                             }
                             if (p.cloud->after_touch_dest == PAR_GRAINVOLUME)
                             {

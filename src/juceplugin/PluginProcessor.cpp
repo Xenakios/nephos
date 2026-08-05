@@ -646,6 +646,10 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             }
         }
         jassert(!corrupt_audio_detected);
+        if (corrupt_audio_detected)
+        {
+            buffer.clear();
+        }
         // for convenience stereo output, visualize the MS decoded stereo
         avisComponent.pushBuffer(buffer);
     }
@@ -675,6 +679,10 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             //    baconSpectrum->pushSample(0.0f);
         }
         jassert(!corrupt_audio_detected);
+        if (corrupt_audio_detected)
+        {
+            buffer.clear();
+        }
         // for ambisonic output, just show the W channel because with increasing ambisonic orders
         // the number of channels explodes and we have just a tiny waveform visualizer at the moment
         jassert(visualizerAudioBuffer.getNumChannels() == 1);
