@@ -94,14 +94,15 @@ AHFloat BounceEaseIn(AHFloat p);
 
 AHFloat BounceEaseInOut(AHFloat p);
 
-template <float Percent> inline AHFloat LinearThenHold(AHFloat p)
-{
-    if (p < Percent)
-        return p * (1.0f / Percent);
-    return 1.0;
-}
-
 inline AHFloat NoEasing(AHFloat p) { return 1.0f; }
+
+template <size_t Percent> inline AHFloat LinearThenHold(AHFloat p)
+{
+    constexpr float fpercent = Percent / 100.0f;
+    if (p < fpercent)
+        return p * (1.0f / fpercent);
+    return 1.0f;
+}
 
 typedef struct
 {
@@ -111,9 +112,9 @@ typedef struct
 
 const EasingMapping easing_table[] = {
     {"Linear", LinearInterpolation},
-    {"Linear 5% And Hold", LinearThenHold<0.05f>},
-    {"Linear 25% And Hold", LinearThenHold<0.25f>},
-    {"Linear 50% And Hold", LinearThenHold<0.5f>},
+    {"Linear 5% And Hold", LinearThenHold<5>},
+    {"Linear 25% And Hold", LinearThenHold<25>},
+    {"Linear 50% And Hold", LinearThenHold<50>},
 
     {"Quadratic Ease In", QuadraticEaseIn},
     {"Quadratic Ease Out", QuadraticEaseOut},
