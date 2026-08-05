@@ -2498,13 +2498,13 @@ class ToneGranulator
                 float timeSpanCurve = *idtoparvalptr[PAR_STACKTIMECURVE];
                 float spatrand = *idtoparvalptr[PAR_STACKRANDOMSPATIALIZATION];
                 // if we have no repeats, we could skip the loop and random walk stuff...
-                struct ParameterRandomWalk
+                struct RepeatsParameterProcessor
                 {
                     xenakios::Xoroshiro128Plus &rgen;
                     float deviation = 0.0f;
                     float *target = nullptr;
                     float walk = 0.0f;
-                    ParameterRandomWalk(xenakios::Xoroshiro128Plus &r, float d, float *t)
+                    RepeatsParameterProcessor(xenakios::Xoroshiro128Plus &r, float d, float *t)
                         : rgen(r), deviation(d), target(t)
                     {
                         if (target)
@@ -2525,11 +2525,11 @@ class ToneGranulator
                     cust_target = &genev.sync_octaves;
                 else if (customrepeatwalkparam == PAR_DURATION)
                     cust_target = &genev.duration;
-                std::array<ParameterRandomWalk, 4> walks{
-                    ParameterRandomWalk{rng, pitchrand, &genev.pitch_semitones},
-                    ParameterRandomWalk{rng, spatrand, &genev.azimuth},
-                    ParameterRandomWalk{rng, spatrand, &genev.elevation},
-                    ParameterRandomWalk{rng, 0.02, cust_target}};
+                std::array<RepeatsParameterProcessor, 4> par_processors{
+                    RepeatsParameterProcessor{rng, pitchrand, &genev.pitch_semitones},
+                    RepeatsParameterProcessor{rng, spatrand, &genev.azimuth},
+                    RepeatsParameterProcessor{rng, spatrand, &genev.elevation},
+                    RepeatsParameterProcessor{rng, 0.02, cust_target}};
 
                 genev.ambi_spread = amb_spread;
                 genev.ambi_rotate = amb_rotate;
@@ -2552,7 +2552,7 @@ class ToneGranulator
                     }
                     tpos += timeSpanToSchedule * normpos;
                     genev.time_position = tpos;
-                    for (auto &rwalk : walks)
+                    for (auto &rwalk : par_processors)
                     {
                         rwalk.step();
                     }
