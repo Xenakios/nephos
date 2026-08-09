@@ -694,12 +694,12 @@ void StackingModuleComponent::resized()
     flex.items.add(juce::FlexItem(pitchRandomKnob).withFlex(1.0).withMargin(2));
     flex.items.add(juce::FlexItem(spatRandomKnob).withFlex(1.0).withMargin(2));
     flex.items.add(juce::FlexItem(endVolumeKnob).withFlex(1.0).withMargin(2));
-    flex.performLayout(juce::Rectangle<int>(7, 17, getWidth() - 14, getHeight() - 58));
+    flex.performLayout(juce::Rectangle<int>(7, 17, getWidth() - 14, 80));
 }
 void StackingModuleComponent::paint(juce::Graphics &g)
 {
     juce::GroupComponent::paint(g);
-    juce::Rectangle<float> visrect{7.0f, (float)getHeight() - 57 + 17, getWidth() - 14.0f, 30.0f};
+    juce::Rectangle<float> visrect{7.0f, 99.0f, getWidth() - 14.0f, 65.0f};
     g.setColour(juce::Colours::black);
     g.fillRect(visrect);
     int count = *processorRef.granulator.idtoparvalptr[ToneGranulator::PAR_STACKCOUNT];

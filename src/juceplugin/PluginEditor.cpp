@@ -322,7 +322,7 @@ void MainPageComponent::resized()
                                    spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 125);
 
     stackModuleComponent.setBounds(oscModuleComponent.getRight() + 2,
-                                   timeModuleComponent.getBottom() + 2, 490, 155);
+                                   timeModuleComponent.getBottom() + 2, 490, 175);
     // processorRef.xenAvisComponent.setBounds(getWidth() - 501, stackModuleComponent.getBottom() +
     // 2,
     //                                         500, 250);
