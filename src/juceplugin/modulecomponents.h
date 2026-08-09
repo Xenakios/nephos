@@ -541,6 +541,7 @@ class StackingModuleComponent : public juce::GroupComponent
         initSlider(p, *this, endVolumeKnob);
     }
     void resized() override;
+    void paint(juce::Graphics &g) override;
 };
 
 class PerformanceComponent : public juce::Component, public juce::Timer

@@ -158,6 +158,7 @@ void AudioPluginAudioProcessorEditor::timerCallback()
     {
         c->updateGUI();
     }
+    mainPage.stackModuleComponent.repaint();
     ParameterMessage parmsg;
     while (processorRef.params_to_gui_fifo.pop(parmsg))
     {
@@ -166,6 +167,7 @@ void AudioPluginAudioProcessorEditor::timerCallback()
         {
             auto xs = it->second;
             xs->setValue(parmsg.value);
+            
         }
     }
     ThreadMessage msg;
@@ -320,7 +322,7 @@ void MainPageComponent::resized()
                                    spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 125);
 
     stackModuleComponent.setBounds(oscModuleComponent.getRight() + 2,
-                                   timeModuleComponent.getBottom() + 2, 490, 125);
+                                   timeModuleComponent.getBottom() + 2, 490, 155);
     // processorRef.xenAvisComponent.setBounds(getWidth() - 501, stackModuleComponent.getBottom() +
     // 2,
     //                                         500, 250);

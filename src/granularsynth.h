@@ -1314,6 +1314,27 @@ struct CloudPlayer
 class ToneGranulator
 {
   public:
+    struct RepeatsParameterProcessor
+    {
+        xenakios::Xoroshiro128Plus &rgen;
+        float deviation = 0.0f;
+        float *target = nullptr;
+        float walk = 0.0f;
+        RepeatsParameterProcessor(xenakios::Xoroshiro128Plus &r, float d, float *t)
+            : rgen(r), deviation(d), target(t)
+        {
+            if (target)
+                walk = *target;
+        }
+        void step()
+        {
+            if (target)
+            {
+                *target = walk;
+                walk += rgen.nextHypCos(0.0, deviation);
+            }
+        }
+    };
     const int numvoices = 64;
     double m_sr = 0.0;
     int graincount = 0;
@@ -2500,27 +2521,7 @@ class ToneGranulator
                 float timeSpanCurve = *idtoparvalptr[PAR_STACKTIMECURVE];
                 float spatrand = *idtoparvalptr[PAR_STACKRANDOMSPATIALIZATION];
                 // if we have no repeats, we could skip the loop and random walk stuff...
-                struct RepeatsParameterProcessor
-                {
-                    xenakios::Xoroshiro128Plus &rgen;
-                    float deviation = 0.0f;
-                    float *target = nullptr;
-                    float walk = 0.0f;
-                    RepeatsParameterProcessor(xenakios::Xoroshiro128Plus &r, float d, float *t)
-                        : rgen(r), deviation(d), target(t)
-                    {
-                        if (target)
-                            walk = *target;
-                    }
-                    void step()
-                    {
-                        if (target)
-                        {
-                            *target = walk;
-                            walk += rgen.nextHypCos(0.0, deviation);
-                        }
-                    }
-                };
+
                 uint32_t customrepeatwalkparam = CLAP_INVALID_ID;
                 float *cust_target = nullptr;
                 if (customrepeatwalkparam == PAR_OSC_SYNC)
@@ -2538,18 +2539,21 @@ class ToneGranulator
                 genev.ambi_omni_boost = omniboost;
 
                 float endvol = *idtoparvalptr[PAR_STACKENDVOLUME];
+                const float maxtimepow = 3.0f;
                 for (int j = 0; j < numToSchedule; ++j)
                 {
                     double tpos = playposframes / this->m_sr;
-                    double normpos = 1.0 / numToSchedule * j;
+                    double normpos = 0.0;
+                    if (numToSchedule > 1)
+                        normpos = 1.0 / (numToSchedule - 1) * j;
                     if (timeSpanCurve < 0.0f)
                     {
-                        float ex = xenakios::mapvalue(timeSpanCurve, -1.0f, 0.0f, 4.0f, 1.0f);
+                        float ex = xenakios::mapvalue(timeSpanCurve, -1.0f, 0.0f, maxtimepow, 1.0f);
                         normpos = std::pow(normpos, ex);
                     }
                     else
                     {
-                        float ex = xenakios::mapvalue(timeSpanCurve, 0.0f, 1.0f, 1.0f, 4.0f);
+                        float ex = xenakios::mapvalue(timeSpanCurve, 0.0f, 1.0f, 1.0f, maxtimepow);
                         normpos = 1.0f - std::pow(1.0f - normpos, ex);
                     }
                     tpos += timeSpanToSchedule * normpos;

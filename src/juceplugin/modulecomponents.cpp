@@ -694,7 +694,44 @@ void StackingModuleComponent::resized()
     flex.items.add(juce::FlexItem(pitchRandomKnob).withFlex(1.0).withMargin(2));
     flex.items.add(juce::FlexItem(spatRandomKnob).withFlex(1.0).withMargin(2));
     flex.items.add(juce::FlexItem(endVolumeKnob).withFlex(1.0).withMargin(2));
-    flex.performLayout(juce::Rectangle<int>(7, 17, getWidth() - 14, getHeight() - 28));
+    flex.performLayout(juce::Rectangle<int>(7, 17, getWidth() - 14, getHeight() - 58));
+}
+void StackingModuleComponent::paint(juce::Graphics &g)
+{
+    juce::GroupComponent::paint(g);
+    juce::Rectangle<float> visrect{7.0f, (float)getHeight() - 57 + 17, getWidth() - 14.0f, 30.0f};
+    g.setColour(juce::Colours::black);
+    g.fillRect(visrect);
+    int count = *processorRef.granulator.idtoparvalptr[ToneGranulator::PAR_STACKCOUNT];
+    float timespan = *processorRef.granulator.idtoparvalptr[ToneGranulator::PAR_STACKTIMESPAN];
+    timespan = 0.05f + 1.95f * std::pow(timespan, 2.0f);
+    float timecurve = *processorRef.granulator.idtoparvalptr[ToneGranulator::PAR_STACKTIMECURVE];
+    float endlevel = *processorRef.granulator.idtoparvalptr[ToneGranulator::PAR_STACKENDVOLUME];
+    g.setColour(juce::Colours::white);
+    const float maxtimepow = 3.0f;
+    for (int i = 0; i < count; ++i)
+    {
+        float normpos = 0.0f;
+        if (count > 1)
+            normpos = 1.0 / (count - 1) * i;
+        if (timecurve < 0.0f)
+        {
+            float ex = xenakios::mapvalue(timecurve, -1.0f, 0.0f, maxtimepow, 1.0f);
+            normpos = std::pow(normpos, ex);
+        }
+        else
+        {
+            float ex = xenakios::mapvalue(timecurve, 0.0f, 1.0f, 1.0f, maxtimepow);
+            normpos = 1.0f - std::pow(1.0f - normpos, ex);
+        }
+        float level = (1.0f - ((1.0f - endlevel) * normpos));
+        // jassert(level >= 0.0f);
+        normpos *= timespan;
+        float xcor = juce::jmap<float>(normpos, 0.0f, 2.0f, visrect.getX(), visrect.getRight());
+
+        float ycor = visrect.getBottom() - level * visrect.getHeight();
+        g.drawLine(xcor, ycor, xcor, visrect.getBottom(), 2.0f);
+    }
 }
 
 void AnalysisSourceComponent::paint(juce::Graphics &g)
