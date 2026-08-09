@@ -517,6 +517,7 @@ class StackingModuleComponent : public juce::GroupComponent
     XapSlider pitchRandomKnob;
     XapSlider spatRandomKnob;
     XapSlider endVolumeKnob;
+    xenakios::Xoroshiro128Plus rng;
     StackingModuleComponent(AudioPluginAudioProcessor &p)
         : juce::GroupComponent("", "Repeats"), processorRef(p),
           countKnob(XapSlider::SS_Knob,
@@ -533,6 +534,7 @@ class StackingModuleComponent : public juce::GroupComponent
           endVolumeKnob(XapSlider::SS_Knob,
                         *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKENDVOLUME])
     {
+        rng.seed(123456, 654321);
         initSlider(p, *this, countKnob);
         initSlider(p, *this, lengthKnob);
         initSlider(p, *this, warpKnob);
