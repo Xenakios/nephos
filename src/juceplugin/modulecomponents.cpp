@@ -725,8 +725,13 @@ void StackingModuleComponent::paint(juce::Graphics &g)
     g.setColour(juce::Colours::black);
     g.fillRect(visrect);
     int count = *processorRef.granulator.idtoparvalptr[ToneGranulator::PAR_STACKCOUNT];
-    float timespan = *processorRef.granulator.idtoparvalptr[ToneGranulator::PAR_STACKTIMESPAN];
+    auto &granul = processorRef.granulator;
+
+    float timespan = granul.modmatrix.m.getTargetValue(
+        GranulatorModConfig::TargetIdentifier{ToneGranulator::PAR_STACKTIMESPAN});
+    timespan = std::clamp(timespan, 0.0f, 1.0f);
     timespan = 0.05f + 1.95f * std::pow(timespan, 2.0f);
+
     float timecurve = *processorRef.granulator.idtoparvalptr[ToneGranulator::PAR_STACKTIMECURVE];
     float endlevel = *processorRef.granulator.idtoparvalptr[ToneGranulator::PAR_STACKENDVOLUME];
 

@@ -89,7 +89,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
         });
     }
     setSize(1500, 720);
-    startTimer(50);
+    startTimerHz(20);
 }
 
 void AudioPluginAudioProcessorEditor::addChildSlidersFrom(juce::Component &c)
@@ -150,7 +150,7 @@ void AudioPluginAudioProcessorEditor::timerCallback()
     {
         c->updateGUI();
     }
-    mainPage.stackModuleComponent.updateIfNeeded();
+    mainPage.stackModuleComponent.repaint();
     ParameterMessage parmsg;
     while (processorRef.params_to_gui_fifo.pop(parmsg))
     {
@@ -159,7 +159,6 @@ void AudioPluginAudioProcessorEditor::timerCallback()
         {
             auto xs = it->second;
             xs->setValue(parmsg.value);
-            
         }
     }
     ThreadMessage msg;
@@ -321,7 +320,6 @@ void MainPageComponent::resized()
     //  keyboardComponent.setBounds(1, getHeight() - 50, getWidth() - 300, 49);
     //  testTree.setBounds(getWidth() - 299, timeModuleComponent.getBottom() + 2, 300, 300);
 }
-
 
 void DashPage::saveSnapShot(int index)
 {

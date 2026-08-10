@@ -2057,6 +2057,7 @@ class ToneGranulator
                                    .withOffsetPowerFormatting("s", 0.05f, 1.95, 2.0f, 1.0f)
                                    .withName("Time Span")
                                    .withGroupName("Repeats")
+                                   .withFlags(CLAP_PARAM_IS_MODULATABLE)
                                    .withID(PAR_STACKTIMESPAN));
         parmetadatas.push_back(pmd()
                                    .withRange(-1.0f, 1.0f)
@@ -2515,8 +2516,9 @@ class ToneGranulator
                 int numToSchedule = std::clamp(*idtoparvalptr[PAR_STACKCOUNT], 1.0f, 16.0f);
                 float pitchrand = std::clamp(*idtoparvalptr[PAR_STACKRANDOMPITCH], 0.0f, 1.0f);
                 // pitchrand = 12.0f * std::pow(pitchrand, 2.0f);
-                float timeSpanToSchedule =
-                    std::clamp(*idtoparvalptr[PAR_STACKTIMESPAN], 0.0f, 1.0f);
+                float timeSpanToSchedule = modmatrix.m.getTargetValue(
+                    GranulatorModConfig::TargetIdentifier{PAR_STACKTIMESPAN});
+                timeSpanToSchedule = std::clamp(timeSpanToSchedule, 0.0f, 1.0f);
                 timeSpanToSchedule = 0.05f + 1.95f * std::pow(timeSpanToSchedule, 2.0f);
                 float timeSpanCurve = *idtoparvalptr[PAR_STACKTIMECURVE];
                 float spatrand = *idtoparvalptr[PAR_STACKRANDOMSPATIALIZATION];
