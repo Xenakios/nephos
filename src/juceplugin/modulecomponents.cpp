@@ -10,16 +10,6 @@
 #include <exception>
 #include <stdexcept>
 
-void GrainModulationVisualizationComponent::timerCallback()
-{
-    ToneGranulator::GrainEnvelopeVisMessage msg;
-    while (granul->gevisfifo.pop(msg))
-    {
-        vismsg = msg;
-    }
-    repaint();
-}
-
 void GrainModulationVisualizationComponent::mouseDown(const juce::MouseEvent &ev)
 {
     juce::PopupMenu menu;

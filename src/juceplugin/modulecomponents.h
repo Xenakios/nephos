@@ -324,22 +324,33 @@ class TriggeredRandomSourceEditor : public juce::Component,
 };
 #endif
 
-class GrainModulationVisualizationComponent : public juce::Component, public juce::Timer
+class GrainModulationVisualizationComponent : public juce::Component
 {
   public:
     ToneGranulator *granul = nullptr;
+    std::unique_ptr<juce::VBlankAttachment> vblankAttachment;
     int target_to_show = 0;
     GrainModulationVisualizationComponent(ToneGranulator *gr) : granul(gr)
     {
         path.preallocateSpace(200);
-        startTimer(20);
         setOpaque(true);
         std::fill(vismsg.moddepths.begin(), vismsg.moddepths.end(), 0.0f);
         std::fill(vismsg.modsources.begin(), vismsg.modsources.end(), CLAP_INVALID_ID);
         std::fill(vismsg.modtargets.begin(), vismsg.modtargets.end(), CLAP_INVALID_ID);
         std::fill(vismsg.auxenvparams.begin(), vismsg.auxenvparams.end(), 0.0f);
+        vblankAttachment = std::make_unique<juce::VBlankAttachment>(this, [this]() {
+            ToneGranulator::GrainEnvelopeVisMessage msg;
+            bool needsRepaint = false;
+            while (granul->gevisfifo.pop(msg))
+            {
+                vismsg = msg;
+                needsRepaint = true;
+            }
+            if (needsRepaint)
+                repaint();
+        });
     }
-    void timerCallback() override;
+
     void mouseDown(const juce::MouseEvent &ev) override;
 
     juce::Path path;
