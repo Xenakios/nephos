@@ -13,6 +13,7 @@
 #include "dropdowncomponent.h"
 #include <exception>
 #include <random>
+#include "memory/choc_xxHash.h"
 
 inline void addMidiLearnToMenu(juce::PopupMenu &menu, AudioPluginAudioProcessor &processorRef,
                                uint32_t parid)
@@ -518,6 +519,8 @@ class StackingModuleComponent : public juce::GroupComponent
     XapSlider spatRandomKnob;
     XapSlider endVolumeKnob;
     xenakios::Xoroshiro128Plus rng;
+    float seenParamValues[6] = {-1000000.0f};
+    int repaintCount = 0;
     StackingModuleComponent(AudioPluginAudioProcessor &p)
         : juce::GroupComponent("", "Repeats"), processorRef(p),
           countKnob(XapSlider::SS_Knob,
@@ -535,12 +538,23 @@ class StackingModuleComponent : public juce::GroupComponent
                         *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKENDVOLUME])
     {
         rng.seed(123456, 654321);
-        initSlider(p, *this, countKnob);
-        initSlider(p, *this, lengthKnob);
-        initSlider(p, *this, warpKnob);
-        initSlider(p, *this, pitchRandomKnob);
-        initSlider(p, *this, spatRandomKnob);
-        initSlider(p, *this, endVolumeKnob);
+        addKnob(countKnob);
+        addKnob(lengthKnob);
+        addKnob(warpKnob);
+        addKnob(pitchRandomKnob);
+        addKnob(spatRandomKnob);
+        addKnob(endVolumeKnob);
+    }
+    void updateIfNeeded();
+    void addKnob(XapSlider &slid)
+    {
+        addAndMakeVisible(slid);
+        slid.OnValueChanged = [this, &slid]() {
+            ParameterMessage msg;
+            msg.id = slid.getParameterMetaData().id;
+            msg.value = slid.getValue();
+            processorRef.params_from_gui_fifo.push(msg);
+        };
     }
     void resized() override;
     void paint(juce::Graphics &g) override;
@@ -1022,7 +1036,6 @@ class JSEntryComponent : public juce::Component
     }
     void paint(juce::Graphics &g) override { g.fillAll(juce::Colours::darkgrey); }
 };
-
 
 struct StepSeqComponent : public juce::Component
 {

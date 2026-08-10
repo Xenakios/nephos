@@ -684,6 +684,27 @@ void OscillatorModuleComponent::resized()
     oscNoiseCorrelationKnob.setBounds(oscSyncKnob.getRight() + 2, oscNoiseModeDrop.getBottom() + 1,
                                       80, 50);
 }
+void StackingModuleComponent::updateIfNeeded()
+{
+    const std::array<uint32_t, 6> ids = {
+        ToneGranulator::PAR_STACKCOUNT,       ToneGranulator::PAR_STACKTIMESPAN,
+        ToneGranulator::PAR_STACKRANDOMPITCH, ToneGranulator::PAR_STACKRANDOMSPATIALIZATION,
+        ToneGranulator::PAR_STACKTIMECURVE,   ToneGranulator::PAR_STACKENDVOLUME};
+    bool needsrepaint = false;
+    for (size_t i = 0; i < ids.size(); ++i)
+    {
+        float latestVal = *processorRef.granulator.idtoparvalptr[ids[i]];
+        if (std::abs(latestVal - seenParamValues[i]) > 0.0000001)
+        {
+            seenParamValues[i] = latestVal;
+            needsrepaint = true;
+        }
+    }
+    if (needsrepaint)
+    {
+        repaint();
+    }
+}
 void StackingModuleComponent::resized()
 {
     juce::FlexBox flex;
@@ -698,6 +719,7 @@ void StackingModuleComponent::resized()
 }
 void StackingModuleComponent::paint(juce::Graphics &g)
 {
+    ++repaintCount;
     juce::GroupComponent::paint(g);
     juce::Rectangle<float> visrect{7.0f, 99.0f, getWidth() - 14.0f, 65.0f};
     g.setColour(juce::Colours::black);
@@ -742,6 +764,9 @@ void StackingModuleComponent::paint(juce::Graphics &g)
         const float r = 8.0f;
         g.fillEllipse(xcor - r / 2.0f, ycor - r / 2.0f, r, r);
     }
+    g.setColour(juce::Colours::white);
+    g.drawText(juce::String(repaintCount), visrect.getWidth() - 50, visrect.getY(), 49, 15,
+               juce::Justification::centredLeft);
 }
 
 void AnalysisSourceComponent::paint(juce::Graphics &g)
@@ -812,13 +837,11 @@ void TimeModuleComponent::resized()
     flex.performLayout(juce::Rectangle<int>(7, 41, getWidth() - 14, getHeight() - 49));
 }
 
-
 choc::value::Value get_js_info(std::string jscode);
 void cancel_js();
 std::vector<float> generate_from_js(std::string jscode, std::vector<float> currentsteps,
                                     int startstep, int endstep, std::vector<float> params);
 choc::value::Value perform_js(std::string jscode, choc::value::ValueView info);
-
 
 void StepSeqComponent::paint(juce::Graphics &g)
 {
@@ -1148,4 +1171,3 @@ void StepSeqComponent::runExternalProgram()
         }
     });
 }
-
