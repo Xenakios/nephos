@@ -508,7 +508,7 @@ class OscillatorModuleComponent : public juce::GroupComponent
     void resized() override;
 };
 
-class StackingModuleComponent : public juce::GroupComponent
+class StackingModuleComponent : public juce::GroupComponent, public juce::Timer
 {
   public:
     AudioPluginAudioProcessor &processorRef;
@@ -544,6 +544,17 @@ class StackingModuleComponent : public juce::GroupComponent
         addKnob(pitchRandomKnob);
         addKnob(spatRandomKnob);
         addKnob(endVolumeKnob);
+        startTimerHz(20);
+    }
+    ToneGranulator::GrainRepeatsVisMessage state;
+    void timerCallback() override
+    {
+        ToneGranulator::GrainRepeatsVisMessage msg;
+        while (processorRef.granulator.repeatsVisMessages.pop(msg))
+        {
+            state = msg;
+        }
+        repaint();
     }
     void updateIfNeeded();
     void addKnob(XapSlider &slid)

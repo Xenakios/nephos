@@ -150,7 +150,7 @@ void AudioPluginAudioProcessorEditor::timerCallback()
     {
         c->updateGUI();
     }
-    mainPage.stackModuleComponent.repaint();
+    // mainPage.stackModuleComponent.repaint();
     ParameterMessage parmsg;
     while (processorRef.params_to_gui_fifo.pop(parmsg))
     {

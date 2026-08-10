@@ -1367,6 +1367,11 @@ class ToneGranulator
     std::unordered_map<uint32_t, float> modRanges;
     std::unordered_map<int, int> shapeParToActualShape;
     choc::fifo::SingleReaderSingleWriterFIFO<StepModSource::Message> fifo;
+    struct GrainRepeatsVisMessage
+    {
+        std::array<float, 6> modulatedvalues = {0.0f};
+    };
+    choc::fifo::SingleReaderSingleWriterFIFO<GrainRepeatsVisMessage> repeatsVisMessages;
     struct GrainEnvelopeVisMessage
     {
         std::array<float, GrainEvent::max_grain_mod_slots> moddepths;
@@ -1694,7 +1699,8 @@ class ToneGranulator
     ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
     {
         visualizer_fifo.reset(2048);
-        gevisfifo.reset(16);
+        gevisfifo.reset(32);
+        repeatsVisMessages.reset(32);
         shapeParToActualShape[0] = GranulatorModMatrix::lfo_t::SINE;
         shapeParToActualShape[1] = GranulatorModMatrix::lfo_t::PULSE;
         shapeParToActualShape[2] = GranulatorModMatrix::lfo_t::SAW_TRI_RAMP;
@@ -2050,6 +2056,7 @@ class ToneGranulator
                                    .withIntegerQuantization()
                                    .withName("Count")
                                    .withGroupName("Repeats")
+                                   .withFlags(CLAP_PARAM_IS_MODULATABLE)
                                    .withID(PAR_STACKCOUNT));
         parmetadatas.push_back(pmd()
                                    .withRange(0.0f, 1.0f)
@@ -2065,6 +2072,7 @@ class ToneGranulator
                                    .withLinearScaleFormatting("", 1.0f)
                                    .withName("Time Curve")
                                    .withGroupName("Repeats")
+                                   .withFlags(CLAP_PARAM_IS_MODULATABLE)
                                    .withID(PAR_STACKTIMECURVE));
         parmetadatas.push_back(pmd()
                                    .withRange(0.0f, 1.0f)
@@ -2417,6 +2425,14 @@ class ToneGranulator
         modmatrix.m.process();
         if (audiocallbackcount % 100 == 0)
         {
+            GrainRepeatsVisMessage repmsg;
+            repmsg.modulatedvalues[0] = modmatrix.m.getTargetValue({PAR_STACKCOUNT});
+            repmsg.modulatedvalues[1] = modmatrix.m.getTargetValue({PAR_STACKTIMESPAN});
+            repmsg.modulatedvalues[2] = modmatrix.m.getTargetValue({PAR_STACKTIMECURVE});
+            repmsg.modulatedvalues[3] = modmatrix.m.getTargetValue({PAR_STACKRANDOMPITCH});
+            repmsg.modulatedvalues[4] = modmatrix.m.getTargetValue({PAR_STACKRANDOMSPATIALIZATION});
+            repmsg.modulatedvalues[5] = modmatrix.m.getTargetValue({PAR_STACKENDVOLUME});
+            repeatsVisMessages.push(repmsg);
             GrainEnvelopeVisMessage msg;
             for (int i = 0; i < GrainEvent::max_grain_mod_slots; ++i)
             {

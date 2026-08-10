@@ -724,21 +724,20 @@ void StackingModuleComponent::paint(juce::Graphics &g)
     juce::Rectangle<float> visrect{7.0f, 99.0f, getWidth() - 14.0f, 65.0f};
     g.setColour(juce::Colours::black);
     g.fillRect(visrect);
-    int count = *processorRef.granulator.idtoparvalptr[ToneGranulator::PAR_STACKCOUNT];
+    int count = state.modulatedvalues[0];
     auto &granul = processorRef.granulator;
 
-    float timespan = granul.modmatrix.m.getTargetValue(
-        GranulatorModConfig::TargetIdentifier{ToneGranulator::PAR_STACKTIMESPAN});
+    float timespan = state.modulatedvalues[1];
     timespan = std::clamp(timespan, 0.0f, 1.0f);
     timespan = 0.05f + 1.95f * std::pow(timespan, 2.0f);
 
-    float timecurve = *processorRef.granulator.idtoparvalptr[ToneGranulator::PAR_STACKTIMECURVE];
-    float endlevel = *processorRef.granulator.idtoparvalptr[ToneGranulator::PAR_STACKENDVOLUME];
+    float timecurve = state.modulatedvalues[2];
+    float endlevel = state.modulatedvalues[5];
 
     const float maxtimepow = 3.0f;
 
     float pitchwalk = 0.0f;
-    float pitchd = *processorRef.granulator.idtoparvalptr[ToneGranulator::PAR_STACKRANDOMPITCH];
+    float pitchd = state.modulatedvalues[3];
     ToneGranulator::RepeatsParameterProcessor proc{rng, pitchd, &pitchwalk};
     for (int i = 0; i < count; ++i)
     {
