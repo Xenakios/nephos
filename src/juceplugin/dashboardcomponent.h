@@ -61,44 +61,7 @@ class DashBoardComponent : public juce::Component
     void paint(juce::Graphics &g) override;
     void paintAmbisonicFieldPolar(juce::Graphics &g);
     void paintAmbisonicFieldHammerProjection(juce::Graphics &g);
-    bool is_extended_size = false;
-    void mouseDown(const juce::MouseEvent &ev) override
-    {
-        if (!ev.mods.isRightButtonDown())
-            return;
-        juce::PopupMenu menu;
-        menu.addSectionHeader("Time span to show");
-        menu.addItem("1 second", [this]() { gr->gvsettings.timespantoshow = 1.0; });
-        menu.addItem("2 seconds", [this]() { gr->gvsettings.timespantoshow = 2.0; });
-        menu.addItem("4 seconds", [this]() { gr->gvsettings.timespantoshow = 4.0; });
-        menu.addItem("8 seconds", [this]() { gr->gvsettings.timespantoshow = 8.0; });
-        menu.addItem("16 seconds", [this]() { gr->gvsettings.timespantoshow = 16.0; });
-        menu.addSectionHeader("Options");
-        menu.addItem("Load macro knobs settings", [this]() {
-            if (OnMacroKnobsLoadRequested)
-                OnMacroKnobsLoadRequested();
-        });
-        menu.addItem("Show modulator values", true, showModulatorValues,
-                     [this]() { showModulatorValues = !showModulatorValues; });
-        juce::PopupMenu param_menu;
-        param_menu.addItem("-None-", [this]() { gr->modulatedParamToStore.store(0); });
-        auto metadata = gr->parmetadatas;
-        std::sort(metadata.begin(), metadata.end(), [](auto &lhs, auto &rhs) {
-            return lhs.groupName + "/" + lhs.name < rhs.groupName + "/" + rhs.name;
-        });
-        for (auto &e : metadata)
-        {
-            if (e.flags & CLAP_PARAM_IS_MODULATABLE)
-            {
-                param_menu.addItem(e.groupName + "/" + e.name, [this, id = e.id]() {
-                    paramValuesHistory.clear();
-                    gr->modulatedParamToStore.store(id);
-                });
-            }
-        }
-        menu.addSubMenu("Parameter scope", param_menu);
-        menu.showMenuAsync(juce::PopupMenu::Options{});
-    }
+    void mouseDown(const juce::MouseEvent &ev) override;
     void drawCPUGraph(juce::Graphics &g, double enginetime, juce::Rectangle<float> area);
     void updateGrainData()
     {

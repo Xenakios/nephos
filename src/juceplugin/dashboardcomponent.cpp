@@ -173,6 +173,43 @@ void DashBoardComponent::paintAmbisonicFieldHammerProjection(juce::Graphics &g)
         }
     }
 }
+void DashBoardComponent::mouseDown(const juce::MouseEvent &ev)
+{
+    if (!ev.mods.isRightButtonDown())
+        return;
+    juce::PopupMenu menu;
+    menu.addSectionHeader("Time span to show");
+    menu.addItem("1 second", [this]() { gr->gvsettings.timespantoshow = 1.0; });
+    menu.addItem("2 seconds", [this]() { gr->gvsettings.timespantoshow = 2.0; });
+    menu.addItem("4 seconds", [this]() { gr->gvsettings.timespantoshow = 4.0; });
+    menu.addItem("8 seconds", [this]() { gr->gvsettings.timespantoshow = 8.0; });
+    menu.addItem("16 seconds", [this]() { gr->gvsettings.timespantoshow = 16.0; });
+    menu.addSectionHeader("Options");
+    menu.addItem("Load macro knobs settings", [this]() {
+        if (OnMacroKnobsLoadRequested)
+            OnMacroKnobsLoadRequested();
+    });
+    menu.addItem("Show modulator values", true, showModulatorValues,
+                 [this]() { showModulatorValues = !showModulatorValues; });
+    juce::PopupMenu param_menu;
+    param_menu.addItem("-None-", [this]() { gr->modulatedParamToStore.store(0); });
+    auto metadata = gr->parmetadatas;
+    std::sort(metadata.begin(), metadata.end(), [](auto &lhs, auto &rhs) {
+        return lhs.groupName + "/" + lhs.name < rhs.groupName + "/" + rhs.name;
+    });
+    for (auto &e : metadata)
+    {
+        if (e.flags & CLAP_PARAM_IS_MODULATABLE)
+        {
+            param_menu.addItem(e.groupName + "/" + e.name, [this, id = e.id]() {
+                paramValuesHistory.clear();
+                gr->modulatedParamToStore.store(id);
+            });
+        }
+    }
+    menu.addSubMenu("Parameter scope", param_menu);
+    menu.showMenuAsync(juce::PopupMenu::Options{});
+}
 
 void DashBoardComponent::drawCPUGraph(juce::Graphics &g, double enginetime,
                                       juce::Rectangle<float> area)
@@ -314,17 +351,20 @@ void DashBoardComponent::paint(juce::Graphics &g)
     int ms = static_cast<int>(std::fmod(enginetime * 1000.0, 1000.0));
 
     // 2. Format with leading zeros
-    juce::String timeText = juce::String::formatted("%02d:%02d.%03d", mins, secs, ms);
-    timeText += " [" + juce::String(gr->missedgrains) + " missed grains]";
+    juce::String infoText = juce::String::formatted("%02d:%02d.%03d", mins, secs, ms);
+    infoText += " [" + juce::String(gr->missedgrains) + " missed grains]";
     // timeText += " " + juce::String(persisted_events.size()) + " events in history";
     // timeText += " " + juce::String(gr->parmetadatas.size()) + " parameters";
-    timeText += " [snapshot : " + juce::String(gr->currentSnapShot) + "]";
-    timeText += " [ambisonic ord " + juce::String(gr->current_ambisonic_order) + "]";
-    timeText += " [" + juce::String(gr->num_out_chans) + " eng channels ";
-    timeText += juce::String(processorRef.getTotalNumInputChannels()) + "/" +
-                juce::String(processorRef.getTotalNumOutputChannels()) + "]";
-    timeText += " [" + juce::String(gr->m_sr) + " Hz]";
+    infoText += " [snapshot : " + juce::String(gr->currentSnapShot) + "]";
+    infoText += " [ambisonic ord " + juce::String(gr->current_ambisonic_order) + "]";
+    infoText += " [" + juce::String(gr->num_out_chans) + " eng channels, plugin I/O ";
+    infoText += juce::String(processorRef.getTotalNumInputChannels()) + " in/" +
+                juce::String(processorRef.getTotalNumOutputChannels()) + " out]";
+    infoText += " [" + juce::String(gr->m_sr) + " Hz]";
+#if JUCE_DEBUG
+    infoText += "\nDEBUG BUILD";
+#endif
     g.setFont(18.0f);
-    g.drawText(timeText, cloudArea.getX(), 1.0f, cloudArea.getWidth(), 25,
-               juce::Justification::left);
+    g.drawMultiLineText(infoText, cloudArea.getX(), 19.0f, cloudArea.getWidth(),
+                        juce::Justification::left);
 }
