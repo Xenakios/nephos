@@ -550,11 +550,16 @@ class StackingModuleComponent : public juce::GroupComponent, public juce::Timer
     void timerCallback() override
     {
         ToneGranulator::GrainRepeatsVisMessage msg;
+        bool needsRepaint = false;
         while (processorRef.granulator.repeatsVisMessages.pop(msg))
         {
             state = msg;
+            needsRepaint = true;
         }
-        repaint();
+        if (needsRepaint)
+        {
+            repaint();
+        }
     }
     void updateIfNeeded();
     void addKnob(XapSlider &slid)
