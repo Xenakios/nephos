@@ -89,25 +89,6 @@ class JSEntryComponent : public juce::Component
     void paint(juce::Graphics &g) override { g.fillAll(juce::Colours::darkgrey); }
 };
 
-class MyCustomLNF : public juce::LookAndFeel_V4
-{
-  public:
-    // Update the constructor/member to avoid that deprecation warning!
-    juce::Font myFont{juce::FontOptions("Comic Sans MS", 20.0f, juce::Font::bold)};
-
-    // This covers Labels (and many components that use Labels internally)
-    juce::Font getLabelFont(juce::Label &l) override { return myFont; }
-
-    // This covers standard TextButtons
-    juce::Font getTextButtonFont(juce::TextButton &b, int buttonHeight) override { return myFont; }
-
-    // This ensures custom typefaces are retrieved if something asks for it
-    juce::Typeface::Ptr getTypefaceForFont(const juce::Font &f) override
-    {
-        return myFont.getTypefacePtr();
-    }
-};
-
 struct PresetsComponent : public juce::Component
 {
     AudioPluginAudioProcessor &processorRef;
@@ -148,29 +129,6 @@ struct PresetsComponent : public juce::Component
     int lastLoaded = -1;
     juce::Colour defaultButtonColor;
     std::vector<std::unique_ptr<juce::TextButton>> buttons;
-};
-
-struct GUIParam : public juce::Component
-{
-    std::unique_ptr<juce::Label> parLabel;
-    std::unique_ptr<juce::Slider> slider;
-    std::unique_ptr<juce::ComboBox> combo;
-    std::unique_ptr<juce::SliderParameterAttachment> slidAttach;
-    std::unique_ptr<juce::ComboBoxParameterAttachment> choiceAttach;
-    GUIParam() {}
-    void resized() override
-    {
-        auto layout = juce::FlexBox(juce::FlexBox::Direction::row, juce::FlexBox::Wrap::noWrap,
-                                    juce::FlexBox::AlignContent::spaceAround,
-                                    juce::FlexBox::AlignItems::stretch,
-                                    juce::FlexBox::JustifyContent::flexStart);
-        layout.items.add(juce::FlexItem(*parLabel).withFlex(1.0));
-        if (slider)
-            layout.items.add(juce::FlexItem(*slider).withFlex(2.5));
-        if (combo)
-            layout.items.add(juce::FlexItem(*combo).withFlex(2.5));
-        layout.performLayout(juce::Rectangle<int>{0, 0, getWidth(), getHeight()});
-    }
 };
 
 struct LFOComponent : public juce::Component
