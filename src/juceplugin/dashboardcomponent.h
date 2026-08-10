@@ -26,69 +26,14 @@ class DashBoardComponent : public juce::Component
     std::unique_ptr<juce::VBlankAttachment> vblankAttachment;
     std::function<double()> GetCPULoad;
     std::function<void(void)> OnMacroKnobsLoadRequested;
-    DashBoardComponent(AudioPluginAudioProcessor &p) : processorRef(p), gr(&p.granulator)
-    {
-        // addAndMakeVisible(haGrid);
-        paramHistoryPath.preallocateSpace(2048);
-        timespantoshow = gr->gvsettings.timespantoshow;
-        pitchGradient.clearColours();
-        pitchGradient.addColour(0.00, juce::Colours::red);
-        pitchGradient.addColour(0.25, juce::Colours::green);
-        pitchGradient.addColour(0.50, juce::Colours::yellow);
-        pitchGradient.addColour(0.75, juce::Colours::cyan);
-        pitchGradient.addColour(1.00, juce::Colours::white);
-        // if (!is_debug())
-        visualfadecoefficient = 0.93;
-        // else
-        //     visualfadecoefficient = std::pow(0.93, 4);
-        persisted_events.reserve(4096);
-        paramValuesHistory.reserve(1024);
-        vblankAttachment = std::make_unique<juce::VBlankAttachment>(this, [this]() {
-            updateGrainData();
-            if (is_debug())
-            {
-                if (throttlecounter % 1 == 0)
-                    repaint();
-                ++throttlecounter;
-            }
-            else
-            {
-                repaint();
-            }
-        });
-    }
+    DashBoardComponent(AudioPluginAudioProcessor &p);
 
     void paint(juce::Graphics &g) override;
     void paintAmbisonicFieldPolar(juce::Graphics &g);
     void paintAmbisonicFieldHammerProjection(juce::Graphics &g);
     void mouseDown(const juce::MouseEvent &ev) override;
     void drawCPUGraph(juce::Graphics &g, double enginetime, juce::Rectangle<float> area);
-    void updateGrainData()
-    {
-        gr->gatherGrainVisData = isShowing();
-        timespantoshow = gr->gvsettings.timespantoshow;
-        ToneGranulator::GrainVisualizerMessage msg;
-        while (gr->visualizer_fifo.pop(msg))
-        {
-            persisted_events.push_back(msg);
-        }
-        double enginetime = gr->playposframes / gr->m_sr;
-        std::erase_if(persisted_events, [this, enginetime](auto const &ev) {
-            return ev.timepos + ev.duration < enginetime - timespantoshow;
-        });
-        auto cpuload = 0.0;
-        if (GetCPULoad)
-            cpuload = GetCPULoad();
-        paramValuesHistory.emplace_back(enginetime, gr->modulatedParValueForGUI.load(), cpuload);
-        std::erase_if(paramValuesHistory, [this, enginetime](auto const &ev) {
-            return ev.timestamp < enginetime - timespantoshow;
-        });
-    }
+    void updateGrainData();
 
-    void resized() override
-    {
-        float h = getHeight();
-        haGrid.setBounds(0.0, h / 2 - 150.0f, 499, 300);
-        // haGrid.toArea = haGrid.toArea.translated(0.0f, h / 2 - 150.0f);
-    }
+    void resized() override;
 };
