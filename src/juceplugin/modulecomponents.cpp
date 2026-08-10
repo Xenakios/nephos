@@ -684,27 +684,7 @@ void OscillatorModuleComponent::resized()
     oscNoiseCorrelationKnob.setBounds(oscSyncKnob.getRight() + 2, oscNoiseModeDrop.getBottom() + 1,
                                       80, 50);
 }
-void StackingModuleComponent::updateIfNeeded()
-{
-    const std::array<uint32_t, 6> ids = {
-        ToneGranulator::PAR_STACKCOUNT,       ToneGranulator::PAR_STACKTIMESPAN,
-        ToneGranulator::PAR_STACKRANDOMPITCH, ToneGranulator::PAR_STACKRANDOMSPATIALIZATION,
-        ToneGranulator::PAR_STACKTIMECURVE,   ToneGranulator::PAR_STACKENDVOLUME};
-    bool needsrepaint = false;
-    for (size_t i = 0; i < ids.size(); ++i)
-    {
-        float latestVal = *processorRef.granulator.idtoparvalptr[ids[i]];
-        if (std::abs(latestVal - seenParamValues[i]) > 0.0000001)
-        {
-            seenParamValues[i] = latestVal;
-            needsrepaint = true;
-        }
-    }
-    if (needsrepaint)
-    {
-        repaint();
-    }
-}
+
 void StackingModuleComponent::resized()
 {
     juce::FlexBox flex;
@@ -716,61 +696,7 @@ void StackingModuleComponent::resized()
     flex.items.add(juce::FlexItem(spatRandomKnob).withFlex(1.0).withMargin(2));
     flex.items.add(juce::FlexItem(endVolumeKnob).withFlex(1.0).withMargin(2));
     flex.performLayout(juce::Rectangle<int>(7, 17, getWidth() - 14, 80));
-}
-void StackingModuleComponent::paint(juce::Graphics &g)
-{
-    ++repaintCount;
-    juce::GroupComponent::paint(g);
-    juce::Rectangle<float> visrect{7.0f, 99.0f, getWidth() - 14.0f, 65.0f};
-    g.setColour(juce::Colours::black);
-    g.fillRect(visrect);
-    int count = state.modulatedvalues[0];
-    auto &granul = processorRef.granulator;
-
-    float timespan = state.modulatedvalues[1];
-    timespan = std::clamp(timespan, 0.0f, 1.0f);
-    timespan = 0.05f + 1.95f * std::pow(timespan, 2.0f);
-
-    float timecurve = state.modulatedvalues[2];
-    float endlevel = state.modulatedvalues[5];
-
-    const float maxtimepow = 3.0f;
-
-    float pitchwalk = 0.0f;
-    float pitchd = state.modulatedvalues[3];
-    ToneGranulator::RepeatsParameterProcessor proc{rng, pitchd, &pitchwalk};
-    for (int i = 0; i < count; ++i)
-    {
-        float normpos = 0.0f;
-        if (count > 1)
-            normpos = 1.0 / (count - 1) * i;
-        if (timecurve < 0.0f)
-        {
-            float ex = xenakios::mapvalue(timecurve, -1.0f, 0.0f, maxtimepow, 1.0f);
-            normpos = std::pow(normpos, ex);
-        }
-        else
-        {
-            float ex = xenakios::mapvalue(timecurve, 0.0f, 1.0f, 1.0f, maxtimepow);
-            normpos = 1.0f - std::pow(1.0f - normpos, ex);
-        }
-        float level = (1.0f - ((1.0f - endlevel) * normpos));
-        // jassert(level >= 0.0f);
-        normpos *= timespan;
-        float xcor = juce::jmap<float>(normpos, 0.0f, 2.0f, visrect.getX(), visrect.getRight());
-
-        float ycor = visrect.getBottom() - level * visrect.getHeight();
-        g.setColour(juce::Colours::white);
-        g.drawLine(xcor, ycor, xcor, visrect.getBottom(), 2.0f);
-        proc.step();
-        ycor = juce::jmap<float>(pitchwalk, -12.0f, 12.0f, visrect.getBottom(), visrect.getY());
-        g.setColour(juce::Colours::lightgreen);
-        const float r = 8.0f;
-        g.fillEllipse(xcor - r / 2.0f, ycor - r / 2.0f, r, r);
-    }
-    g.setColour(juce::Colours::white);
-    g.drawText(juce::String(repaintCount), visrect.getWidth() - 50, visrect.getY(), 49, 15,
-               juce::Justification::centredLeft);
+    repVis.setBounds(7, endVolumeKnob.getBottom() + 2, getWidth() - 14, 50);
 }
 
 void AnalysisSourceComponent::paint(juce::Graphics &g)
