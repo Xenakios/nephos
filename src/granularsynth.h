@@ -566,6 +566,7 @@ struct SimpleEnvelope
     {
         IM_NONE,
         IM_LINEAR,
+        IM_SIGMOID,
         IM_SPLINE,
         IM_CUBIC
     };
@@ -591,7 +592,11 @@ struct SimpleEnvelope
             steps[i] = xenakios::mapvalue<float>(i, 0, maxnumsteps - 1, -1.0, 1.0);
         }
     }
-
+    inline static float smoothstep(float y0, float y1, float mu)
+    {
+        float t = mu * mu * (3.0f - 2.0f * mu);
+        return y0 + (y1 - y0) * t;
+    }
     float get_value(float xpos, float xwarp) const
     {
         xpos = std::clamp(xpos, 0.0f, 1.0f);
@@ -614,6 +619,8 @@ struct SimpleEnvelope
         float mu = xpos - index;
         if (interpmode == IM_LINEAR)
             return y0 + (y1 - y0) * mu;
+        if (interpmode == IM_SIGMOID)
+            return smoothstep(y0, y1, mu);
         float y2 = steps[index + 2];
         if (interpmode == IM_SPLINE)
             return sst::basic_blocks::dsp::quad_bspline(y0, y1, y2, mu);

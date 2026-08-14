@@ -220,8 +220,8 @@ void GrainEnvelopeEditorComponent::mouseDown(const juce::MouseEvent &ev)
         }
         else
         {
-            menu.addSectionHeader("Interpolation mode");
-            juce::StringArray modes{"None", "Linear", "Spline", "Cubic"};
+            menu.addSectionHeader("Smoothing mode");
+            juce::StringArray modes{"None", "Linear", "Sigmoid", "Spline", "Cubic"};
             for (int i = 0; i < modes.size(); ++i)
             {
                 menu.addItem(modes[i], true,
