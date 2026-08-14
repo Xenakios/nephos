@@ -706,11 +706,7 @@ class GranulatorVoice
                          sfpp::FilterModel model, sfpp::ModelConfig config)
     {
         assert(filtindex < pendingInsertConfs.size());
-        pendingInsertConfs[filtindex].is_pending = true;
-        pendingInsertConfs[filtindex].mainmode = mainmode;
-        pendingInsertConfs[filtindex].awtype = awtype;
-        pendingInsertConfs[filtindex].sstconfig = config;
-        pendingInsertConfs[filtindex].sstmodel = model;
+        pendingInsertConfs[filtindex] = {true, mainmode, awtype, model, config};
     }
     void calculate_ambisonic_coeffs(float *destarray, float azimuth, float elevation)
     {
