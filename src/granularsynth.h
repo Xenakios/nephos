@@ -13,6 +13,7 @@
 #include <variant>
 #include "../Common/xen_ambisonics.h"
 #include "../Common/xap_utils.h"
+#include "sst/basic-blocks/dsp/Interpolators.h"
 #include "sst/filters++/api.h"
 #include "sst/filters++/enums.h"
 #include "sst/filters++/model_config.h"
@@ -535,7 +536,27 @@ inline int osc_name_to_index(std::string name)
 template <bool TaperEnabled> struct SimpleEnvelope
 {
     static constexpr int maxnumsteps = 16;
+
+  private:
     alignas(32) std::array<float, maxnumsteps + 5> steps;
+
+  public:
+    auto get_all_steps() const { return steps; }
+    float get_step(size_t index) const
+    {
+        assert(index < maxnumsteps);
+        return steps[index];
+    }
+    void set_step(size_t index, float value)
+    {
+        assert(index < maxnumsteps);
+        steps[index] = value;
+        if (index == maxnumsteps - 1)
+        {
+            for (size_t i = 0; i < 5; ++i)
+                steps[maxnumsteps + i] = value;
+        }
+    }
     alignas(16) int curstep = 0;
     alignas(16) double steplen = 0.0;
     alignas(16) double phase = 0.0;
@@ -545,7 +566,8 @@ template <bool TaperEnabled> struct SimpleEnvelope
     {
         IM_NONE,
         IM_LINEAR,
-        IM_SPLINE
+        IM_SPLINE,
+        IM_CUBIC
     };
     int interpmode = IM_SPLINE;
     choc::value::Value getState()
@@ -569,14 +591,7 @@ template <bool TaperEnabled> struct SimpleEnvelope
             steps[i] = xenakios::mapvalue<float>(i, 0, maxnumsteps - 1, -1.0, 1.0);
         }
     }
-    void start(int dursamples)
-    {
-        taper_phase = 0;
-        taper_len = dursamples;
-        curstep = 0;
-        phase = 0.0;
-        steplen = (double)dursamples / (maxnumsteps - 1);
-    }
+
     float get_value(float xpos, float xwarp) const
     {
         xpos = std::clamp(xpos, 0.0f, 1.0f);
@@ -600,7 +615,10 @@ template <bool TaperEnabled> struct SimpleEnvelope
         if (interpmode == IM_LINEAR)
             return y0 + (y1 - y0) * mu;
         float y2 = steps[index + 2];
-        return sst::basic_blocks::dsp::quad_bspline(y0, y1, y2, mu);
+        if (interpmode == IM_SPLINE)
+            return sst::basic_blocks::dsp::quad_bspline(y0, y1, y2, mu);
+        float y3 = index < 1 ? steps[0] : steps[index - 1];
+        return sst::basic_blocks::dsp::cubic_ipol(y3, y0, y1, y2, mu);
     }
     double step()
     {
@@ -821,6 +839,7 @@ class GranulatorVoice
                 },
                 theoscillator);
         }
+
         envgainlag.snapTo(0.0f);
         pitch_base = evpars.pitch_semitones;
         if (newosctype == 6)
@@ -1540,16 +1559,7 @@ class ToneGranulator
             {
                 const auto numsteps = SimpleEnvelope<false>::maxnumsteps;
                 int envindex = msg.dest - 1000;
-                voiceaux_envelopes[envindex].steps[msg.ival0] = msg.fval0;
-                if (msg.ival0 == numsteps - 1)
-                {
-                    // steps array has extra space for interpolation
-                    voiceaux_envelopes[envindex].steps[numsteps] = msg.fval0;
-                    voiceaux_envelopes[envindex].steps[numsteps + 1] = msg.fval0;
-                    voiceaux_envelopes[envindex].steps[numsteps + 2] = msg.fval0;
-                }
-
-                // voiceaux_envelope.steps[msg.ival0] = msg.fval0;
+                voiceaux_envelopes[envindex].set_step(msg.ival0, msg.fval0);
             }
             if (msg.dest < stepModSources.size())
             {

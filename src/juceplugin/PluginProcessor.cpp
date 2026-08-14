@@ -636,7 +636,8 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 channelDatas[1][j] = std::clamp((m - s) * 0.5f, -1.0f, 1.0f);
                 if (pushAnalysisData)
                     baconSpectrum->pushSample(m);
-            } else
+            }
+            else
             {
                 channelDatas[0][j] = 0.0f;
                 channelDatas[1][j] = 0.0f;
@@ -666,17 +667,17 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 {
                     if (std::isfinite(s))
                         channelDatas[i][j] = std::clamp(s, -1.0f, 1.0f);
-                    else 
+                    else
                     {
                         channelDatas[i][j] = 0.0f;
                         corrupt_audio_detected = true;
                     }
                 }
             }
-            //if (!corrupt_audio_detected && pushAnalysisData)
-            //    baconSpectrum->pushSample(adapter_block[0]);
-            //else
-            //    baconSpectrum->pushSample(0.0f);
+            // if (!corrupt_audio_detected && pushAnalysisData)
+            //     baconSpectrum->pushSample(adapter_block[0]);
+            // else
+            //     baconSpectrum->pushSample(0.0f);
         }
         jassert(!corrupt_audio_detected);
         if (corrupt_audio_detected)
@@ -902,12 +903,15 @@ void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
             auto auxenvsteps = auxenvstate["steps"];
             for (int j = 0; j < auxenvsteps.size(); ++j)
             {
-                StepModSource::Message msg;
-                msg.opcode = StepModSource::Message::OP_SETSTEP;
-                msg.fval0 = auxenvsteps[j].getWithDefault(0.0);
-                msg.dest = 1000 + i;
-                msg.ival0 = j;
-                granulator.fifo.push(msg);
+                if (j < SimpleEnvelope<false>::maxnumsteps)
+                {
+                    StepModSource::Message msg;
+                    msg.opcode = StepModSource::Message::OP_SETSTEP;
+                    msg.fval0 = auxenvsteps[j].getWithDefault(0.0);
+                    msg.dest = 1000 + i;
+                    msg.ival0 = j;
+                    granulator.fifo.push(msg);
+                }
             }
         }
     }

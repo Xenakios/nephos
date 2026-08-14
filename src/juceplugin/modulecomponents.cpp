@@ -145,7 +145,7 @@ void GrainEnvelopeEditorComponent::paint(juce::Graphics &g)
     {
         float x0 = (float)getWidth() / numsteps * i;
         float x1 = (float)getWidth() / numsteps * (i + 1);
-        float y = juce::jmap<float>(auxenv.steps[i], -1.1f, 1.1f, getHeight(), top_margin);
+        float y = juce::jmap<float>(auxenv.get_step(i), -1.1f, 1.1f, getHeight(), top_margin);
         g.drawLine(x0, y, x1, y, 2.0f);
     }
     // g.drawText("Envelope " + juce::String(target_envelope + 1), 1, 1, getWidth() - 2, 20,
@@ -157,7 +157,7 @@ void GrainEnvelopeEditorComponent::paint(juce::Graphics &g)
 void GrainEnvelopeEditorComponent::transform_steps(TransformMode mode)
 {
     auto numsteps = SimpleEnvelope<false>::maxnumsteps;
-    auto oldsteps = granul->voiceaux_envelopes[target_envelope].steps;
+    auto oldsteps = granul->voiceaux_envelopes[target_envelope].get_all_steps();
     bool waschanged = false;
     if (mode == TM_Reverse)
     {
@@ -221,7 +221,7 @@ void GrainEnvelopeEditorComponent::mouseDown(const juce::MouseEvent &ev)
         else
         {
             menu.addSectionHeader("Interpolation mode");
-            juce::StringArray modes{"None", "Linear", "Spline"};
+            juce::StringArray modes{"None", "Linear", "Spline", "Cubic"};
             for (int i = 0; i < modes.size(); ++i)
             {
                 menu.addItem(modes[i], true,
@@ -368,7 +368,7 @@ void GrainEnvelopeEditorComponent::mouseWheelMove(const juce::MouseEvent &event,
     {
         float delta = wheel.deltaY * 0.2;
         auto &auxenv = granul->voiceaux_envelopes[target_envelope];
-        float val = std::clamp(auxenv.steps[stepindex] + delta, -1.0f, 1.0f);
+        float val = std::clamp(auxenv.get_step(stepindex) + delta, -1.0f, 1.0f);
         StepModSource::Message msg;
         msg.opcode = StepModSource::Message::OP_SETSTEP;
         msg.fval0 = val;
