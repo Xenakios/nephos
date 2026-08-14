@@ -533,6 +533,12 @@ inline int osc_name_to_index(std::string name)
     return -1;
 }
 
+inline float smoothstep(float y0, float y1, float mu)
+{
+    float t = mu * mu * (3.0f - 2.0f * mu);
+    return y0 + (y1 - y0) * t;
+}
+
 struct SimpleEnvelope
 {
     static constexpr int maxnumsteps = 16;
@@ -557,11 +563,6 @@ struct SimpleEnvelope
                 steps[maxnumsteps + i] = value;
         }
     }
-    alignas(16) int curstep = 0;
-    alignas(16) double steplen = 0.0;
-    alignas(16) double phase = 0.0;
-    alignas(16) int taper_phase = 0;
-    alignas(16) int taper_len = 0;
     enum InterpolationMode
     {
         IM_NONE,
@@ -583,20 +584,9 @@ struct SimpleEnvelope
         result.setMember("steps", auxenvsteps);
         return result;
     }
+    // should implement this
     void setState(choc::value::ValueView state) {}
-    SimpleEnvelope()
-    {
-        std::fill(steps.begin(), steps.end(), 0.0f);
-        for (size_t i = 0; i < maxnumsteps; ++i)
-        {
-            steps[i] = xenakios::mapvalue<float>(i, 0, maxnumsteps - 1, -1.0, 1.0);
-        }
-    }
-    inline static float smoothstep(float y0, float y1, float mu)
-    {
-        float t = mu * mu * (3.0f - 2.0f * mu);
-        return y0 + (y1 - y0) * t;
-    }
+    SimpleEnvelope() { std::fill(steps.begin(), steps.end(), 0.0f); }
     float get_value(float xpos, float xwarp) const
     {
         xpos = std::clamp(xpos, 0.0f, 1.0f);
