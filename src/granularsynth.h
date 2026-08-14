@@ -533,7 +533,7 @@ inline int osc_name_to_index(std::string name)
     return -1;
 }
 
-template <bool TaperEnabled> struct SimpleEnvelope
+struct SimpleEnvelope
 {
     static constexpr int maxnumsteps = 16;
 
@@ -620,41 +620,6 @@ template <bool TaperEnabled> struct SimpleEnvelope
         float y3 = index < 1 ? steps[0] : steps[index - 1];
         return sst::basic_blocks::dsp::cubic_ipol(y3, y0, y1, y2, mu);
     }
-    double step()
-    {
-        double y0 = steps[curstep];
-        double y1 = 0.0;
-        if (curstep + 1 < maxnumsteps - 1)
-        {
-            y1 = steps[curstep + 1];
-        }
-        else
-        {
-            y1 = steps[maxnumsteps - 1];
-        }
-        double y2 = y0 + (y1 - y0) / steplen * phase;
-        phase += 1.0;
-        if (phase >= steplen)
-        {
-            phase = 0.0;
-            ++curstep;
-            if (curstep >= maxnumsteps)
-                curstep = maxnumsteps - 1;
-        }
-        if constexpr (TaperEnabled)
-        {
-            double tapergain = 1.0;
-            const int taperfadelen = 32;
-            if (taper_phase < taperfadelen)
-                tapergain = xenakios::mapvalue<double>(taper_phase, 0, taperfadelen, 0.0, 1.0);
-            else if (taper_phase >= taper_len - taperfadelen)
-                tapergain = xenakios::mapvalue<double>(taper_phase, taper_len - taperfadelen,
-                                                       taper_len, 1.0, 0.0);
-            ++taper_phase;
-            return y2 * tapergain;
-        }
-        return y2;
-    }
 };
 
 constexpr size_t numPitchBandAttens = 7;
@@ -692,7 +657,7 @@ class GranulatorVoice
     };
     FilterRouting filter_routing = FR_ALLSERIAL;
     static constexpr size_t num_aux_envelopes = 4;
-    std::array<SimpleEnvelope<false>, num_aux_envelopes> *aux_envelopes = nullptr;
+    std::array<SimpleEnvelope, num_aux_envelopes> *aux_envelopes = nullptr;
     struct ModSlot
     {
         uint32_t source_id = CLAP_INVALID_ID;
@@ -1053,7 +1018,7 @@ class GranulatorVoice
     static void process_mod_matrix(
         double normphase, std::span<float> auxenvparams,
         std::array<ModSlot, GrainEvent::max_grain_mod_slots> &mod_slots,
-        std::array<SimpleEnvelope<false>, GranulatorVoice::num_aux_envelopes> &aux_envelopes,
+        std::array<SimpleEnvelope, GranulatorVoice::num_aux_envelopes> &aux_envelopes,
         std::span<float> targetmodvalues)
     {
         assert(auxenvparams.size() == 8);
@@ -1525,9 +1490,8 @@ class ToneGranulator
     alignas(32) std::array<TriggeredRandomSource, 4> randomModSources{1001, 1007, 5543, 90001};
     alignas(32) MidiNoteModSource midiNoteModSource;
     float midiNoteModValue = 0.0f;
-    // we can share these between voices as we don't need it stateful, at least for now
-    alignas(32)
-        std::array<SimpleEnvelope<false>, GranulatorVoice::num_aux_envelopes> voiceaux_envelopes;
+    // we can share these between voices as we don't need them stateful, at least for now
+    alignas(32) std::array<SimpleEnvelope, GranulatorVoice::num_aux_envelopes> voiceaux_envelopes;
     alignas(16) std::array<float, numPitchBandAttens + 5> pitchBandAttensShared;
     alignas(16) std::array<int, 7> osctypemapping;
     struct ModSourceInfo
@@ -1557,7 +1521,7 @@ class ToneGranulator
             if (msg.dest >= 1000 && msg.dest < 1000 + GranulatorVoice::num_aux_envelopes &&
                 msg.opcode == StepModSource::Message::OP_SETSTEP)
             {
-                const auto numsteps = SimpleEnvelope<false>::maxnumsteps;
+                const auto numsteps = SimpleEnvelope::maxnumsteps;
                 int envindex = msg.dest - 1000;
                 voiceaux_envelopes[envindex].set_step(msg.ival0, msg.fval0);
             }
@@ -2302,22 +2266,6 @@ class ToneGranulator
             v->set_insert_type(which, mainmode, awtype, mo, conf);
         }
     }
-
-    void set_voice_aux_envelope(std::array<float, SimpleEnvelope<false>::maxnumsteps> env)
-    {
-        for (auto &v : voices)
-        {
-            // v->aux_envelope.steps = env;
-        }
-    }
-    void set_voice_gain_envelope(std::array<float, SimpleEnvelope<false>::maxnumsteps> env)
-    {
-        for (auto &v : voices)
-        {
-            // v->gain_envelope.steps = env;
-        }
-    }
-
     int current_ambisonic_order = 0;
     int pending_ambisonic_order = 0;
     void set_event_list(events_t evlist)

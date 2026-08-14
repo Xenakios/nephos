@@ -903,7 +903,7 @@ void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
             auto auxenvsteps = auxenvstate["steps"];
             for (int j = 0; j < auxenvsteps.size(); ++j)
             {
-                if (j < SimpleEnvelope<false>::maxnumsteps)
+                if (j < SimpleEnvelope::maxnumsteps)
                 {
                     StepModSource::Message msg;
                     msg.opcode = StepModSource::Message::OP_SETSTEP;

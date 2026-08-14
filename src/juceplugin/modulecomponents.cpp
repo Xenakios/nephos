@@ -140,7 +140,7 @@ void GrainEnvelopeEditorComponent::paint(juce::Graphics &g)
     auto &auxenv = granul->voiceaux_envelopes[target_envelope];
 
     g.setColour(juce::Colours::white);
-    auto numsteps = SimpleEnvelope<false>::maxnumsteps;
+    auto numsteps = SimpleEnvelope::maxnumsteps;
     for (int i = 0; i < numsteps; ++i)
     {
         float x0 = (float)getWidth() / numsteps * i;
@@ -156,7 +156,7 @@ void GrainEnvelopeEditorComponent::paint(juce::Graphics &g)
 
 void GrainEnvelopeEditorComponent::transform_steps(TransformMode mode)
 {
-    auto numsteps = SimpleEnvelope<false>::maxnumsteps;
+    auto numsteps = SimpleEnvelope::maxnumsteps;
     auto oldsteps = granul->voiceaux_envelopes[target_envelope].get_all_steps();
     bool waschanged = false;
     if (mode == TM_Reverse)
@@ -208,7 +208,7 @@ void GrainEnvelopeEditorComponent::transform_steps(TransformMode mode)
 
 void GrainEnvelopeEditorComponent::mouseDown(const juce::MouseEvent &ev)
 {
-    auto numsteps = SimpleEnvelope<false>::maxnumsteps;
+    auto numsteps = SimpleEnvelope::maxnumsteps;
     if (ev.mods.isRightButtonDown())
     {
         juce::PopupMenu menu;
@@ -332,7 +332,7 @@ juce::PopupMenu GrainEnvelopeEditorComponent::generate_presets_menu()
                 auto txt =
                     choc::file::loadFileAsString(f.getFile().getFullPathName().toStdString());
                 auto arr = choc::json::parse(txt);
-                auto numsteps = SimpleEnvelope<false>::maxnumsteps;
+                auto numsteps = SimpleEnvelope::maxnumsteps;
                 if (arr.isArray())
                 {
                     for (int i = 0; i < numsteps; ++i)
@@ -362,7 +362,7 @@ juce::PopupMenu GrainEnvelopeEditorComponent::generate_presets_menu()
 void GrainEnvelopeEditorComponent::mouseWheelMove(const juce::MouseEvent &event,
                                                   const juce::MouseWheelDetails &wheel)
 {
-    auto numsteps = SimpleEnvelope<false>::maxnumsteps;
+    auto numsteps = SimpleEnvelope::maxnumsteps;
     int stepindex = numsteps / (float)getWidth() * event.x;
     if (stepindex >= 0 && stepindex < numsteps)
     {
@@ -381,7 +381,7 @@ void GrainEnvelopeEditorComponent::mouseWheelMove(const juce::MouseEvent &event,
 
 void GrainEnvelopeEditorComponent::generate_steps(GenMode mode)
 {
-    auto numsteps = SimpleEnvelope<false>::maxnumsteps;
+    auto numsteps = SimpleEnvelope::maxnumsteps;
     lastError = "";
     if (mode == GM_CLIPBOARD)
     {
