@@ -6,7 +6,94 @@
 #include <array>
 #include <string>
 #include "../Common/xap_utils.h"
+#include "sst/basic-blocks/dsp/Interpolators.h"
 #include "sst/basic-blocks/params/ParamMetadata.h"
+
+inline float smoothstep(float y0, float y1, float mu)
+{
+    float t = mu * mu * (3.0f - 2.0f * mu);
+    return y0 + (y1 - y0) * t;
+}
+
+struct SimpleEnvelope
+{
+    static constexpr int maxnumsteps = 16;
+
+  private:
+    alignas(32) std::array<float, maxnumsteps + 5> steps;
+
+  public:
+    auto get_all_steps() const { return steps; }
+    float get_step(size_t index) const
+    {
+        assert(index < maxnumsteps);
+        return steps[index];
+    }
+    void set_step(size_t index, float value)
+    {
+        assert(index < maxnumsteps);
+        steps[index] = value;
+        if (index == maxnumsteps - 1)
+        {
+            for (size_t i = 0; i < 5; ++i)
+                steps[maxnumsteps + i] = value;
+        }
+    }
+    enum InterpolationMode
+    {
+        IM_NONE,
+        IM_LINEAR,
+        IM_SIGMOID,
+        IM_SPLINE,
+        IM_CUBIC
+    };
+    int interpmode = IM_SPLINE;
+    choc::value::Value getState()
+    {
+        auto result = choc::value::createObject("stepenvstate");
+        result.setMember("interpmode", interpmode);
+        auto auxenvsteps = choc::value::createEmptyArray();
+        for (auto &v : steps)
+        {
+            auxenvsteps.addArrayElement(v);
+        }
+        result.setMember("steps", auxenvsteps);
+        return result;
+    }
+    // should implement this
+    void setState(choc::value::ValueView state) {}
+    SimpleEnvelope() { std::fill(steps.begin(), steps.end(), 0.0f); }
+    float get_value(float xpos, float xwarp) const
+    {
+        xpos = std::clamp(xpos, 0.0f, 1.0f);
+        if (xwarp < 0.0f)
+        {
+            float ex = xenakios::mapvalue(xwarp, -1.0f, 0.0f, 4.0f, 1.0f);
+            xpos = std::pow(xpos, ex);
+        }
+        else
+        {
+            float ex = xenakios::mapvalue(xwarp, 0.0f, 1.0f, 1.0f, 4.0f);
+            xpos = 1.0f - std::pow(1.0f - xpos, ex);
+        }
+        xpos *= maxnumsteps;
+        int index = xpos;
+        float y0 = steps[index];
+        if (interpmode == IM_NONE)
+            return y0;
+        float y1 = steps[index + 1];
+        float mu = xpos - index;
+        if (interpmode == IM_LINEAR)
+            return y0 + (y1 - y0) * mu;
+        if (interpmode == IM_SIGMOID)
+            return smoothstep(y0, y1, mu);
+        float y2 = steps[index + 2];
+        if (interpmode == IM_SPLINE)
+            return sst::basic_blocks::dsp::quad_bspline(y0, y1, y2, mu);
+        float y3 = index < 1 ? steps[0] : steps[index - 1];
+        return sst::basic_blocks::dsp::cubic_ipol(y3, y0, y1, y2, mu);
+    }
+};
 
 class MidiNoteModSource
 {
