@@ -183,6 +183,10 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     juce::MidiKeyboardState keyboardState;
     SpectralModulationAnalyzer modulationAnalyzer;
     std::atomic<bool> modulationAnalyzerEnabled{false};
+    // can be resetted back to false from the GUI
+    std::atomic<bool> corruptAudioDetected{false};
+    // for testing
+    std::atomic<bool> corruptAudioOnPurpose{false};
   private:
     alignas(32) std::vector<float> workBuffer;
     alignas(32) choc::fifo::SingleReaderSingleWriterFIFO<

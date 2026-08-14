@@ -216,7 +216,12 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
       volumeModuleComponent(p), stackModuleComponent(p), mainOutModuleComponent(p),
       keyboardComponent(p.keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard)
 {
-    // addAndMakeVisible(processorRef.xenAvisComponent);
+    addAndMakeVisible(corruptButton);
+    corruptButton.setButtonText("CORRUPT AUDIO");
+    corruptButton.onClick = [this]() {
+        processorRef.corruptAudioOnPurpose = true;
+        juce::Timer::callAfterDelay(1000, [this]() { processorRef.corruptAudioOnPurpose = false; });
+    };
     mainOutModuleComponent.perfComponent.RequestData = [this](int &maxvoices, int &usedvoices,
                                                               float &cpu) {
         maxvoices = processorRef.granulator.voices.size();
@@ -307,7 +312,7 @@ void MainPageComponent::resized()
 
     spatModuleComponent.setBounds(0, volumeModuleComponent.getBottom() + 2, 600, 125);
     mainOutModuleComponent.setBounds(spatModuleComponent.getRight() + 2,
-                                     volumeModuleComponent.getBottom() + 2, 500, 125);
+                                     volumeModuleComponent.getBottom() + 2, 600, 125);
     insertComponents[0]->setBounds(0, spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 125);
     insertComponents[1]->setBounds(insertComponents[0]->getRight() + 1,
                                    spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 125);
@@ -319,6 +324,7 @@ void MainPageComponent::resized()
     //                                         500, 250);
     //  keyboardComponent.setBounds(1, getHeight() - 50, getWidth() - 300, 49);
     //  testTree.setBounds(getWidth() - 299, timeModuleComponent.getBottom() + 2, 300, 300);
+    corruptButton.setBounds(getWidth() - 200, stackModuleComponent.getBottom() + 2, 190, 25);
 }
 
 void DashPage::saveSnapShot(int index)

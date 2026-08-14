@@ -618,7 +618,6 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     bool pushAnalysisData = false;
     if (baconSpectrum && baconSpectrum->visibleAtomic.load())
         pushAnalysisData = true;
-    bool corrupt_audio_detected = false;
     if (totalNumOutputChannels == 2)
     {
         // super simple decode for stereo monitoring, we should probably just bite
@@ -629,6 +628,10 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             buffer_adapter.pop(adapter_block);
             float m = adapter_block[0];
             float s = adapter_block[1];
+            if (corruptAudioOnPurpose && j == 31)
+            {
+                s = std::nanf("");
+            }
             if (std::isfinite(m) && std::isfinite(s))
             {
                 m = m * midGain;
@@ -643,11 +646,10 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 channelDatas[1][j] = 0.0f;
                 if (pushAnalysisData)
                     baconSpectrum->pushSample(0.0f);
-                corrupt_audio_detected = true;
+                corruptAudioDetected = true;
             }
         }
-        jassert(!corrupt_audio_detected);
-        if (corrupt_audio_detected)
+        if (corruptAudioDetected)
         {
             buffer.clear();
         }
@@ -670,7 +672,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                     else
                     {
                         channelDatas[i][j] = 0.0f;
-                        corrupt_audio_detected = true;
+                        corruptAudioDetected = true;
                     }
                 }
             }
@@ -679,8 +681,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             // else
             //     baconSpectrum->pushSample(0.0f);
         }
-        jassert(!corrupt_audio_detected);
-        if (corrupt_audio_detected)
+        if (corruptAudioDetected)
         {
             buffer.clear();
         }

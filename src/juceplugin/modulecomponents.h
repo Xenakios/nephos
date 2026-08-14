@@ -681,13 +681,14 @@ class PerformanceComponent : public juce::Component, public juce::Timer
     std::function<void(int &, int &, float &)> RequestData;
 };
 
-class MainOutputModule : public juce::GroupComponent
+class MainOutputModule : public juce::GroupComponent, public juce::Timer
 {
   public:
     AudioPluginAudioProcessor &processorRef;
     XapSlider mainVolumeKnob;
     XapSlider highPassCutoffKnob;
     PerformanceComponent perfComponent;
+    juce::TextButton continueButton;
     MainOutputModule(AudioPluginAudioProcessor &p)
         : juce::GroupComponent("", "Main Output"), processorRef(p),
           mainVolumeKnob(XapSlider::SS_Knob,
@@ -701,6 +702,23 @@ class MainOutputModule : public juce::GroupComponent
         addAndMakeVisible(perfComponent);
         addAndMakeVisible(highPassCutoffKnob);
         addAndMakeVisible(p.avisComponent);
+        addChildComponent(continueButton);
+        continueButton.setButtonText("Corrupt audio detected, click to attempt resuming");
+        continueButton.onClick = [this]() { processorRef.corruptAudioDetected = false; };
+        startTimerHz(1);
+    }
+    void timerCallback() override
+    {
+        if (processorRef.corruptAudioDetected)
+        {
+            processorRef.avisComponent.setVisible(false);
+            continueButton.setVisible(true);
+        }
+        else
+        {
+            processorRef.avisComponent.setVisible(true);
+            continueButton.setVisible(false);
+        }
     }
     void resized() override
     {
@@ -710,6 +728,8 @@ class MainOutputModule : public juce::GroupComponent
         processorRef.avisComponent.setBounds(highPassCutoffKnob.getRight() + 2,
                                              perfComponent.getBottom() + 1, getWidth() - 220,
                                              getHeight() - 25 - 21);
+        continueButton.setBounds(highPassCutoffKnob.getRight() + 2, perfComponent.getBottom() + 1,
+                                 getWidth() - 220, getHeight() - 25 - 24);
     }
 };
 

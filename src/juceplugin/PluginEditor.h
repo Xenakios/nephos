@@ -391,7 +391,7 @@ class MainPageComponent final : public juce::Component
             g.drawText(itemText, 0, 0, width, height, juce::Justification::centredLeft);
         }
     };
-    // MyTreeItem testRootItem;
+    juce::TextButton corruptButton;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainPageComponent)
 };
 
