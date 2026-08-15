@@ -36,6 +36,13 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
     : juce::AudioProcessorEditor(p), processorRef(p), mainPage(p), modulationPage(p), dashPage(p),
       mainTabs(juce::TabbedButtonBar::Orientation::TabsAtTop)
 {
+    /*
+    if (!processorRef.baconSpectrum)
+    {
+        processorRef.baconSpectrum =
+            std::make_unique<baconpaul::six_sines::ui::SpectrumAnalyzerComponent>(44100.0);
+    }
+    */
     addChildComponent(overlaylabel);
     mainTabs.addTab("MAIN", juce::Colours::grey, &mainPage, false);
     mainTabs.addTab("MODULATION", juce::Colours::grey, &modulationPage, false);
