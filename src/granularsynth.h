@@ -532,7 +532,6 @@ inline int osc_name_to_index(std::string name)
     return -1;
 }
 
-
 constexpr size_t numPitchBandAttens = 7;
 
 class GranulatorVoice
@@ -1347,6 +1346,7 @@ class ToneGranulator
         PAR_AUXENVTIMESHIFT = 3054,
         PAR_AUXENVVALUEWARP = 3058,
         PAR_MASTERHIGHPASSCUTOFF = 3100,
+        PAR_MASTERLFORATE = 4000,
         PAR_MAINMODDEPTHSTART = 5000,
         PAR_LFORATES = 100000,
         PAR_LFODEFORMS = 100100,
@@ -1979,6 +1979,15 @@ class ToneGranulator
                                    .withGroupName("Repeats")
                                    .withID(PAR_STACKENDVOLUME)
                                    .withFlags(CLAP_PARAM_IS_MODULATABLE));
+        parmetadatas.push_back(pmd()
+                                   .withRange(-2.0f, 2.0f)
+                                   .withDefault(0.0)
+                                   .withDecimalPlaces(3)
+                                   .withATwoToTheBFormatting(1.0f, 1.0f, "Hz")
+                                   .withName("LFO Master Rate")
+                                   .withGroupName("LFO Master")
+                                   .withID(PAR_MASTERLFORATE)
+                                   .withFlags(CLAP_PARAM_IS_MODULATABLE));
         for (int i = 0; i < GranulatorModMatrix::numLfos; ++i)
         {
             parmetadatas.push_back(pmd()
@@ -2254,6 +2263,8 @@ class ToneGranulator
     std::atomic<float> modulatedParValueForGUI{0.0f};
     void process_modulations()
     {
+        float master_rate =
+            modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_MASTERLFORATE});
         for (uint32_t i = 0; i < modmatrix.numLfos; ++i)
         {
             float shift = modmatrix.m.getTargetValue(
@@ -2261,6 +2272,7 @@ class ToneGranulator
             modmatrix.m_lfos[i]->applyPhaseOffset(shift);
             float rate = modmatrix.m.getTargetValue(
                 GranulatorModConfig::TargetIdentifier{(int)(PAR_LFORATES + i)});
+            rate = std::clamp(rate + master_rate, -6.0f, 6.0f);
             float deform = modmatrix.m.getTargetValue(
                 GranulatorModConfig::TargetIdentifier{(int)(PAR_LFODEFORMS + i)});
             float warp = modmatrix.m.getTargetValue(

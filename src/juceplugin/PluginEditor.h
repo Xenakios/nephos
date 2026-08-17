@@ -449,9 +449,13 @@ class ModulationPage : public juce::Component
   public:
     ModulationPage(AudioPluginAudioProcessor &p)
         : processorRef(p), analysisComponen(p),
-          stepSeqTabs(juce::TabbedButtonBar::Orientation::TabsAtTop)
+          stepSeqTabs(juce::TabbedButtonBar::Orientation::TabsAtTop),
+          masterRateKnob(XapSlider::SS_Knob,
+                         *p.granulator.idtoparmetadata[ToneGranulator::PAR_MASTERLFORATE])
     {
         addAndMakeVisible(resetModsButton);
+        addAndMakeVisible(masterRateKnob);
+        initSlider(p, *this, masterRateKnob);
         resetModsButton.setButtonText("RESET MODULATOR PHASES");
         resetModsButton.onClick = [this]() {
             ThreadMessage msg;
@@ -492,6 +496,7 @@ class ModulationPage : public juce::Component
     void resized() override
     {
         resetModsButton.setBounds(1, 1, 200, 38);
+        masterRateKnob.setBounds(resetModsButton.getRight() + 2, 1, 80, 60);
         juce::FlexBox flex;
         flex.flexDirection = juce::FlexBox::Direction::column;
         flex.flexWrap = juce::FlexBox::Wrap::wrap;
@@ -500,7 +505,7 @@ class ModulationPage : public juce::Component
             flex.items.add(
                 juce::FlexItem(*lfocomps[i]).withFlex(1.0).withMargin(2.0).withMinHeight(80.0));
         }
-        flex.performLayout(juce::Rectangle<int>(0, 40, getWidth(), 175));
+        flex.performLayout(juce::Rectangle<int>(0, 61, getWidth(), 175));
         stepSeqTabs.setBounds(0, lfocomps.back()->getBottom() + 2, getWidth(), 120);
         juce::FlexBox modrowflex;
         modrowflex.flexDirection = juce::FlexBox::Direction::column;
@@ -520,6 +525,7 @@ class ModulationPage : public juce::Component
     std::vector<std::unique_ptr<StepSeqComponent>> stepcomps;
     std::vector<std::unique_ptr<ModulationRowComponent>> modRowComps;
     juce::TextButton resetModsButton;
+    XapSlider masterRateKnob;
 };
 
 class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor, public juce::Timer
@@ -529,7 +535,7 @@ class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor,
     ~AudioPluginAudioProcessorEditor() override;
     juce::Label overlaylabel;
     void setOverLaytext(juce::String txt, int delay_ms);
-    
+
     void resized() override;
     void timerCallback() override;
     void updateParameterRemoteStates();
