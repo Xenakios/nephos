@@ -1980,7 +1980,7 @@ class ToneGranulator
                                    .withID(PAR_STACKENDVOLUME)
                                    .withFlags(CLAP_PARAM_IS_MODULATABLE));
         parmetadatas.push_back(pmd()
-                                   .withRange(-2.0f, 2.0f)
+                                   .withRange(-7.0f, 7.0f)
                                    .withDefault(0.0)
                                    .withDecimalPlaces(3)
                                    .withATwoToTheBFormatting(1.0f, 1.0f, "Hz")
@@ -2006,7 +2006,7 @@ class ToneGranulator
                                        .withGroupName(fmt::format("LFO {}", i + 1))
                                        .withID(PAR_LFOSHAPES + i));
             parmetadatas.push_back(pmd()
-                                       .withRange(-6.0, 6.0)
+                                       .withRange(-7.0, 7.0)
                                        .withDefault(0.0)
                                        .withDecimalPlaces(3)
                                        .withATwoToTheBFormatting(1.0f, 1.0f, "Hz")
@@ -2265,6 +2265,7 @@ class ToneGranulator
     {
         float master_rate =
             modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_MASTERLFORATE});
+        master_rate = std::clamp(master_rate, -7.0f, 7.0f);
         for (uint32_t i = 0; i < modmatrix.numLfos; ++i)
         {
             float shift = modmatrix.m.getTargetValue(
@@ -2272,7 +2273,7 @@ class ToneGranulator
             modmatrix.m_lfos[i]->applyPhaseOffset(shift);
             float rate = modmatrix.m.getTargetValue(
                 GranulatorModConfig::TargetIdentifier{(int)(PAR_LFORATES + i)});
-            rate = std::clamp(rate + master_rate, -6.0f, 6.0f);
+            rate = std::clamp(rate + master_rate, -7.0f, 7.0f);
             float deform = modmatrix.m.getTargetValue(
                 GranulatorModConfig::TargetIdentifier{(int)(PAR_LFODEFORMS + i)});
             float warp = modmatrix.m.getTargetValue(
