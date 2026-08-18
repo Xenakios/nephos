@@ -1260,6 +1260,10 @@ class ToneGranulator
     struct GrainRepeatsVisMessage
     {
         std::array<float, 6> modulatedvalues = {0.0f};
+        bool operator==(const GrainRepeatsVisMessage &other) const
+        {
+            return modulatedvalues == other.modulatedvalues;
+        }
     };
     choc::fifo::SingleReaderSingleWriterFIFO<GrainRepeatsVisMessage> repeatsVisMessages;
     struct GrainEnvelopeVisMessage
@@ -2301,7 +2305,7 @@ class ToneGranulator
             }
         }
         modmatrix.m.process();
-        if (audiocallbackcount % 100 == 0)
+        if (audiocallbackcount % 128 == 0)
         {
             GrainRepeatsVisMessage repmsg;
             repmsg.modulatedvalues[0] = modmatrix.m.getTargetValue({PAR_STACKCOUNT});

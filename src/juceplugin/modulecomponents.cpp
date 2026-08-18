@@ -1091,3 +1091,57 @@ void StepSeqComponent::runExternalProgram()
         }
     });
 }
+void RepeatsVisualizer::paint(juce::Graphics &g)
+{
+    juce::Rectangle<float> visrect{0.0f, 0.0f, (float)getWidth(), (float)getHeight()};
+    g.setColour(juce::Colours::black);
+    g.fillRect(visrect);
+    int count = state.modulatedvalues[0];
+    auto &granul = processorRef.granulator;
+
+    float timespan = state.modulatedvalues[1];
+    timespan = std::clamp(timespan, 0.0f, 1.0f);
+    timespan = 0.05f + 1.95f * std::pow(timespan, 2.0f);
+
+    float timecurve = state.modulatedvalues[2];
+    float endlevel = state.modulatedvalues[5];
+
+    const float maxtimepow = 3.0f;
+
+    float pitchwalk = 0.0f;
+    float pitchd = state.modulatedvalues[3];
+    ToneGranulator::RepeatsParameterProcessor proc{rng, pitchd, &pitchwalk};
+    for (int i = 0; i < count; ++i)
+    {
+        float normpos = 0.0f;
+        if (count > 1)
+            normpos = 1.0 / (count - 1) * i;
+        if (timecurve < 0.0f)
+        {
+            float ex = xenakios::mapvalue(timecurve, -1.0f, 0.0f, maxtimepow, 1.0f);
+            normpos = std::pow(normpos, ex);
+        }
+        else
+        {
+            float ex = xenakios::mapvalue(timecurve, 0.0f, 1.0f, 1.0f, maxtimepow);
+            normpos = 1.0f - std::pow(1.0f - normpos, ex);
+        }
+        float level = (1.0f - ((1.0f - endlevel) * normpos));
+        // jassert(level >= 0.0f);
+        normpos *= timespan;
+        float xcor = juce::jmap<float>(normpos, 0.0f, 2.0f, visrect.getX(), visrect.getRight());
+
+        float ycor = visrect.getBottom() - level * visrect.getHeight();
+        g.setColour(juce::Colours::white);
+        g.drawLine(xcor, ycor, xcor, visrect.getBottom(), 2.0f);
+        proc.step();
+        ycor = juce::jmap<float>(pitchwalk, -12.0f, 12.0f, visrect.getBottom(), visrect.getY());
+        g.setColour(juce::Colours::lightgreen);
+        const float r = 8.0f;
+        g.fillEllipse(xcor - r / 2.0f, ycor - r / 2.0f, r, r);
+    }
+    ++repaintCount;
+    g.setColour(juce::Colours::white);
+    g.drawText(juce::String(repaintCount), visrect.getWidth() - 50, visrect.getY(), 49, 15,
+               juce::Justification::centredLeft);
+}
