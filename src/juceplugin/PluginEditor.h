@@ -419,7 +419,7 @@ class ModulationPage : public juce::Component
             randComponents.push_back(std::move(rc));
         }
 
-        stepSeqTabs.addTab("Audio Input Analysis", juce::Colours::darkgrey, &analysisComponen,
+        stepSeqTabs.addTab("AUDIO INPUT", juce::Colours::darkgrey, &analysisComponen,
                            false);
         addAndMakeVisible(stepSeqTabs);
         for (int i = 0; i < 16; ++i)

@@ -325,6 +325,7 @@ struct TriggeredRandomSource
         D_HYPCOS,
         D_CAUCHY,
         D_ARCSIN,
+        D_DISCRETE8,
         D_END
     };
     enum Limiting
@@ -345,12 +346,13 @@ struct TriggeredRandomSource
         result.emplace_back(D_UNIFORM, "UNIFORM");
         result.emplace_back(D_HYPCOS, "HYPCOS");
         result.emplace_back(D_CAUCHY, "CAUCHY");
+        result.emplace_back(D_DISCRETE8, "8 DISCRETE STEPS");
         return result;
     }
-    std::array<float, 4> parameter_values = {0.0f};
+    std::array<float, 8> parameter_values = {0.0f};
     size_t num_params = 0;
     using PMD = sst::basic_blocks::params::ParamMetaData;
-    std::array<PMD, 4> param_metadatas;
+    std::array<PMD, 8> param_metadatas;
     Distribution rand_dist = D_NONE;
     Limiting limit_mode = L_CLIP;
     TriggeredRandomSource(uint64_t seed) : rng(seed, 12345)
@@ -369,6 +371,20 @@ struct TriggeredRandomSource
         if (rand_dist == D_UNIFORM)
         {
             num_params = 0;
+        }
+        if (rand_dist == D_DISCRETE8)
+        {
+            num_params = 8;
+            for (size_t i = 0; i < 8; ++i)
+            {
+                parameter_values[i] = 0.5f;
+                param_metadatas[i] = PMD()
+                                         .withName(fmt::format("P {}", i + 1))
+                                         .asFloat()
+                                         .withRange(0.0f, 1.0f)
+                                         .withDefault(0.5)
+                                         .withLinearScaleFormatting("");
+            }
         }
         if (rand_dist == D_BERNOUILLI)
         {
@@ -424,6 +440,28 @@ struct TriggeredRandomSource
             float norm = std::clamp(parameter_values[1], 0.0f, 1.0f);
             norm = norm * norm;
             result = rng.nextCauchy(parameter_values[0], norm);
+        }
+        else if (rand_dist == D_DISCRETE8)
+        {
+            float sum = 0.0f;
+            for (auto &e : parameter_values)
+                sum += e;
+            if (sum > 0.0f)
+            {
+                float z = rng.nextFloat(); // Assumes range is [0.0, 1.0)
+                float cumulative = 0.0f;
+
+                for (int i = 0; i < 8; ++i)
+                {
+                    cumulative +=
+                        parameter_values[i] / sum; // Add normalized weight to running total
+                    if (z < cumulative)
+                    {
+                        result = -1.0f + (2.0f / 7.0f) * i; // Fixed floating-point division
+                        break;
+                    }
+                }
+            }
         }
         if (limit_mode == L_CLIP)
             result = std::clamp(result, -1.0f, 1.0f);
