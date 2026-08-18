@@ -1998,7 +1998,7 @@ class ToneGranulator
             parmetadatas.push_back(pmd()
                                        .asOnOffBool()
                                        .withID(PAR_LFOUNIPOLARS + i)
-                                       .withName(fmt::format("LFO {} UNIPOLAR", i + 1))
+                                       .withName(fmt::format("UNIPOLAR"))
                                        .withGroupName(fmt::format("LFO {}", i + 1)));
             parmetadatas.push_back(pmd()
                                        .asOnOffBool()
@@ -2051,7 +2051,7 @@ class ToneGranulator
                                        .withID(PAR_LFOWARPS + i)
                                        .withFlags(CLAP_PARAM_IS_MODULATABLE));
         }
-
+        // std::cout << parmetadatas.size() << " parameters inited\n";
         paramvalues.resize(parmetadatas.size());
         for (int i = 0; i < parmetadatas.size(); ++i)
         {
