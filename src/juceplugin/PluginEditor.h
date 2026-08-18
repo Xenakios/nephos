@@ -377,7 +377,7 @@ class ModulationPage : public juce::Component
 {
   public:
     ModulationPage(AudioPluginAudioProcessor &p)
-        : processorRef(p), analysisComponen(p), randComponent(p, 0),
+        : processorRef(p), analysisComponen(p),
           stepSeqTabs(juce::TabbedButtonBar::Orientation::TabsAtTop),
           masterRateKnob(XapSlider::SS_Knob,
                          *p.granulator.idtoparmetadata[ToneGranulator::PAR_MASTERLFORATE])
@@ -411,9 +411,16 @@ class ModulationPage : public juce::Component
                                stepcomp.get(), false);
             stepcomps.push_back(std::move(stepcomp));
         }
+        for (int i = 0; i < processorRef.granulator.randomModSources.size(); ++i)
+        {
+            auto rc = std::make_unique<TriggeredRandomModuleComponent>(processorRef, i);
+            stepSeqTabs.addTab("RANDOM " + juce::String(i + 1), juce::Colours::darkgrey, rc.get(),
+                               false);
+            randComponents.push_back(std::move(rc));
+        }
+
         stepSeqTabs.addTab("Audio Input Analysis", juce::Colours::darkgrey, &analysisComponen,
                            false);
-        stepSeqTabs.addTab("Random", juce::Colours::darkgrey, &randComponent, false);
         addAndMakeVisible(stepSeqTabs);
         for (int i = 0; i < 16; ++i)
         {
@@ -451,7 +458,7 @@ class ModulationPage : public juce::Component
     AudioPluginAudioProcessor &processorRef;
     juce::TabbedComponent stepSeqTabs;
     AnalysisSourceComponent analysisComponen;
-    TriggeredRandomModuleComponent randComponent;
+    std::vector<std::unique_ptr<TriggeredRandomModuleComponent>> randComponents;
     std::vector<std::unique_ptr<LFOComponent>> lfocomps;
     std::vector<std::unique_ptr<StepSeqComponent>> stepcomps;
     std::vector<std::unique_ptr<ModulationRowComponent>> modRowComps;
