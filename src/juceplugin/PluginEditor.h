@@ -72,8 +72,16 @@ struct LFOComponent : public juce::Component
           shapeSlider(XapSlider::SS_HorizontalSlider,
                       *g->idtoparmetadata[ToneGranulator::PAR_LFOSHAPES + index]),
           unipolarSlider(XapSlider::SS_HorizontalSlider,
-                         *g->idtoparmetadata[ToneGranulator::PAR_LFOUNIPOLARS + index])
+                         *g->idtoparmetadata[ToneGranulator::PAR_LFOUNIPOLARS + index]),
+          masterSyncSlider(XapSlider::SS_HorizontalSlider,
+                           *g->idtoparmetadata[ToneGranulator::PAR_LFOMASTERSYNCS + index])
     {
+        addAndMakeVisible(masterSyncSlider);
+        masterSyncSlider.OnValueChanged = [this]() {
+            stateChangedCallback(masterSyncSlider.getParameterMetaData().id,
+                                 masterSyncSlider.getValue());
+        };
+
         addAndMakeVisible(rateSlider);
         rateSlider.OnValueChanged = [this]() {
             stateChangedCallback(rateSlider.getParameterMetaData().id, rateSlider.getValue());
@@ -107,8 +115,9 @@ struct LFOComponent : public juce::Component
     }
     void resized()
     {
-        shapeSlider.setBounds(0, 0, 240, 25);
+        shapeSlider.setBounds(0, 0, 200, 25);
         unipolarSlider.setBounds(shapeSlider.getRight() + 1, 0, 100, 25);
+        masterSyncSlider.setBounds(unipolarSlider.getRight() + 1, 0, 100, 25);
 
         juce::FlexBox flex;
         flex.flexDirection = juce::FlexBox::Direction::row;
@@ -129,6 +138,7 @@ struct LFOComponent : public juce::Component
     XapSlider warpSlider;
     XapSlider shapeSlider;
     XapSlider unipolarSlider;
+    XapSlider masterSyncSlider;
 };
 
 struct ModulationRowComponent : public juce::Component

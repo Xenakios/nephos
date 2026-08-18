@@ -1357,7 +1357,8 @@ class ToneGranulator
         PAR_LFOSHIFTS = 100200,
         PAR_LFOWARPS = 100300,
         PAR_LFOSHAPES = 100400,
-        PAR_LFOUNIPOLARS = 100500
+        PAR_LFOUNIPOLARS = 100500,
+        PAR_LFOMASTERSYNCS = 100600
     };
     enum SI
     {
@@ -2000,6 +2001,11 @@ class ToneGranulator
                                        .withName(fmt::format("LFO {} UNIPOLAR", i + 1))
                                        .withGroupName(fmt::format("LFO {}", i + 1)));
             parmetadatas.push_back(pmd()
+                                       .asOnOffBool()
+                                       .withID(PAR_LFOMASTERSYNCS + i)
+                                       .withName(fmt::format("MST SYNC"))
+                                       .withGroupName(fmt::format("LFO {}", i + 1)));
+            parmetadatas.push_back(pmd()
                                        .withUnorderedMapFormatting({{0, "SIN"},
                                                                     {1, "SIN<>SQR<>TRI"},
                                                                     {2, "DOWN<>TRI<>UP"},
@@ -2277,7 +2283,11 @@ class ToneGranulator
             modmatrix.m_lfos[i]->applyPhaseOffset(shift);
             float rate = modmatrix.m.getTargetValue(
                 GranulatorModConfig::TargetIdentifier{(int)(PAR_LFORATES + i)});
-            rate = std::clamp(rate + master_rate, -7.0f, 7.0f);
+            bool ismastersynced = *idtoparvalptr[PAR_LFOMASTERSYNCS + i];
+            if (ismastersynced)
+                rate = std::clamp(rate + master_rate, -7.0f, 7.0f);
+            else
+                rate = std::clamp(rate, -7.0f, 7.0f);
             float deform = modmatrix.m.getTargetValue(
                 GranulatorModConfig::TargetIdentifier{(int)(PAR_LFODEFORMS + i)});
             float warp = modmatrix.m.getTargetValue(
