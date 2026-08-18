@@ -60,7 +60,6 @@ struct PresetsComponent : public juce::Component
     std::vector<std::unique_ptr<juce::TextButton>> buttons;
 };
 
-
 struct ModulationRowComponent : public juce::Component
 {
     void fillDropWithCurves(DropDownComponent &drop, std::string roottext)
@@ -378,7 +377,7 @@ class ModulationPage : public juce::Component
 {
   public:
     ModulationPage(AudioPluginAudioProcessor &p)
-        : processorRef(p), analysisComponen(p),
+        : processorRef(p), analysisComponen(p), randComponent(p, 0),
           stepSeqTabs(juce::TabbedButtonBar::Orientation::TabsAtTop),
           masterRateKnob(XapSlider::SS_Knob,
                          *p.granulator.idtoparmetadata[ToneGranulator::PAR_MASTERLFORATE])
@@ -414,6 +413,7 @@ class ModulationPage : public juce::Component
         }
         stepSeqTabs.addTab("Audio Input Analysis", juce::Colours::darkgrey, &analysisComponen,
                            false);
+        stepSeqTabs.addTab("Random", juce::Colours::darkgrey, &randComponent, false);
         addAndMakeVisible(stepSeqTabs);
         for (int i = 0; i < 16; ++i)
         {
@@ -451,6 +451,7 @@ class ModulationPage : public juce::Component
     AudioPluginAudioProcessor &processorRef;
     juce::TabbedComponent stepSeqTabs;
     AnalysisSourceComponent analysisComponen;
+    TriggeredRandomModuleComponent randComponent;
     std::vector<std::unique_ptr<LFOComponent>> lfocomps;
     std::vector<std::unique_ptr<StepSeqComponent>> stepcomps;
     std::vector<std::unique_ptr<ModulationRowComponent>> modRowComps;

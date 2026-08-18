@@ -324,7 +324,8 @@ struct TriggeredRandomSource
         D_UNIFORM,
         D_HYPCOS,
         D_CAUCHY,
-        D_ARCSIN
+        D_ARCSIN,
+        D_END
     };
     enum Limiting
     {
@@ -332,6 +333,20 @@ struct TriggeredRandomSource
         L_FOLD,
         L_WRAP
     };
+    struct DistributionInfo
+    {
+        Distribution d;
+        std::string name;
+    };
+    static std::vector<DistributionInfo> get_distributions()
+    {
+        std::vector<DistributionInfo> result;
+        result.emplace_back(D_BERNOUILLI, "BERNOUILLI");
+        result.emplace_back(D_UNIFORM, "UNIFORM");
+        result.emplace_back(D_HYPCOS, "HYPCOS");
+        result.emplace_back(D_CAUCHY, "CAUCHY");
+        return result;
+    }
     std::array<float, 4> parameter_values = {0.0f};
     size_t num_params = 0;
     using PMD = sst::basic_blocks::params::ParamMetaData;
@@ -359,8 +374,12 @@ struct TriggeredRandomSource
         {
             num_params = 1;
             parameter_values[0] = 0.5f;
-            param_metadatas[0] =
-                PMD().withName("Probability").asFloat().withRange(0.0f, 1.0f).withDefault(0.5);
+            param_metadatas[0] = PMD()
+                                     .withName("Probability")
+                                     .asFloat()
+                                     .withRange(0.0f, 1.0f)
+                                     .withDefault(0.5)
+                                     .withLinearScaleFormatting("");
         }
         if (rand_dist == D_HYPCOS || rand_dist == D_CAUCHY)
         {
@@ -387,9 +406,9 @@ struct TriggeredRandomSource
         if (rand_dist == D_BERNOUILLI)
         {
             if (rng.nextFloat() < parameter_values[0])
-                result = -1.0f;
-            else
                 result = 1.0f;
+            else
+                result = -1.0f;
             return result;
         }
         else if (rand_dist == D_UNIFORM)
@@ -402,7 +421,9 @@ struct TriggeredRandomSource
         }
         else if (rand_dist == D_CAUCHY)
         {
-            result = rng.nextCauchy(parameter_values[0], parameter_values[1]);
+            float norm = std::clamp(parameter_values[1], 0.0f, 1.0f);
+            norm = norm * norm;
+            result = rng.nextCauchy(parameter_values[0], norm);
         }
         if (limit_mode == L_CLIP)
             result = std::clamp(result, -1.0f, 1.0f);

@@ -1163,5 +1163,67 @@ struct StepSeqComponent : public juce::Component
     juce::ThreadPool *threadPool = nullptr;
 };
 
+class TriggeredRandomModuleComponent : public juce::Component
+{
+  public:
+    AudioPluginAudioProcessor &processorRef;
+    int index = -1;
+    DropDownComponent distributionDrop;
+    XapSlider par0slider;
+    XapSlider par1slider;
+    TriggeredRandomModuleComponent(AudioPluginAudioProcessor &p, int moduleIndex)
+        : processorRef(p), index(moduleIndex),
+          par0slider(XapSlider::SS_Knob, ParamDesc().withName("")),
+          par1slider(XapSlider::SS_Knob, ParamDesc().withName(""))
+    {
+        addAndMakeVisible(distributionDrop);
+        auto infos = TriggeredRandomSource::get_distributions();
+        for (auto &e : infos)
+        {
+            distributionDrop.rootNode.children.push_back({e.name, e.d});
+        }
+        distributionDrop.setSelectedId(processorRef.granulator.randomModSources[index].rand_dist);
+        distributionDrop.OnItemSelected = [this]() {
+            auto &rms = processorRef.granulator.randomModSources[index];
+            rms.set_distribution(
+                static_cast<TriggeredRandomSource::Distribution>(distributionDrop.getSelectedId()));
+            updateKnobs();
+        };
+        addChildComponent(par0slider);
+        par0slider.OnValueChanged = [this]() {
+            processorRef.granulator.randomModSources[index].parameter_values[0] =
+                par0slider.getValue();
+        };
+        addChildComponent(par1slider);
+        par1slider.OnValueChanged = [this]() {
+            processorRef.granulator.randomModSources[index].parameter_values[1] =
+                par1slider.getValue();
+        };
+        updateKnobs();
+    }
+    void updateKnobs()
+    {
+        auto &rms = processorRef.granulator.randomModSources[index];
+        par0slider.setVisible(false);
+        par1slider.setVisible(false);
+        if (rms.num_params >= 1)
+        {
+            par0slider.setVisible(true);
+            par0slider.setParameterMetaData(rms.param_metadatas[0], true);
+        }
+        if (rms.num_params >= 2)
+        {
+            par1slider.setVisible(true);
+            par1slider.setParameterMetaData(rms.param_metadatas[1], true);
+        }
+    }
+    void resized() override
+    {
+        distributionDrop.setBounds(1, 1, 150, 25);
+        par0slider.setBounds(distributionDrop.getRight() + 2, 1, 80, 60);
+        par1slider.setBounds(par0slider.getRight() + 2, 1, 80, 60);
+    }
+};
+
 void init_step_sequencer_js();
 void deinit_step_sequencer_js();
