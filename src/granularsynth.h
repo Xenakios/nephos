@@ -996,7 +996,8 @@ class GranulatorVoice
                 insert_fx[i].parammodvalues[2] =
                     modulatedvalues[MT_INSERTASTART + i * 10 + 2] * 0.5f;
                 // cut off stereo separation
-                // insert_fx[i].parammodvalues[2] = modulatedvalues[MT_INSERTASTART + i * 10 + 2];
+                insert_fx[i].parammodvalues[3] =
+                    modulatedvalues[MT_INSERTASTART + i * 10 + 3] * 12.0f;
                 // drywet mix
                 insert_fx[i].parammodvalues[4] =
                     modulatedvalues[MT_INSERTASTART + i * 10 + 4] * 0.5f;

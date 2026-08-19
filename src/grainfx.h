@@ -152,9 +152,10 @@ class GrainInsertFX
     {
         if (mainmode == GFXSSTFILTER)
         {
-            sstfilter.makeCoefficients(0, paramvalues[0] + parammodvalues[0] - paramvalues[3],
+            float cutoffspread = paramvalues[3] + parammodvalues[3];
+            sstfilter.makeCoefficients(0, paramvalues[0] + parammodvalues[0] - cutoffspread,
                                        paramvalues[1], paramvalues[2]);
-            sstfilter.makeCoefficients(1, paramvalues[0] + parammodvalues[0] + paramvalues[3],
+            sstfilter.makeCoefficients(1, paramvalues[0] + parammodvalues[0] + cutoffspread,
                                        paramvalues[1], paramvalues[2]);
             sstfilter.prepareBlock();
 
