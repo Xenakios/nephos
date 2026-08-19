@@ -49,7 +49,7 @@ struct SimpleEnvelope
         IM_CUBIC
     };
     int interpmode = IM_SPLINE;
-    choc::value::Value getState()
+    choc::value::Value get_state()
     {
         auto result = choc::value::createObject("stepenvstate");
         result.setMember("interpmode", interpmode);
@@ -61,8 +61,18 @@ struct SimpleEnvelope
         result.setMember("steps", auxenvsteps);
         return result;
     }
-    // should implement this
-    void setState(choc::value::ValueView state) {}
+    void set_state(choc::value::ValueView state)
+    {
+        interpmode = state["interpmode"].getWithDefault(0);
+        auto vsteps = state["steps"];
+        for (int i = 0; i < vsteps.size(); ++i)
+        {
+            if (i < maxnumsteps)
+            {
+                set_step(i, vsteps[i].getWithDefault(0.0f));
+            }
+        }
+    }
     SimpleEnvelope() { std::fill(steps.begin(), steps.end(), 0.0f); }
     float get_value(float xpos, float xwarp) const
     {

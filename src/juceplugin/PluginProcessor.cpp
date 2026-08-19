@@ -6,6 +6,7 @@
 #include "juce_audio_basics/juce_audio_basics.h"
 #include "juce_audio_utils/juce_audio_utils.h"
 #include "juce_core/juce_core.h"
+#include "juce_events/juce_events.h"
 #include "text/choc_Files.h"
 #include "text/choc_JSON.h"
 #include <cmath>
@@ -765,11 +766,11 @@ choc::value::Value AudioPluginAudioProcessor::getState()
     auto auxenvstates = choc::value::createEmptyArray();
     for (int i = 0; i < granulator.voiceaux_envelopes.size(); ++i)
     {
-        auto auxenvstate = granulator.voiceaux_envelopes[i].getState();
+        auto auxenvstate = granulator.voiceaux_envelopes[i].get_state();
         auxenvstates.addArrayElement(auxenvstate);
     }
-
     rootstate.setMember("auxenvstates", auxenvstates);
+
     auto grainmodroutings = choc::value::createEmptyArray();
     for (int i = 0; i < GrainEvent::max_grain_mod_slots; ++i)
     {
@@ -821,6 +822,7 @@ choc::value::Value AudioPluginAudioProcessor::getState()
 
 void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
 {
+    jassert(!juce::MessageManager::getInstance()->isThisTheMessageThread());
     if (!state[StateIgnoreStrings::dashboardsettings].getWithDefault(false))
     {
         granulator.gvsettings.timespantoshow = state["gvs_timespan"].getWithDefault(8.0);
@@ -907,22 +909,10 @@ void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
         auto auxenvstates = state["auxenvstates"];
         for (int i = 0; i < auxenvstates.size(); ++i)
         {
+            if (i >= granulator.voiceaux_envelopes.size())
+                break;
             auto auxenvstate = auxenvstates[i];
-            granulator.set_aux_envelope_interpolation_mode(
-                i, auxenvstate["interpmode"].getWithDefault(0));
-            auto auxenvsteps = auxenvstate["steps"];
-            for (int j = 0; j < auxenvsteps.size(); ++j)
-            {
-                if (j < SimpleEnvelope::maxnumsteps)
-                {
-                    StepModSource::Message msg;
-                    msg.opcode = StepModSource::Message::OP_SETSTEP;
-                    msg.fval0 = auxenvsteps[j].getWithDefault(0.0);
-                    msg.dest = 1000 + i;
-                    msg.ival0 = j;
-                    granulator.fifo.push(msg);
-                }
-            }
+            granulator.voiceaux_envelopes[i].set_state(auxenvstate);
         }
     }
     if (state.hasObjectMember("stepseqstates"))
