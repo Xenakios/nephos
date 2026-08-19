@@ -317,7 +317,10 @@ class StepModSource
 
 struct TriggeredRandomSource
 {
+  private:
     xenakios::Xoroshiro128Plus rng;
+
+  public:
     enum Distribution
     {
         D_NONE,
@@ -350,12 +353,18 @@ struct TriggeredRandomSource
         result.emplace_back(D_DISCRETE8, "8 DISCRETE STEPS");
         return result;
     }
-    std::array<float, 8> parameter_values = {0.0f};
-    size_t num_params = 0;
     using PMD = sst::basic_blocks::params::ParamMetaData;
+    size_t num_params = 0;
+    std::array<float, 8> parameter_values = {0.0f};
     std::array<PMD, 8> param_metadatas;
     Distribution rand_dist = D_NONE;
     Limiting limit_mode = L_CLIP;
+    struct Patch
+    {
+        Distribution rand_dist = D_NONE;
+        Limiting limit_mode = L_CLIP;
+        std::array<float, 8> parameter_values = {0.0f};
+    };
     TriggeredRandomSource(uint64_t seed) : rng(seed, 12345)
     {
         for (auto &pmd : param_metadatas)
@@ -378,7 +387,6 @@ struct TriggeredRandomSource
             num_params = 8;
             for (size_t i = 0; i < 8; ++i)
             {
-                parameter_values[i] = 0.5f;
                 param_metadatas[i] = PMD()
                                          .withName(fmt::format("P {}", i + 1))
                                          .asFloat()
@@ -390,7 +398,6 @@ struct TriggeredRandomSource
         if (rand_dist == D_BERNOUILLI)
         {
             num_params = 1;
-            parameter_values[0] = 0.5f;
             param_metadatas[0] = PMD()
                                      .withName("Probability")
                                      .asFloat()
@@ -401,8 +408,6 @@ struct TriggeredRandomSource
         if (rand_dist == D_HYPCOS || rand_dist == D_CAUCHY)
         {
             num_params = 2;
-            parameter_values[0] = 0.0f;
-            parameter_values[1] = 0.1f;
             param_metadatas[0] = PMD()
                                      .withName("Center")
                                      .asFloat()
@@ -415,6 +420,10 @@ struct TriggeredRandomSource
                                      .withRange(0.0f, 1.0f)
                                      .withDefault(0.1)
                                      .withLinearScaleFormatting("");
+        }
+        for (size_t i = 0; i < num_params; ++i)
+        {
+            parameter_values[i] = param_metadatas[i].defaultVal;
         }
     }
     choc::value::Value get_state()
