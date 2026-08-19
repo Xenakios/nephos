@@ -168,15 +168,15 @@ void AudioPluginAudioProcessorEditor::timerCallback()
             xs->setValue(parmsg.value);
         }
     }
+    for (auto &c : modulationPage.randComponents)
+    {
+        c->update_all();
+    }
     ThreadMessage msg;
     while (processorRef.to_gui_fifo.pop(msg))
     {
         if (msg.opcode == ThreadMessage::OP_RANDOMSOURCES)
         {
-            for (auto &c : modulationPage.randComponents)
-            {
-                c->update_all();
-            }
         }
         if (msg.opcode == ThreadMessage::OP_PARAMREMOTE)
         {

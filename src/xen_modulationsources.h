@@ -423,6 +423,7 @@ struct TriggeredRandomSource
         int ival = 0;
         float fval = 0.0f;
     };
+    std::atomic<bool> state_dirty{false};
     TriggeredRandomSource(uint64_t seed) : rng(seed, 12345)
     {
         for (auto &pmd : param_metadatas)
@@ -430,12 +431,14 @@ struct TriggeredRandomSource
             pmd = PMD().withName("NO PARAMETER");
         }
         set_distribution(D_BERNOUILLI);
+        
     }
     void set_distribution(Distribution d)
     {
         if (rand_dist == d)
             return;
         rand_dist = d;
+        
         if (rand_dist == D_UNIFORM)
         {
             num_params = 0;
@@ -483,6 +486,7 @@ struct TriggeredRandomSource
         {
             parameter_values[i] = param_metadatas[i].defaultVal;
         }
+        state_dirty = true;
     }
     choc::value::Value get_state()
     {
@@ -507,6 +511,7 @@ struct TriggeredRandomSource
                     parameter_values[i] = arr[i].getWithDefault(param_metadatas[i].defaultVal);
             }
         }
+        state_dirty = true;
     }
     float next()
     {

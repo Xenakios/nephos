@@ -1027,7 +1027,7 @@ class TriggeredRandomModuleComponent : public juce::Component
             processorRef.granulator.trngFifo.push(msg);
             // this obviously is not ideal, we need some other kind of mechanism
             // to update once the audio thread has finished changing the random distribution
-            juce::Timer::callAfterDelay(100, [this] { updateKnobs(); });
+            // juce::Timer::callAfterDelay(100, [this] { updateKnobs(); });
         };
         addAndMakeVisible(limitDrop);
         auto limitinfos = TriggeredRandomSource::get_limit_modes();
@@ -1084,8 +1084,14 @@ class TriggeredRandomModuleComponent : public juce::Component
     void update_all()
     {
         auto &rms = processorRef.granulator.randomModSources[index];
-        distributionDrop.setSelectedId(rms.rand_dist);
-        updateKnobs();
+        if (rms.state_dirty)
+        {
+            distributionDrop.setSelectedId(rms.rand_dist);
+            limitDrop.setSelectedId(rms.limit_mode);
+            updateKnobs();
+            rms.state_dirty = false;
+            DBG("updated random source " << index << " GUI");
+        }
     }
 };
 

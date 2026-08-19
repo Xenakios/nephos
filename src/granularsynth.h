@@ -1439,6 +1439,7 @@ class ToneGranulator
             else if (rmsg.opcode == TriggeredRandomSource::Message::OP_LIMIT)
             {
                 dest.limit_mode = static_cast<TriggeredRandomSource::Limiting>(rmsg.ival);
+                dest.state_dirty = true;
             }
             else if (rmsg.opcode == TriggeredRandomSource::Message::OP_PARAM)
             {
@@ -1624,11 +1625,11 @@ class ToneGranulator
             v = 0.0f;
         for (auto &v : randomModValues)
             v = 0.0f;
-        randomModSources[0] = TriggeredRandomSource{1001};
-        randomModSources[1].set_distribution(TriggeredRandomSource::D_CAUCHY);
-        randomModSources[1].parameter_values[1] = 0.02;
-        randomModSources[2].set_distribution(TriggeredRandomSource::D_UNIFORM);
-        randomModSources[3].set_distribution(TriggeredRandomSource::D_HYPCOS);
+        // randomModSources[0] = TriggeredRandomSource{1001};
+        // randomModSources[1].set_distribution(TriggeredRandomSource::D_CAUCHY);
+        // randomModSources[1].parameter_values[1] = 0.02;
+        // randomModSources[2].set_distribution(TriggeredRandomSource::D_UNIFORM);
+        // randomModSources[3].set_distribution(TriggeredRandomSource::D_HYPCOS);
         auto initssfunc = [](StepModSource &sms, std::initializer_list<float> values) {
             for (int i = 0; i < values.size(); ++i)
             {
