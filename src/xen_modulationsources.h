@@ -409,11 +409,19 @@ struct TriggeredRandomSource
     std::array<PMD, 8> param_metadatas;
     Distribution rand_dist = D_NONE;
     Limiting limit_mode = L_CLIP;
-    struct Patch
+    struct Message
     {
-        Distribution rand_dist = D_NONE;
-        Limiting limit_mode = L_CLIP;
-        std::array<float, 8> parameter_values = {0.0f};
+        enum OPCODE
+        {
+            OP_NONE,
+            OP_DISTRIBUTION,
+            OP_LIMIT,
+            OP_PARAM
+        };
+        OPCODE opcode = OP_NONE;
+        int dest = -1;
+        int ival = 0;
+        float fval = 0.0f;
     };
     TriggeredRandomSource(uint64_t seed) : rng(seed, 12345)
     {
@@ -480,6 +488,7 @@ struct TriggeredRandomSource
     {
         auto result = choc::value::createObject("trngstate");
         result.setMember("distribution", (int64_t)rand_dist);
+        result.setMember("limit_mode", (int64_t)limit_mode);
         result.setMember("paramvalues", choc::value::createArray(parameter_values));
         return result;
     }
@@ -487,6 +496,8 @@ struct TriggeredRandomSource
     {
         if (state.hasObjectMember("distribution"))
             set_distribution((Distribution)state["distribution"].getWithDefault((int)D_BERNOUILLI));
+        if (state.hasObjectMember("limit_mode"))
+            limit_mode = (Limiting)state["limit_mode"].getWithDefault(0);
         if (state.hasObjectMember("paramvalues"))
         {
             auto arr = state["paramvalues"];

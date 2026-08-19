@@ -1400,6 +1400,7 @@ class ToneGranulator
     alignas(32) std::array<StepModSource, 8> stepModSources;
     alignas(32) std::array<float, 8> randomModValues;
     alignas(32) std::array<TriggeredRandomSource, 4> randomModSources{1001, 1007, 5543, 90001};
+    choc::fifo::SingleReaderSingleWriterFIFO<TriggeredRandomSource::Message> trngFifo;
     alignas(32) MidiNoteModSource midiNoteModSource;
     float midiNoteModValue = 0.0f;
     // we can share these between voices as we don't need them stateful, at least for now
@@ -1424,6 +1425,26 @@ class ToneGranulator
     int get_aux_envelope_interpolation_mode(int envindex) const
     {
         return voiceaux_envelopes[envindex].interpmode;
+    }
+    void handleRandomSourceMessages()
+    {
+        TriggeredRandomSource::Message rmsg;
+        while (trngFifo.pop(rmsg))
+        {
+            auto &dest = randomModSources[rmsg.dest];
+            if (rmsg.opcode == TriggeredRandomSource::Message::OP_DISTRIBUTION)
+            {
+                dest.set_distribution(static_cast<TriggeredRandomSource::Distribution>(rmsg.ival));
+            }
+            else if (rmsg.opcode == TriggeredRandomSource::Message::OP_LIMIT)
+            {
+                dest.limit_mode = static_cast<TriggeredRandomSource::Limiting>(rmsg.ival);
+            }
+            else if (rmsg.opcode == TriggeredRandomSource::Message::OP_PARAM)
+            {
+                dest.parameter_values[rmsg.ival] = rmsg.fval;
+            }
+        }
     }
     void handleStepSequencerMessages()
     {
@@ -1585,6 +1606,7 @@ class ToneGranulator
     ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
     {
         visualizer_fifo.reset(2048);
+        trngFifo.reset(32);
         gevisfifo.reset(32);
         repeatsVisMessages.reset(32);
         shapeParToActualShape[0] = GranulatorModMatrix::lfo_t::SINE;
@@ -2889,6 +2911,7 @@ class ToneGranulator
         float taillen = *idtoparvalptr[PAR_GRAINTAIL];
         taillen = 0.002 + 0.998 * std::pow(taillen, 3.0);
         handleStepSequencerMessages();
+        handleRandomSourceMessages();
         bool self_generate = true;
         // if (events.size() == 0)
         //     self_generate = true;

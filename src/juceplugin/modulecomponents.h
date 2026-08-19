@@ -1022,10 +1022,12 @@ class TriggeredRandomModuleComponent : public juce::Component
         }
         distributionDrop.setSelectedId(processorRef.granulator.randomModSources[index].rand_dist);
         distributionDrop.OnItemSelected = [this]() {
-            auto &rms = processorRef.granulator.randomModSources[index];
-            rms.set_distribution(
-                static_cast<TriggeredRandomSource::Distribution>(distributionDrop.getSelectedId()));
-            updateKnobs();
+            TriggeredRandomSource::Message msg{TriggeredRandomSource::Message::OP_DISTRIBUTION,
+                                               index, distributionDrop.getSelectedId()};
+            processorRef.granulator.trngFifo.push(msg);
+            // this obviously is not ideal, we need some other kind of mechanism
+            // to update once the audio thread has finished changing the random distribution
+            juce::Timer::callAfterDelay(100, [this] { updateKnobs(); });
         };
         addAndMakeVisible(limitDrop);
         auto limitinfos = TriggeredRandomSource::get_limit_modes();
@@ -1034,9 +1036,9 @@ class TriggeredRandomModuleComponent : public juce::Component
             limitDrop.rootNode.children.push_back({e.name, e.l});
         }
         limitDrop.OnItemSelected = [this]() {
-            auto &rms = processorRef.granulator.randomModSources[index];
-            rms.limit_mode =
-                static_cast<TriggeredRandomSource::Limiting>(limitDrop.getSelectedId());
+            TriggeredRandomSource::Message msg{TriggeredRandomSource::Message::OP_LIMIT, index,
+                                               limitDrop.getSelectedId()};
+            processorRef.granulator.trngFifo.push(msg);
         };
         limitDrop.setSelectedId(0);
         for (int i = 0; i < 8; ++i)
@@ -1044,7 +1046,12 @@ class TriggeredRandomModuleComponent : public juce::Component
             auto knob = std::make_unique<XapSlider>(XapSlider::SS_Knob, ParamDesc());
             addChildComponent(knob.get());
             knob->OnValueChanged = [i, this, k = knob.get()]() {
-                processorRef.granulator.randomModSources[index].parameter_values[i] = k->getValue();
+                TriggeredRandomSource::Message msg;
+                msg.opcode = TriggeredRandomSource::Message::OP_PARAM;
+                msg.dest = index;
+                msg.ival = i;
+                msg.fval = k->getValue();
+                processorRef.granulator.trngFifo.push(msg);
             };
             parsliders.push_back(std::move(knob));
         }
