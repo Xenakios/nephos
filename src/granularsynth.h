@@ -503,7 +503,7 @@ struct GrainEvent
     float noiseimode = 0.0f;
     static constexpr size_t max_grain_mod_slots = 4;
     float modamounts[max_grain_mod_slots] = {0.0f};
-    float insertparams[4][10];
+    float insertparams[4][10] = {0.0f};
 };
 
 struct tone_info
