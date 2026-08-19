@@ -6,6 +6,7 @@
 #include <array>
 #include <string>
 #include "../Common/xap_utils.h"
+#include "containers/choc_Value.h"
 #include "sst/basic-blocks/dsp/Interpolators.h"
 #include "sst/basic-blocks/params/ParamMetadata.h"
 
@@ -414,6 +415,27 @@ struct TriggeredRandomSource
                                      .withRange(0.0f, 1.0f)
                                      .withDefault(0.1)
                                      .withLinearScaleFormatting("");
+        }
+    }
+    choc::value::Value get_state()
+    {
+        auto result = choc::value::createObject("trngstate");
+        result.setMember("distribution", (int64_t)rand_dist);
+        result.setMember("paramvalues", choc::value::createArray(parameter_values));
+        return result;
+    }
+    void set_state(choc::value::ValueView state)
+    {
+        if (state.hasObjectMember("distribution"))
+            set_distribution((Distribution)state["distribution"].getWithDefault((int)D_BERNOUILLI));
+        if (state.hasObjectMember("paramvalues"))
+        {
+            auto arr = state["paramvalues"];
+            for (int i = 0; i < arr.size(); ++i)
+            {
+                if (i < parameter_values.size())
+                    parameter_values[i] = arr[i].getWithDefault(param_metadatas[i].defaultVal);
+            }
         }
     }
     float next()

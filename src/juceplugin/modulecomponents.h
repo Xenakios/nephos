@@ -1047,7 +1047,8 @@ class TriggeredRandomModuleComponent : public juce::Component
             if (i < rms.num_params)
             {
                 parsliders[i]->setVisible(true);
-                parsliders[i]->setParameterMetaData(rms.param_metadatas[i], true);
+                parsliders[i]->setParameterMetaData(rms.param_metadatas[i], false);
+                parsliders[i]->setValue(rms.parameter_values[i], false);
             }
         }
     }
@@ -1058,6 +1059,12 @@ class TriggeredRandomModuleComponent : public juce::Component
         {
             parsliders[i]->setBounds(distributionDrop.getRight() + 2 + i * 82, 1, 80, 60);
         }
+    }
+    void update_all()
+    {
+        auto &rms = processorRef.granulator.randomModSources[index];
+        distributionDrop.setSelectedId(rms.rand_dist);
+        updateKnobs();
     }
 };
 

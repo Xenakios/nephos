@@ -703,7 +703,7 @@ juce::AudioProcessorEditor *AudioPluginAudioProcessor::createEditor()
 
 choc::value::Value AudioPluginAudioProcessor::getState()
 {
-    auto state = choc::value::createObject("state");
+    auto rootstate = choc::value::createObject("state");
     auto mainparams = choc::value::createObject("params");
     const auto &pmds = granulator.parmetadatas;
     for (int i = 0; i < pmds.size(); ++i)
@@ -712,8 +712,8 @@ choc::value::Value AudioPluginAudioProcessor::getState()
         float v = *granulator.idtoparvalptr[pmds[i].id];
         mainparams.setMember(id, v);
     }
-    state.setMember("params", mainparams);
-    state.setMember("gvs_timespan", granulator.gvsettings.timespantoshow);
+    rootstate.setMember("params", mainparams);
+    rootstate.setMember("gvs_timespan", granulator.gvsettings.timespantoshow);
     auto filterstates = choc::value::createEmptyArray();
     for (int i = 0; i < 2; ++i)
     {
@@ -727,7 +727,15 @@ choc::value::Value AudioPluginAudioProcessor::getState()
         filterstate.setMember("mt", (int64_t)granulator.currentInsertConfs[i].sstconfig.mt);
         filterstates.addArrayElement(filterstate);
     }
-    state.setMember("filterstates", filterstates);
+    rootstate.setMember("filterstates", filterstates);
+
+    auto rngstates = choc::value::createEmptyArray();
+    for (int i = 0; i < granulator.randomModSources.size(); ++i)
+    {
+        auto rngstate = granulator.randomModSources[i].get_state();
+        rngstates.addArrayElement(rngstate);
+    }
+    rootstate.setMember("trigrandstates", rngstates);
 
     auto stepseqstates = choc::value::createEmptyArray();
     for (size_t i = 0; i < granulator.stepModSources.size(); ++i)
@@ -745,14 +753,14 @@ choc::value::Value AudioPluginAudioProcessor::getState()
         seqstate.setMember("playmode", (int)ss.playmode);
         stepseqstates.addArrayElement(seqstate);
     }
-    state.setMember("stepseqstates", stepseqstates);
+    rootstate.setMember("stepseqstates", stepseqstates);
 
     auto osctypemap = choc::value::createEmptyArray();
     for (int i = 0; i < granulator.osctypemapping.size(); ++i)
     {
         osctypemap.addArrayElement(granulator.osctypemapping[i]);
     }
-    state.setMember("osctypemapping", osctypemap);
+    rootstate.setMember("osctypemapping", osctypemap);
 
     auto auxenvstates = choc::value::createEmptyArray();
     for (int i = 0; i < granulator.voiceaux_envelopes.size(); ++i)
@@ -761,7 +769,7 @@ choc::value::Value AudioPluginAudioProcessor::getState()
         auxenvstates.addArrayElement(auxenvstate);
     }
 
-    state.setMember("auxenvstates", auxenvstates);
+    rootstate.setMember("auxenvstates", auxenvstates);
     auto grainmodroutings = choc::value::createEmptyArray();
     for (int i = 0; i < GrainEvent::max_grain_mod_slots; ++i)
     {
@@ -772,7 +780,7 @@ choc::value::Value AudioPluginAudioProcessor::getState()
                                   (int64_t)granulator.voices[0]->modulation_slots[i].target_id);
         grainmodroutings.addArrayElement(grainmodrouting);
     }
-    state.setMember("grainmodroutings", grainmodroutings);
+    rootstate.setMember("grainmodroutings", grainmodroutings);
     auto modroutings = choc::value::createEmptyArray();
     auto &mm = granulator.modmatrix;
     for (int i = 0; i < GranulatorModConfig::FixedMatrixSize; ++i)
@@ -793,7 +801,7 @@ choc::value::Value AudioPluginAudioProcessor::getState()
             modroutings.addArrayElement(routingstate);
         }
     }
-    state.setMember("modroutings", modroutings);
+    rootstate.setMember("modroutings", modroutings);
     auto midibinds = choc::value::createEmptyArray();
     for (auto &b : midiBindings)
     {
@@ -807,8 +815,8 @@ choc::value::Value AudioPluginAudioProcessor::getState()
         midibind.setMember("curveid", b.mapfunctionid);
         midibinds.addArrayElement(midibind);
     }
-    state.setMember("midibindings", midibinds);
-    return state;
+    rootstate.setMember("midibindings", midibinds);
+    return rootstate;
 }
 
 void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
@@ -859,6 +867,14 @@ void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
                     midiBindings.emplace_back(binding);
                 }
             }
+        }
+    }
+    if (state.hasObjectMember("trigrandstates"))
+    {
+        auto randstates = state["trigrandstates"];
+        for (int i = 0; i < randstates.size(); ++i)
+        {
+            granulator.randomModSources[i].set_state(randstates[i]);
         }
     }
     if (state.hasObjectMember("osctypemapping"))
@@ -1063,21 +1079,21 @@ void AudioPluginAudioProcessor::setStateInformation(const void *data, int sizeIn
 
 void AudioPluginAudioProcessor::sendExtraStatesToGUI()
 {
-    ThreadMessage msg{ThreadMessage::OP_STEPSEQUENCER};
-    to_gui_fifo.push(msg);
+    to_gui_fifo.push(ThreadMessage{ThreadMessage::OP_STEPSEQUENCER});
+    to_gui_fifo.push(ThreadMessage{ThreadMessage::OP_RANDOMSOURCES});
+
+    ThreadMessage msg;
+    msg.opcode = ThreadMessage::OP_FILTERTYPE;
+    for (int i = 0; i < granulator.currentInsertConfs.size(); ++i)
     {
-        ThreadMessage msg;
-        msg.opcode = ThreadMessage::OP_FILTERTYPE;
-        for (int i = 0; i < granulator.currentInsertConfs.size(); ++i)
-        {
-            msg.filterindex = i;
-            msg.insertmainmode = granulator.currentInsertConfs[i].mainmode;
-            msg.awtype = granulator.currentInsertConfs[i].awtype;
-            msg.filtermodel = granulator.currentInsertConfs[i].sstmodel;
-            msg.filterconfig = granulator.currentInsertConfs[i].sstconfig;
-            to_gui_fifo.push(msg);
-        }
+        msg.filterindex = i;
+        msg.insertmainmode = granulator.currentInsertConfs[i].mainmode;
+        msg.awtype = granulator.currentInsertConfs[i].awtype;
+        msg.filtermodel = granulator.currentInsertConfs[i].sstmodel;
+        msg.filterconfig = granulator.currentInsertConfs[i].sstconfig;
+        to_gui_fifo.push(msg);
     }
+
     for (auto &p : granulator.parmetadatas)
     {
         ParameterMessage msg;
