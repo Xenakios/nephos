@@ -10,6 +10,33 @@
 #include "sst/basic-blocks/dsp/Interpolators.h"
 #include "sst/basic-blocks/params/ParamMetadata.h"
 
+template <typename T> inline T reflect_value_no_loop(const T minval, const T val, const T maxval)
+{
+    assert(maxval > minval);
+    const T range = maxval - minval;
+    const T doubled = range * T(2);
+
+    // Normalize val into [0, 2*range), then reflect
+    T temp = std::fmod(val - minval, doubled);
+    if (temp < T(0))
+        temp += doubled;
+
+    return (temp <= range) ? minval + temp : maxval - (temp - range);
+}
+
+template <typename T> inline T wrap_value_no_loop(const T minval, const T val, const T maxval)
+{
+    assert(maxval > minval);
+    const T range = maxval - minval;
+
+    // Normalize val into [0, range)
+    T temp = std::fmod(val - minval, range);
+    if (temp < T(0))
+        temp += range;
+
+    return minval + temp;
+}
+
 inline float smoothstep(float y0, float y1, float mu)
 {
     float t = mu * mu * (3.0f - 2.0f * mu);
@@ -353,6 +380,11 @@ struct TriggeredRandomSource
         Distribution d;
         std::string name;
     };
+    struct LimitingInfo
+    {
+        Limiting l;
+        std::string name;
+    };
     static std::vector<DistributionInfo> get_distributions()
     {
         std::vector<DistributionInfo> result;
@@ -361,6 +393,14 @@ struct TriggeredRandomSource
         result.emplace_back(D_HYPCOS, "HYPCOS");
         result.emplace_back(D_CAUCHY, "CAUCHY");
         result.emplace_back(D_DISCRETE8, "8 DISCRETE STEPS");
+        return result;
+    }
+    static std::vector<LimitingInfo> get_limit_modes()
+    {
+        std::vector<LimitingInfo> result;
+        result.emplace_back(L_CLIP, "CLIP");
+        result.emplace_back(L_FOLD, "FOLD");
+        result.emplace_back(L_WRAP, "WRAP");
         return result;
     }
     using PMD = sst::basic_blocks::params::ParamMetaData;
@@ -506,6 +546,10 @@ struct TriggeredRandomSource
         }
         if (limit_mode == L_CLIP)
             result = std::clamp(result, -1.0f, 1.0f);
+        else if (limit_mode == L_FOLD)
+            result = reflect_value_no_loop(-1.0f, result, 1.0f);
+        else if (limit_mode == L_WRAP)
+            result = wrap_value_no_loop(-1.0f, result, 1.0f);
         return result;
     }
 };

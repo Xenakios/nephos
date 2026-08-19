@@ -472,19 +472,6 @@ inline void test_routing(std::vector<std::tuple<int, int, int>> routings)
     writer->appendFrames(outbuf.getView());
 }
 
-template <typename T> inline T reflect_value_no_loop(const T minval, const T val, const T maxval)
-{
-    assert(maxval > minval);
-    const T range = maxval - minval;
-    const T doubled = range * T(2);
-
-    // Normalize val into [0, 2*range), then reflect
-    T temp = std::fmod(val - minval, doubled);
-    if (temp < T(0))
-        temp += doubled;
-
-    return (temp <= range) ? minval + temp : maxval - (temp - range);
-}
 
 struct DegradeEngine
 {

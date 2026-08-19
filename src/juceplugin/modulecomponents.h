@@ -1007,6 +1007,7 @@ class TriggeredRandomModuleComponent : public juce::Component
     AudioPluginAudioProcessor &processorRef;
     int index = -1;
     DropDownComponent distributionDrop;
+    DropDownComponent limitDrop;
     std::vector<std::unique_ptr<XapSlider>> parsliders;
 
     TriggeredRandomModuleComponent(AudioPluginAudioProcessor &p, int moduleIndex)
@@ -1026,6 +1027,18 @@ class TriggeredRandomModuleComponent : public juce::Component
                 static_cast<TriggeredRandomSource::Distribution>(distributionDrop.getSelectedId()));
             updateKnobs();
         };
+        addAndMakeVisible(limitDrop);
+        auto limitinfos = TriggeredRandomSource::get_limit_modes();
+        for (auto &e : limitinfos)
+        {
+            limitDrop.rootNode.children.push_back({e.name, e.l});
+        }
+        limitDrop.OnItemSelected = [this]() {
+            auto &rms = processorRef.granulator.randomModSources[index];
+            rms.limit_mode =
+                static_cast<TriggeredRandomSource::Limiting>(limitDrop.getSelectedId());
+        };
+        limitDrop.setSelectedId(0);
         for (int i = 0; i < 8; ++i)
         {
             auto knob = std::make_unique<XapSlider>(XapSlider::SS_Knob, ParamDesc());
@@ -1055,6 +1068,7 @@ class TriggeredRandomModuleComponent : public juce::Component
     void resized() override
     {
         distributionDrop.setBounds(1, 1, 150, 25);
+        limitDrop.setBounds(1, distributionDrop.getBottom() + 2, 150, 25);
         for (int i = 0; i < parsliders.size(); ++i)
         {
             parsliders[i]->setBounds(distributionDrop.getRight() + 2 + i * 82, 1, 80, 60);
