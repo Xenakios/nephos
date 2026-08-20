@@ -22,7 +22,12 @@ void XapSlider::setParameterMetaData(ParamDesc md, bool updateCurrentValue)
     m_snap_positions.resize(9);
     for (int i = 0; i < 9; ++i)
         m_snap_positions[i] = m_min_value + (m_max_value - m_min_value) / 8 * i;
-    m_param_step = (m_max_value - m_min_value) / 64;
+    if (m_pardesc.quantization == ParamDesc::Quantization::CUSTOM_INTERVAL)
+        m_param_step = m_pardesc.quantizationParam;
+    else if (m_pardesc.quantization == ParamDesc::Quantization::CUSTOM_STEP_COUNT)
+        m_param_step = (m_max_value - m_min_value) / m_pardesc.quantizationParam;
+    else
+        m_param_step = (m_max_value - m_min_value) / 64;
     if (m_pardesc.type == ParamDesc::BOOL || m_pardesc.type == ParamDesc::INT)
         m_param_step = 1;
     keypress_to_step.clear();
@@ -96,7 +101,16 @@ bool XapSlider::keyPressed(const juce::KeyPress &key)
     }
     if (val)
     {
+        if (!m_mousedown)
+        {
+            juce::Timer::callAfterDelay(500, [this]() {
+                m_mousedown = false;
+                repaint();
+            });
+        }
+        m_mousedown = true;
         setValue(*val, true);
+
         return true;
     }
     return false;

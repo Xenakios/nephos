@@ -136,7 +136,7 @@ void GrainEnvelopeEditorComponent::paint(juce::Graphics &g)
         float parval = *granul->idtoparvalptr[target_param];
         g.drawText(juce::String(parval, 3), 0, top_margin, 100, 15, juce::Justification::centred);
     }
-    curvepath.clear();
+    
     auto &auxenv = granul->voiceaux_envelopes[target_envelope];
 
     g.setColour(juce::Colours::white);

@@ -205,7 +205,6 @@ class GrainEnvelopeEditorComponent : public juce::Component
     GrainEnvelopeEditorComponent(AudioPluginAudioProcessor &p)
         : processorRef(p), granul(&p.granulator)
     {
-        curvepath.preallocateSpace(512);
         rng.seed(65537, 90004);
     }
     xenakios::Xoroshiro128Plus rng;
@@ -268,7 +267,7 @@ class GrainEnvelopeEditorComponent : public juce::Component
 
     void updateIfNeeded() { repaint(); }
     ToneGranulator *granul = nullptr;
-    juce::Path curvepath;
+    
 };
 
 inline void initSlider(AudioPluginAudioProcessor &processor, juce::Component &parentComponent,
