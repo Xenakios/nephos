@@ -136,7 +136,7 @@ void GrainEnvelopeEditorComponent::paint(juce::Graphics &g)
         float parval = *granul->idtoparvalptr[target_param];
         g.drawText(juce::String(parval, 3), 0, top_margin, 100, 15, juce::Justification::centred);
     }
-    
+
     auto &auxenv = granul->voiceaux_envelopes[target_envelope];
 
     g.setColour(juce::Colours::white);
@@ -587,11 +587,14 @@ OscillatorModuleComponent::OscillatorModuleComponent(AudioPluginAudioProcessor &
                        *p.granulator.idtoparmetadata[ToneGranulator::PAR_NOISEMODE]),
       oscNoiseCorrelationKnob(XapSlider::SS_Knob,
                               *p.granulator.idtoparmetadata[ToneGranulator::PAR_NOISECORRELATION]),
+      quantizePitchToggle(XapSlider::SS_HorizontalSlider,
+                          *p.granulator.idtoparmetadata[ToneGranulator::PAR_QUANTIZEPITCH]),
       pitchEnvelopeComponent(p), grainModComponent(&p.granulator)
 {
     addAndMakeVisible(grainModComponent);
     addAndMakeVisible(oscTypeComponent);
     initSlider(p, *this, oscPitchKnob);
+    initSlider(p, *this, quantizePitchToggle);
     for (int i = 0; i < GrainEvent::max_grain_mod_slots; ++i)
     {
         auto knob = std::make_unique<XapSlider>(
@@ -649,7 +652,7 @@ void OscillatorModuleComponent::resized()
 {
     oscTypeComponent.setBounds(7, 17, 370, 50);
     oscPitchKnob.setBounds(7, oscTypeComponent.getBottom() + 1, 80, 100);
-
+    quantizePitchToggle.setBounds(7, oscPitchKnob.getBottom() + 2, 80, 25);
     for (int i = 0; i < modDepthKnobs.size(); ++i)
     {
         modDepthKnobs[i]->setBounds(oscPitchKnob.getRight() + 2,

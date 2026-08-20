@@ -481,6 +481,7 @@ struct GrainEvent
     double time_position = 0.0;
     float duration = 0.0f;
     float pitch_semitones = 0.0f;
+    bool quantize_pitch = false;
     int generator_type = 0;
     float volume = 0.0f;
     float auxsend = 0.0f;
@@ -716,6 +717,11 @@ class GranulatorVoice
         if (newosctype == 6)
             pitch_base += 12.0;
         pitch_base = std::clamp(pitch_base, -48.0f, 64.0f);
+        if (evpars.quantize_pitch)
+        {
+            const float pitchquanstep = 5.0f;
+            pitch_base = std::round(pitch_base / pitchquanstep) * pitchquanstep;
+        }
         auto syncratio = std::clamp(evpars.sync_octaves, 0.0f, 4.0f);
         syncratio = std::pow(2.0f, syncratio);
         auto pw = evpars.pulse_width; // osc implementation clamps itself to 0..1
@@ -1314,6 +1320,7 @@ class ToneGranulator
         PAR_OSCTYPE = 300,
         PAR_DENSITY = 400,
         PAR_PITCH = 500,
+        PAR_QUANTIZEPITCH = 550,
         PAR_AZIMUTH = 600,
         PAR_ELEVATION = 700,
         PAR_AMBSPREAD = 710,
@@ -1802,6 +1809,12 @@ class ToneGranulator
                                    .withGroupName("Oscillator")
                                    .withID(PAR_PITCH)
                                    .withFlags(CLAP_PARAM_IS_MODULATABLE));
+        parmetadatas.push_back(pmd()
+                                   .asOnOffBool()
+                                   .withDefault(0.0)
+                                   .withName("Quant Pitch")
+                                   .withGroupName("Oscillator")
+                                   .withID(PAR_QUANTIZEPITCH));
         for (int i = 0; i < 4; ++i)
         {
             parmetadatas.push_back(pmd()
@@ -2398,6 +2411,7 @@ class ToneGranulator
                 float gvol = modmatrix.m.getTargetValue(
                     GranulatorModConfig::TargetIdentifier{PAR_GRAINVOLUME});
                 GrainEvent genev{0.0, gdur, pitch, gvol};
+                genev.quantize_pitch = (*idtoparvalptr[PAR_QUANTIZEPITCH] >= 0.5f);
                 genev.envelope_start_type = *idtoparvalptr[PAR_VOLENVEASINGSTART];
                 genev.envelope_end_type = *idtoparvalptr[PAR_VOLENVEASINGEND];
                 genev.envelope_shape =
