@@ -587,7 +587,7 @@ OscillatorModuleComponent::OscillatorModuleComponent(AudioPluginAudioProcessor &
                        *p.granulator.idtoparmetadata[ToneGranulator::PAR_NOISEMODE]),
       oscNoiseCorrelationKnob(XapSlider::SS_Knob,
                               *p.granulator.idtoparmetadata[ToneGranulator::PAR_NOISECORRELATION]),
-      quantizePitchToggle(XapSlider::SS_HorizontalSlider,
+      quantizePitchToggle(XapSlider::SS_Knob,
                           *p.granulator.idtoparmetadata[ToneGranulator::PAR_QUANTIZEPITCH]),
       pitchEnvelopeComponent(p), grainModComponent(&p.granulator)
 {
@@ -652,7 +652,7 @@ void OscillatorModuleComponent::resized()
 {
     oscTypeComponent.setBounds(7, 17, 370, 50);
     oscPitchKnob.setBounds(7, oscTypeComponent.getBottom() + 1, 80, 100);
-    quantizePitchToggle.setBounds(7, oscPitchKnob.getBottom() + 2, 80, 25);
+    quantizePitchToggle.setBounds(7, oscPitchKnob.getBottom() + 2, 80, 100);
     for (int i = 0; i < modDepthKnobs.size(); ++i)
     {
         modDepthKnobs[i]->setBounds(oscPitchKnob.getRight() + 2,

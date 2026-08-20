@@ -481,7 +481,7 @@ struct GrainEvent
     double time_position = 0.0;
     float duration = 0.0f;
     float pitch_semitones = 0.0f;
-    bool quantize_pitch = false;
+    float pitch_quantize_amount = 0.0f;
     int generator_type = 0;
     float volume = 0.0f;
     float auxsend = 0.0f;
@@ -717,10 +717,12 @@ class GranulatorVoice
         if (newosctype == 6)
             pitch_base += 12.0;
         pitch_base = std::clamp(pitch_base, -48.0f, 64.0f);
-        if (evpars.quantize_pitch)
+        if (evpars.pitch_quantize_amount > 0.0f)
         {
             const float pitchquanstep = 5.0f;
-            pitch_base = std::round(pitch_base / pitchquanstep) * pitchquanstep;
+            float quantpitch = std::round(pitch_base / pitchquanstep) * pitchquanstep;
+            pitch_base = pitch_base * (1.0f - evpars.pitch_quantize_amount) +
+                         quantpitch * evpars.pitch_quantize_amount;
         }
         auto syncratio = std::clamp(evpars.sync_octaves, 0.0f, 4.0f);
         syncratio = std::pow(2.0f, syncratio);
@@ -1810,10 +1812,12 @@ class ToneGranulator
                                    .withID(PAR_PITCH)
                                    .withFlags(CLAP_PARAM_IS_MODULATABLE));
         parmetadatas.push_back(pmd()
-                                   .asOnOffBool()
+                                   .withRange(0.0f, 1.0f)
                                    .withDefault(0.0)
+                                   .withLinearScaleFormatting("%", 100.0f)
                                    .withName("Quant Pitch")
                                    .withGroupName("Oscillator")
+                                   .withFlags(CLAP_PARAM_IS_MODULATABLE)
                                    .withID(PAR_QUANTIZEPITCH));
         for (int i = 0; i < 4; ++i)
         {
@@ -2411,7 +2415,10 @@ class ToneGranulator
                 float gvol = modmatrix.m.getTargetValue(
                     GranulatorModConfig::TargetIdentifier{PAR_GRAINVOLUME});
                 GrainEvent genev{0.0, gdur, pitch, gvol};
-                genev.quantize_pitch = (*idtoparvalptr[PAR_QUANTIZEPITCH] >= 0.5f);
+                genev.pitch_quantize_amount =
+                    std::clamp(modmatrix.m.getTargetValue(
+                                   GranulatorModConfig::TargetIdentifier{PAR_QUANTIZEPITCH}),
+                               0.0f, 1.0f);
                 genev.envelope_start_type = *idtoparvalptr[PAR_VOLENVEASINGSTART];
                 genev.envelope_end_type = *idtoparvalptr[PAR_VOLENVEASINGEND];
                 genev.envelope_shape =
