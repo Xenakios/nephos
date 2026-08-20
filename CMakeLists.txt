@@ -19,6 +19,7 @@ include_directories(
     libs/sst-cpputils/include
     libs/fmt/include
     libs/sst-filters/include
+    libs/tuning-library/include
     # libs/sst-effects/include
     # libs/sst-waveshapers
     # libs/oscpkt

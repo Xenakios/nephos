@@ -28,6 +28,7 @@
 #define SIMDE_ENABLE_NATIVE_ALIASES // lets you skip the simde_ prefix
 #include <simde/x86/avx2.h>
 #include <simde/x86/fma.h>
+#include "Tunings.h"
 
 using namespace sst::basic_blocks::mod_matrix;
 
@@ -557,6 +558,7 @@ class GranulatorVoice
     float polarity_gain = 1.0f;
     int prior_osc_type = -1;
     EasingLUTS *eluts = nullptr;
+    Tunings::Tuning *tuning = nullptr;
     std::span<int> osctypemapping;
     // 2x up to 7th order Ambisonics
     alignas(32) std::array<float, 128> ambcoeffs;
@@ -717,12 +719,27 @@ class GranulatorVoice
         if (newosctype == 6)
             pitch_base += 12.0;
         pitch_base = std::clamp(pitch_base, -48.0f, 64.0f);
-        if (evpars.pitch_quantize_amount > 0.0f)
+        if (evpars.pitch_quantize_amount > 0.0f && tuning)
         {
-            const float pitchquanstep = 5.0f;
-            float quantpitch = std::round(pitch_base / pitchquanstep) * pitchquanstep;
-            pitch_base = pitch_base * (1.0f - evpars.pitch_quantize_amount) +
-                         quantpitch * evpars.pitch_quantize_amount;
+            double unquanhz = 440.0 * std::pow(2.0, 1.0 / 12.0 * (pitch_base - 9.0));
+            double smallestdiff = 1000000.0;
+            std::optional<double> closestfoundhz;
+            for (int i = 0; i < 128; ++i)
+            {
+                double hz = tuning->frequencyForMidiNote(i);
+                double diff = std::abs(hz - unquanhz);
+                if (diff < smallestdiff)
+                {
+                    closestfoundhz = hz;
+                    smallestdiff = diff;
+                }
+            }
+            if (closestfoundhz)
+            {
+                float quantpitch = std::log2(*closestfoundhz / 440.0) * 12.0f;
+                pitch_base = pitch_base * (1.0f - evpars.pitch_quantize_amount) +
+                             quantpitch * evpars.pitch_quantize_amount;
+            }
         }
         auto syncratio = std::clamp(evpars.sync_octaves, 0.0f, 4.0f);
         syncratio = std::pow(2.0f, syncratio);
@@ -1255,7 +1272,7 @@ class ToneGranulator
     int num_out_chans = 0;
     int missedgrains = 0;
     // ideally we would not use a lock at all but it looks like it's cleaner
-    // to just use revert to using that for a some things
+    // to revert to using that for some things
     alignas(16) choc::threading::SpinLock spinLock;
     alignas(16) double graingen_phase = 0.0;
     alignas(16) double graingen_phase_prior = 2.0;
@@ -1272,6 +1289,7 @@ class ToneGranulator
     std::unordered_map<uint32_t, float> modRanges;
     std::unordered_map<int, int> shapeParToActualShape;
     choc::fifo::SingleReaderSingleWriterFIFO<StepModSource::Message> fifo;
+    alignas(16) Tunings::Tuning tuning;
     struct GrainRepeatsVisMessage
     {
         std::array<float, 6> modulatedvalues = {0.0f};
@@ -1588,10 +1606,17 @@ class ToneGranulator
         {
             osctypemapping[i] = i;
         }
+
+        tuning = Tunings::evenDivisionOfCentsByM(1200.0f, 7);
+        for (int i = 60; i < 72; ++i)
+        {
+            // std::cout << i << "\t" << tuning.frequencyForMidiNote(i) << "\n";
+        }
+
         for (int i = 0; i < numvoices; ++i)
         {
             auto v = std::make_unique<GranulatorVoice>();
-
+            v->tuning = &tuning;
             v->aux_envelopes = &voiceaux_envelopes;
             v->pitchBandAttens = pitchBandAttensShared;
             v->osctypemapping = osctypemapping;
