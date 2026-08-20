@@ -34,7 +34,7 @@ inline void updateAllFonts(juce::Component &parent, const juce::Font &newFont)
 
 AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudioProcessor &p)
     : juce::AudioProcessorEditor(p), processorRef(p), mainPage(p), modulationPage(p), dashPage(p),
-      mainTabs(juce::TabbedButtonBar::Orientation::TabsAtTop)
+      imTest(p), mainTabs(juce::TabbedButtonBar::Orientation::TabsAtTop)
 {
     /*
     if (!processorRef.baconSpectrum)
@@ -52,6 +52,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
     };
     if (processorRef.baconSpectrum)
         mainTabs.addTab("ANALYSIS", juce::Colours::grey, processorRef.baconSpectrum.get(), false);
+    mainTabs.addTab("IM TEST", juce::Colours::grey, &imTest, false);
     mainTabs.setCurrentTabIndex(0);
     addAndMakeVisible(mainTabs);
     for (int i = 0; i < 8; ++i)

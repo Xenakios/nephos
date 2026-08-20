@@ -17,6 +17,7 @@
 #include <memory>
 #include <stdio.h>
 #include <unordered_map>
+#include "imtest.h"
 
 struct PresetsComponent : public juce::Component
 {
@@ -481,6 +482,7 @@ class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor,
     MainPageComponent mainPage;
     ModulationPage modulationPage;
     DashPage dashPage;
+    IMTestComponent imTest;
     juce::TabbedComponent mainTabs;
     std::unordered_map<uint32_t, XapSlider *> idToSlider;
     void addChildSlidersFrom(juce::Component &c);
