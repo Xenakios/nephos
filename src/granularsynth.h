@@ -736,7 +736,7 @@ class GranulatorVoice
             }
             if (closestfoundhz)
             {
-                float quantpitch = std::log2(*closestfoundhz / 440.0) * 12.0f;
+                float quantpitch = std::log2(*closestfoundhz / 261.6255653005986) * 12.0f;
                 pitch_base = pitch_base * (1.0f - evpars.pitch_quantize_amount) +
                              quantpitch * evpars.pitch_quantize_amount;
             }
