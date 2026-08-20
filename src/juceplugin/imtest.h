@@ -6,6 +6,8 @@
 #include "juce_events/juce_events.h"
 #include "juce_graphics/juce_graphics.h"
 #include "juce_gui_basics/juce_gui_basics.h"
+#include <cstdint>
+#include <optional>
 
 struct IMMouse
 {
@@ -17,29 +19,39 @@ struct IMMouse
     float y = 0.0f;
     float delta_y = 0.0f;
     float previous_y = 0.0f;
+    float drag_start_x = 0.0f;
+    float drag_start_y = 0.0f;
 };
 
-inline std::optional<float> IMMiniParam(juce::Graphics &g, juce::Rectangle<float> bounds,
-                                        IMMouse mouse, const std::string &text, float curval)
+struct MiniParamResult
+{
+    std::optional<float> value;
+    bool was_clicked = false;
+};
+
+inline MiniParamResult IMMiniParam(juce::Graphics &g, juce::Rectangle<float> bounds,
+                                   const IMMouse &mouse, const std::string &text, float curval)
 {
     g.setColour(juce::Colours::grey);
     g.fillRect(bounds);
     g.setColour(juce::Colours::white);
     g.setFont(bounds.getHeight() - 1.0f);
-    if (mouse.is_down && bounds.contains(mouse.x, mouse.y))
+    MiniParamResult result;
+    if (mouse.is_dragging)
     {
-        if (mouse.is_dragging)
-        {
-            float delta = mouse.y - mouse.previous_y;
-            curval = curval + delta * 0.01f;
-            curval = std::clamp(curval, -1.0f, 1.0f);
-        }
+        float delta = mouse.y - mouse.previous_y;
+        curval = curval + delta * 0.01f;
+        curval = std::clamp(curval, -1.0f, 1.0f);
+        result.value = curval;
+    }
+    else if (mouse.is_down && bounds.contains(mouse.x, mouse.y))
+    {
+        result.was_clicked = true;
         g.drawText(juce::String(curval, 2), bounds, juce::Justification::centred);
-        return curval;
     }
     else
         g.drawText(text, bounds, juce::Justification::centred);
-    return {};
+    return result;
 }
 
 inline bool IMSelectEnvelopeButton(juce::Graphics &g, juce::Rectangle<float> bounds, int env_index,
@@ -97,6 +109,8 @@ class IMTestComponent : public juce::Component
     std::unique_ptr<juce::VBlankAttachment> vblankAttachment;
     IMMouse mouse;
     int selected_envelope = 0;
+    float par_start_value = 0.0f;
+    uint32_t target_param = CLAP_INVALID_ID;
     IMTestComponent(AudioPluginAudioProcessor &p) : processorRef(p)
     {
         vblankAttachment = std::make_unique<juce::VBlankAttachment>(this, [this]() { repaint(); });
@@ -118,13 +132,18 @@ class IMTestComponent : public juce::Component
         {
             uint32_t parid = pars[i] + selected_envelope;
             float curval = *processorRef.granulator.idtoparvalptr[parid];
-            auto editedval =
-                IMMiniParam(g, {61.0f + i * 45.0f, 1.0f, 43.0f, 14.0f}, mouse, ops[i], curval);
-            if (editedval)
+            auto miniresult = IMMiniParam(g, {61.0f + i * 45.0f, 1.0f, 43.0f, 14.0f}, mouse, ops[i],
+                                          par_start_value);
+            if (miniresult.was_clicked)
+            {
+                target_param = parid;
+                par_start_value = curval;
+            }
+            if (miniresult.value && target_param != CLAP_INVALID_ID)
             {
                 ParameterMessage msg;
-                msg.id = parid;
-                msg.value = *editedval;
+                msg.id = target_param;
+                msg.value = *miniresult.value;
                 processorRef.params_from_gui_fifo.push(msg);
             }
         }
@@ -140,6 +159,7 @@ class IMTestComponent : public juce::Component
             msg.ival0 = edited->first;
             processorRef.granulator.fifo.push(msg);
         }
+        mouse.is_dragging = false;
         // g.setColour(juce::Colours::white);
         // g.setFont(30.0f);
         // g.drawText(juce::String(selected_envelope + 1), 1, 16, 100, 100,
