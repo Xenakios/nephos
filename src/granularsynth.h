@@ -1598,6 +1598,22 @@ class ToneGranulator
                 osctypemapping[i] = mapping[i];
         }
     }
+    std::string load_scala_file(std::string path)
+    {
+        try
+        {
+            auto scale = Tunings::readSCLFile(path);
+            auto temp = Tunings::Tuning(scale);
+            spinLock.lock();
+            tuning = temp;
+            spinLock.unlock();
+        }
+        catch (std::exception &excep)
+        {
+            return excep.what();
+        }
+        return {};
+    }
     void create_voices()
     {
         std::fill(pitchBandAttensShared.begin(), pitchBandAttensShared.end(), 1.0f);
@@ -1607,22 +1623,7 @@ class ToneGranulator
         {
             osctypemapping[i] = i;
         }
-        try
-        {
-            // tuning = Tunings::evenDivisionOfCentsByM(1200.0f, 7);
-            auto scale = Tunings::readSCLFile(
-                std::string(R"(C:\develop\nephos\Assets\scala_scales\penta_opt.scl)"));
-            tuning = Tunings::Tuning(scale);
-            std::cout << tuning.keyboardMapping.rawText << "\n";
-            for (int i = 60; i < 72; ++i)
-            {
-                // std::cout << i << "\t" << tuning.frequencyForMidiNote(i) << "\n";
-            }
-        }
-        catch (std::exception& excep)
-        {
-            std::cout << excep.what() << "\n";
-        }
+        tuning = Tunings::evenTemperament12NoteScale();
         for (int i = 0; i < numvoices; ++i)
         {
             auto v = std::make_unique<GranulatorVoice>();

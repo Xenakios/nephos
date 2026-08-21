@@ -267,7 +267,6 @@ class GrainEnvelopeEditorComponent : public juce::Component
 
     void updateIfNeeded() { repaint(); }
     ToneGranulator *granul = nullptr;
-    
 };
 
 inline void initSlider(AudioPluginAudioProcessor &processor, juce::Component &parentComponent,
@@ -350,11 +349,14 @@ class OscillatorModuleComponent : public juce::GroupComponent
     XapSlider oscNoiseCorrelationKnob;
     XapSlider oscNoiseModeDrop;
     XapSlider quantizePitchToggle;
+    DropDownComponent scalaDrop;
     GrainEnvelopeEditorComponent pitchEnvelopeComponent;
     GrainModulationVisualizationComponent grainModComponent;
     juce::TextEditor oscTypeEditor;
+    std::map<int, std::string> scalaIdToPath;
     OscillatorModuleComponent(AudioPluginAudioProcessor &p);
     void resized() override;
+    void populateScalaDrop();
 };
 
 class RepeatsVisualizer : public juce::Component

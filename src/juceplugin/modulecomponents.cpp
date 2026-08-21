@@ -593,6 +593,16 @@ OscillatorModuleComponent::OscillatorModuleComponent(AudioPluginAudioProcessor &
 {
     addAndMakeVisible(grainModComponent);
     addAndMakeVisible(oscTypeComponent);
+    addAndMakeVisible(scalaDrop);
+    populateScalaDrop();
+    scalaDrop.OnItemSelected = [this]() {
+        auto strpath = scalaIdToPath[scalaDrop.getSelectedId()];
+        auto err = processorRef.granulator.load_scala_file(strpath);
+        if (!err.empty())
+        {
+            DBG(err);
+        }
+    };
     initSlider(p, *this, oscPitchKnob);
     initSlider(p, *this, quantizePitchToggle);
     for (int i = 0; i < GrainEvent::max_grain_mod_slots; ++i)
@@ -648,11 +658,30 @@ OscillatorModuleComponent::OscillatorModuleComponent(AudioPluginAudioProcessor &
     addChildComponent(oscTypeEditor);
     oscTypeEditor.setBounds(2, 2, 200, 25);
 }
+
+void OscillatorModuleComponent::populateScalaDrop()
+{
+    scalaDrop.rootNode.children.clear();
+    scalaIdToPath.clear();
+    int id = 0;
+    for (auto &e : juce::RangedDirectoryIterator(
+             juce::File(R"(C:\develop\nephos\Assets\scala_scales)"), false))
+    {
+        auto strpath = e.getFile().getFileNameWithoutExtension().toStdString();
+        scalaDrop.rootNode.children.emplace_back(strpath, id);
+        strpath = e.getFile().getFullPathName().toStdString();
+        scalaIdToPath[id] = strpath;
+        ++id;
+    }
+    scalaDrop.setSelectedId(0);
+}
+
 void OscillatorModuleComponent::resized()
 {
     oscTypeComponent.setBounds(7, 17, 370, 50);
     oscPitchKnob.setBounds(7, oscTypeComponent.getBottom() + 1, 80, 100);
     quantizePitchToggle.setBounds(7, oscPitchKnob.getBottom() + 2, 80, 100);
+
     for (int i = 0; i < modDepthKnobs.size(); ++i)
     {
         modDepthKnobs[i]->setBounds(oscPitchKnob.getRight() + 2,
@@ -665,6 +694,7 @@ void OscillatorModuleComponent::resized()
                                      200, 200);
     grainModComponent.setBounds(pitchEnvelopeComponent.getRight() + 2, oscTypeComponent.getBottom(),
                                 200, 200);
+    scalaDrop.setBounds(grainModComponent.getRight() + 2, getHeight() - 40, 250, 20);
     oscSyncKnob.setBounds(grainModComponent.getRight() + 2, oscTypeComponent.getBottom() + 1, 80,
                           50);
     oscPWKnob.setBounds(grainModComponent.getRight() + 2, oscSyncKnob.getBottom() + 1, 80, 50);
