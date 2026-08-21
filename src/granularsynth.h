@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <exception>
 #include <initializer_list>
 #include <mutex>
 #include <optional>
@@ -1606,13 +1607,22 @@ class ToneGranulator
         {
             osctypemapping[i] = i;
         }
-
-        tuning = Tunings::evenDivisionOfCentsByM(1200.0f, 7);
-        for (int i = 60; i < 72; ++i)
+        try
         {
-            // std::cout << i << "\t" << tuning.frequencyForMidiNote(i) << "\n";
+            // tuning = Tunings::evenDivisionOfCentsByM(1200.0f, 7);
+            auto scale = Tunings::readSCLFile(
+                std::string(R"(C:\develop\nephos\Assets\scala_scales\penta_opt.scl)"));
+            tuning = Tunings::Tuning(scale);
+            std::cout << tuning.keyboardMapping.rawText << "\n";
+            for (int i = 60; i < 72; ++i)
+            {
+                // std::cout << i << "\t" << tuning.frequencyForMidiNote(i) << "\n";
+            }
         }
-
+        catch (std::exception& excep)
+        {
+            std::cout << excep.what() << "\n";
+        }
         for (int i = 0; i < numvoices; ++i)
         {
             auto v = std::make_unique<GranulatorVoice>();

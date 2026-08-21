@@ -338,7 +338,8 @@ void DashBoardComponent::paint(juce::Graphics &g)
     g.reduceClipRegion(juce::Rectangle<int>(cloudArea.getX(), 0, getWidth(), getHeight()));
     for (auto &e : persisted_events)
     {
-        float alpha = juce::jmap<float>(e.gain, 0.0f, 1.0f, 0.0f, 1.0f);
+        float cubedgain = e.gain * e.gain * e.gain;
+        float alpha = juce::jmap<float>(cubedgain, 0.0f, 1.0f, 0.0f, 1.0f);
         float normpitch = juce::jmap<float>(e.pitch, -48.0f, 64.0f, 0.0f, 1.0f);
         g.setColour(pitchGradient.getColourAtPosition(normpitch).withBrightness(alpha));
         float xcor = cloudArea.getWidth() -
