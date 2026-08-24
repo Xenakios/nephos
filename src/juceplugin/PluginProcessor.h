@@ -43,7 +43,8 @@ struct ThreadMessage
         OP_MIDILEARNCURVE,
         OP_PARAMREMOTE,
         OP_RESET_MODULATORS,
-        OP_RANDOMSOURCES
+        OP_RANDOMSOURCES,
+        OP_TUNING
     };
     OpCode opcode = OP_NOOP;
     // note that some of the fields have multiple meanings depending on

@@ -357,6 +357,7 @@ class OscillatorModuleComponent : public juce::GroupComponent
     OscillatorModuleComponent(AudioPluginAudioProcessor &p);
     void resized() override;
     void populateScalaDrop();
+    void updateScalaDropFromPath(std::string path);
 };
 
 class RepeatsVisualizer : public juce::Component

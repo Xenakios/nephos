@@ -734,6 +734,11 @@ choc::value::Value AudioPluginAudioProcessor::getState()
     }
     rootstate.setMember("params", mainparams);
     rootstate.setMember("gvs_timespan", granulator.gvsettings.timespantoshow);
+
+    auto tuningstate = choc::value::createObject("tuning");
+    tuningstate.setMember("scala_file", granulator.currentScalaFile);
+    rootstate.setMember("tuning", tuningstate);
+
     auto filterstates = choc::value::createEmptyArray();
     for (int i = 0; i < 2; ++i)
     {
@@ -889,6 +894,12 @@ void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
                 }
             }
         }
+    }
+    if (state.hasObjectMember("tuning"))
+    {
+        auto tunstate = state["tuning"];
+        auto scalapath = tunstate["scala_file"].getWithDefault(std::string(""));
+        granulator.load_scala_file(scalapath, true);
     }
     if (state.hasObjectMember("trigrandstates"))
     {
@@ -1090,7 +1101,7 @@ void AudioPluginAudioProcessor::sendExtraStatesToGUI()
 {
     to_gui_fifo.push(ThreadMessage{ThreadMessage::OP_STEPSEQUENCER});
     to_gui_fifo.push(ThreadMessage{ThreadMessage::OP_RANDOMSOURCES});
-
+    to_gui_fifo.push(ThreadMessage{ThreadMessage::OP_TUNING});
     ThreadMessage msg;
     msg.opcode = ThreadMessage::OP_FILTERTYPE;
     for (int i = 0; i < granulator.currentInsertConfs.size(); ++i)

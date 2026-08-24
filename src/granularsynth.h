@@ -1598,15 +1598,19 @@ class ToneGranulator
                 osctypemapping[i] = mapping[i];
         }
     }
-    std::string load_scala_file(std::string path)
+    std::string currentScalaFile;
+    std::string load_scala_file(std::string path, bool called_from_audio_thread)
     {
         try
         {
             auto scale = Tunings::readSCLFile(path);
             auto temp = Tunings::Tuning(scale);
-            spinLock.lock();
+            if (!called_from_audio_thread)
+                spinLock.lock();
             tuning = temp;
-            spinLock.unlock();
+            currentScalaFile = path;
+            if (!called_from_audio_thread)
+                spinLock.unlock();
         }
         catch (std::exception &excep)
         {

@@ -176,8 +176,10 @@ void AudioPluginAudioProcessorEditor::timerCallback()
     ThreadMessage msg;
     while (processorRef.to_gui_fifo.pop(msg))
     {
-        if (msg.opcode == ThreadMessage::OP_RANDOMSOURCES)
+        if (msg.opcode == ThreadMessage::OP_TUNING)
         {
+            mainPage.oscModuleComponent.updateScalaDropFromPath(
+                processorRef.granulator.currentScalaFile);
         }
         if (msg.opcode == ThreadMessage::OP_PARAMREMOTE)
         {

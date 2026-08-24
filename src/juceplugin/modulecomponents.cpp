@@ -597,7 +597,7 @@ OscillatorModuleComponent::OscillatorModuleComponent(AudioPluginAudioProcessor &
     populateScalaDrop();
     scalaDrop.OnItemSelected = [this]() {
         auto strpath = scalaIdToPath[scalaDrop.getSelectedId()];
-        auto err = processorRef.granulator.load_scala_file(strpath);
+        auto err = processorRef.granulator.load_scala_file(strpath, false);
         if (!err.empty())
         {
             DBG(err);
@@ -657,6 +657,18 @@ OscillatorModuleComponent::OscillatorModuleComponent(AudioPluginAudioProcessor &
     addAndMakeVisible(pitchEnvelopeComponent);
     addChildComponent(oscTypeEditor);
     oscTypeEditor.setBounds(2, 2, 200, 25);
+}
+
+void OscillatorModuleComponent::updateScalaDropFromPath(std::string path)
+{
+    for (auto &e : scalaIdToPath)
+    {
+        if (e.second == path)
+        {
+            scalaDrop.setSelectedId(e.first);
+            break;
+        }
+    }
 }
 
 void OscillatorModuleComponent::populateScalaDrop()
