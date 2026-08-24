@@ -75,6 +75,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
       avisComponent(2)
 {
     // init_clouds(granulator);
+    rc_fifo.reset(512);
     initMidiBindings();
     macroBindings.resize(16);
 #ifdef JUCE_MAC
@@ -263,14 +264,15 @@ void AudioPluginAudioProcessor::setStateDirtyHack()
     dirtyStateParam->endChangeGesture();
 }
 
-void AudioPluginAudioProcessor::handleMIDICCMessage(int channel, int ccnumber, int ccvalue)
+void AudioPluginAudioProcessor::handleMIDICCMessage(int channel, int ccnumber, float ccvalue)
 {
     // DBG("handling midi message " << channel << " " << ccnumber << " " << ccvalue);
     auto &mm = granulator.modmatrix;
     uint32_t ccnum = ccnumber;
     if (midiLearnAction != MIDIBinding::NPA_NONE)
     {
-        // DBG("learning midi cc " << ccnumber << " to trigger action " << (int)midiLearnAction);
+        DBG("learning message " << channel << " " << ccnumber << " to trigger action "
+                                << (int)midiLearnAction);
         std::erase_if(midiBindings,
                       [this](const MIDIBinding &b) { return b.npa == midiLearnAction; });
         MIDIBinding b;
@@ -322,7 +324,7 @@ void AudioPluginAudioProcessor::handleMIDICCMessage(int channel, int ccnumber, i
                 auto md = granulator.idtoparmetadata[binding.target_param];
                 float minval = std::clamp(binding.par_range.first, md->minVal, md->maxVal);
                 float maxval = std::clamp(binding.par_range.second, md->minVal, md->maxVal);
-                float val = juce::jmap<float>(ccvalue, 0, 127, -1.0f, 1.0f);
+                float val = juce::jmap<float>(ccvalue, 0.0f, 1.0f, -1.0f, 1.0f);
                 if (binding.mapfunction)
                     val = binding.mapfunction(val);
                 val = juce::jmap<float>(val, -1.0f, 1.0f, minval, maxval);
@@ -343,6 +345,8 @@ void AudioPluginAudioProcessor::handleMIDICCMessage(int channel, int ccnumber, i
                 return b.target_param == midiLearnParam;
             });
             auto md = it->second;
+            DBG("learning message " << channel << " " << ccnumber << " to set parameter "
+                                    << md->name);
             midiBindings.emplace_back(
                 MIDIBinding{(uint32_t)channel, ccnum, midiLearnParam, {md->minVal, md->maxVal}});
             midiLearnParam = CLAP_INVALID_ID;
@@ -384,8 +388,13 @@ void AudioPluginAudioProcessor::processMidiMessages(juce::MidiBuffer &midiMessag
         const auto msg = mm.getMessage();
         if (msg.isController())
         {
-            handleMIDICCMessage(msg.getChannel(), msg.getControllerNumber(),
-                                msg.getControllerValue());
+            RemoteControlMessage rcmsg;
+            rcmsg.chan = msg.getChannel();
+            rcmsg.src = msg.getControllerNumber();
+            rcmsg.value = juce::jmap<float>(msg.getControllerValue(), 0, 127, 0.0f, 1.0f);
+            rc_fifo.push(rcmsg);
+            // handleMIDICCMessage(msg.getChannel(), msg.getControllerNumber(),
+            //                     msg.getControllerValue());
         }
         if (msg.isSustainPedalOn())
         {
@@ -428,6 +437,16 @@ void AudioPluginAudioProcessor::processMidiMessages(juce::MidiBuffer &midiMessag
         }
     }
 }
+
+void AudioPluginAudioProcessor::processRemoteControlMessages()
+{
+    RemoteControlMessage msg;
+    while (rc_fifo.pop(msg))
+    {
+        handleMIDICCMessage(msg.chan, msg.src, msg.value);
+    }
+}
+
 void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                                              juce::MidiBuffer &midiMessages)
 {
@@ -463,8 +482,8 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     float modspread = std::clamp(modulationAnalyzer.latestSpread, 0.0f, 5.0f);
     granulator.modSourceValues[ToneGranulator::AA_SPEAD] =
         juce::jmap<float>(modspread, 0.0f, 5.0f, 0.0f, 1.0f);
-
     processMidiMessages(midiMessages);
+    processRemoteControlMessages();
     bool statechanged = false;
     ThreadMessage msg;
     while (from_gui_fifo.pop(msg))

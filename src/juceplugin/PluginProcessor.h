@@ -6,6 +6,7 @@
 #include "../granularsynth.h"
 #include "clap/id.h"
 #include "containers/choc_SingleReaderSingleWriterFIFO.h"
+#include "containers/choc_SingleReaderMultipleWriterFIFO.h"
 #include "juce_audio_basics/juce_audio_basics.h"
 #include "juce_core/juce_core.h"
 #include "juce_dsp/juce_dsp.h"
@@ -71,12 +72,19 @@ struct MacroKnobBinding
     std::string label;
 };
 
+struct RemoteControlMessage
+{
+    uint32_t chan = 1;
+    uint32_t src = CLAP_INVALID_ID;
+    float value = 0.0f;
+};
+
 struct MIDIBinding
 {
     uint32_t midichan = 1;
     uint32_t midicc = CLAP_INVALID_ID;
     uint32_t target_param = CLAP_INVALID_ID;
-    
+
     std::pair<float, float> par_range{0.0f, 0.0f};
     std::function<float(float)> mapfunction;
     int mapfunctionid = 0;
@@ -114,7 +122,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     void releaseResources() override;
 
     bool isBusesLayoutSupported(const BusesLayout &layouts) const override;
-    void handleMIDICCMessage(int channel, int ccnumber, int ccvalue);
+    void handleMIDICCMessage(int channel, int ccnumber, float ccvalue);
     void processMidiMessages(juce::MidiBuffer &midiMessages);
     void processBlock(juce::AudioBuffer<float> &, juce::MidiBuffer &) override;
     using AudioProcessor::processBlock;
@@ -142,6 +150,10 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     choc::fifo::SingleReaderSingleWriterFIFO<ParameterMessage> params_from_gui_fifo;
     choc::fifo::SingleReaderSingleWriterFIFO<ParameterMessage> params_to_gui_fifo;
     choc::fifo::SingleReaderSingleWriterFIFO<ThreadMessage> to_gui_fifo;
+    // This is multiple writer because remote messages may be coming from GUI macro knobs or MIDI in
+    // the audio thread. In the future we may also handle OSC messages, which
+    // would arrive in yet another thread.
+    choc::fifo::SingleReaderMultipleWriterFIFO<RemoteControlMessage> rc_fifo;
     juce::AudioProcessLoadMeasurer perfMeasurer;
     std::atomic<float> cpu_load{0.0f};
     juce::ThreadPool tpool{juce::ThreadPool::Options{"granulatorworker", 1}};
@@ -188,6 +200,8 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     std::atomic<bool> corruptAudioDetected{false};
     // for testing
     std::atomic<bool> corruptAudioOnPurpose{false};
+    void processRemoteControlMessages();
+
   private:
     alignas(32) std::vector<float> workBuffer;
     alignas(32) choc::fifo::SingleReaderSingleWriterFIFO<

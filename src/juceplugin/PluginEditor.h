@@ -342,12 +342,17 @@ class DashPage : public juce::Component
         {
             ParamDesc pmd = ParamDesc()
                                 .asFloat()
-                                .withRange(-1.0, 1.0)
+                                .withRange(0.0, 1.0)
                                 .withName(fmt::format("M{}", i + 1))
                                 .withLinearScaleFormatting("");
             auto knob = std::make_unique<XapSlider>(XapSlider::SS_Knob, pmd);
             knob->OnValueChanged = [this, i, knobptr = knob.get()]() {
-                processorRef.handleMacroKnob(i, knobptr->getValue(), false);
+                RemoteControlMessage msg;
+                msg.chan = 4096;
+                msg.src = i;
+                msg.value = knobptr->getValue();
+                processorRef.rc_fifo.push(msg);
+                // processorRef.handleMacroKnob(i, knobptr->getValue(), false);
             };
             addAndMakeVisible(knob.get());
             perfSliders.push_back(std::move(knob));
@@ -420,8 +425,7 @@ class ModulationPage : public juce::Component
             randComponents.push_back(std::move(rc));
         }
 
-        stepSeqTabs.addTab("AUDIO INPUT", juce::Colours::darkgrey, &analysisComponen,
-                           false);
+        stepSeqTabs.addTab("AUDIO INPUT", juce::Colours::darkgrey, &analysisComponen, false);
         addAndMakeVisible(stepSeqTabs);
         for (int i = 0; i < 16; ++i)
         {
