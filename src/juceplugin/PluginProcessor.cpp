@@ -86,6 +86,14 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     presetsPath = R"(C:\develop\nephos\granulatorpresets\)";
 #endif
     loadMacroKnobs(macroKnobsPath);
+    try
+    {
+        presetsInitSchema(presetsDataBase);
+    }
+    catch (std::exception &ex)
+    {
+        DBG(ex.what());
+    }
     snapshots.resize(64);
 
     for (int i = 0; i < 64; ++i)
@@ -166,6 +174,14 @@ void AudioPluginAudioProcessor::saveSnapShot(int index, choc::value::ValueView s
     {
         std::lock_guard<choc::threading::SpinLock> locker(stateLock);
         snapshots[index] = state;
+        try
+        {
+            insertOrUpdatePreset(presetsDataBase, std::to_string(index), "snapshot", state);
+        }
+        catch (std::exception &ex)
+        {
+            DBG(ex.what());
+        }
     }
 }
 
@@ -173,6 +189,30 @@ void AudioPluginAudioProcessor::loadSnapShot(int index)
 {
     if (index >= 0 && index < snapshots.size())
     {
+        try
+        {
+            auto dbstate = loadPreset(presetsDataBase, std::to_string(index));
+            if (dbstate)
+            {
+                if (dbstate->data.size() < 1)
+                    return;
+                choc::value::InputData idata{(const uint8_t *)dbstate->data.data(),
+                                             (const uint8_t *)dbstate->data.data() +
+                                                 dbstate->data.size()};
+                auto state = choc::value::Value::deserialise(idata);
+                state.setMember(StateIgnoreStrings::masterVolume, true);
+                state.setMember(StateIgnoreStrings::dashboardsettings, true);
+                state.setMember(StateIgnoreStrings::ambisonicOrder, true);
+                state.setMember(StateIgnoreStrings::midiBinds, true);
+                setState(state.getView());
+                granulator.currentSnapShot = index;
+            }
+        }
+        catch (std::exception &ex)
+        {
+            DBG(ex.what());
+        }
+        return;
         auto &state = snapshots[index];
         if (!state.isVoid())
         {

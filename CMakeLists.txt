@@ -20,6 +20,7 @@ include_directories(
     libs/fmt/include
     libs/sst-filters/include
     libs/tuning-library/include
+    libs/sqlite
     # libs/sst-effects/include
     # libs/sst-waveshapers
     # libs/oscpkt
@@ -31,6 +32,8 @@ include_directories(
 )
 
 add_subdirectory(libs/fmt)
+
+add_library(SQLITE libs/sqlite/sqlite3.c)
 
 add_library(AWLIMITED
     libs/airwindows_limited/airwin_consolidated_base.cpp
@@ -156,6 +159,7 @@ target_link_libraries(NephosPlugin
         juce::juce_dsp
         fmt
         AWLIMITED
+        SQLITE
     PUBLIC
         juce::juce_recommended_config_flags
         # juce::juce_recommended_lto_flags
