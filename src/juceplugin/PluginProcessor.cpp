@@ -105,10 +105,10 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
             {
                 auto jsontxt = choc::file::loadFileAsString(fname);
                 auto state = choc::json::parseValue(jsontxt);
-                state.setMember(StateIgnoreStrings::masterVolume, true);
-                state.setMember(StateIgnoreStrings::dashboardsettings, true);
-                state.setMember(StateIgnoreStrings::ambisonicOrder, true);
-                state.setMember(StateIgnoreStrings::midiBinds, true);
+                // state.setMember(StateIgnoreStrings::masterVolume, true);
+                state.setMember("state_ignore_flags", (int64_t)SIF_MASTERVOLUME |
+                                                          SIF_DASHBOARDSETTING |
+                                                          SIF_AMBISONICORDER | SIF_MIDIBINDINGS);
                 snapshots[i] = state;
             }
         }
@@ -164,7 +164,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         }
     }
     */
-    insertOrUpdatePreset(presetsDataBase, "Factory Reset", "Factory Presets", getState());
+    insertOrUpdatePreset(presetsDataBase, "Factory Reset", "Factory Presets", false, getState());
 }
 
 AudioPluginAudioProcessor::~AudioPluginAudioProcessor() {}
@@ -177,7 +177,7 @@ void AudioPluginAudioProcessor::saveSnapShot(int index, choc::value::ValueView s
         snapshots[index] = state;
         try
         {
-            insertOrUpdatePreset(presetsDataBase, std::to_string(index), "snapshot", state);
+            insertOrUpdatePreset(presetsDataBase, std::to_string(index), "snapshot", false, state);
         }
         catch (std::exception &ex)
         {
@@ -199,12 +199,9 @@ void AudioPluginAudioProcessor::loadPreset(std::string name, std::string categor
                                          (const uint8_t *)dbstate->data.data() +
                                              dbstate->data.size()};
             auto state = choc::value::Value::deserialise(idata);
-            state.setMember(StateIgnoreStrings::masterVolume, true);
-            state.setMember(StateIgnoreStrings::dashboardsettings, true);
-            state.setMember(StateIgnoreStrings::ambisonicOrder, true);
-            state.setMember(StateIgnoreStrings::midiBinds, true);
+            state.setMember("state_ignore_flags", (int64_t)SIF_AMBISONICORDER | SIF_MASTERVOLUME |
+                                                      SIF_DASHBOARDSETTING | SIF_MIDIBINDINGS);
             setState(state.getView());
-            
         }
     }
     catch (std::exception &ex)
@@ -223,10 +220,6 @@ void AudioPluginAudioProcessor::loadSnapShot(int index)
         auto &state = snapshots[index];
         if (!state.isVoid())
         {
-            state.setMember(StateIgnoreStrings::masterVolume, true);
-            state.setMember(StateIgnoreStrings::dashboardsettings, true);
-            state.setMember(StateIgnoreStrings::ambisonicOrder, true);
-            state.setMember(StateIgnoreStrings::midiBinds, true);
             setState(state);
         }
         granulator.currentSnapShot = index;
@@ -894,11 +887,12 @@ choc::value::Value AudioPluginAudioProcessor::getState()
 void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
 {
     jassert(!juce::MessageManager::getInstance()->isThisTheMessageThread());
-    if (!state[StateIgnoreStrings::dashboardsettings].getWithDefault(false))
+    int64_t state_ignore_flags = state["state_ignore_flags"].getWithDefault(0);
+    if (state_ignore_flags & SIF_DASHBOARDSETTING)
     {
         granulator.gvsettings.timespantoshow = state["gvs_timespan"].getWithDefault(8.0);
     }
-    bool ignoreMidiBindings = state[StateIgnoreStrings::midiBinds].getWithDefault(false);
+    bool ignoreMidiBindings = state_ignore_flags & SIF_MIDIBINDINGS;
     if (!ignoreMidiBindings && state.hasObjectMember("midibindings"))
     {
         auto binds = state["midibindings"];
@@ -1060,8 +1054,8 @@ void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
     {
         auto params = state["params"];
         auto &pars = granulator.parmetadatas;
-        bool ignoreMasterVolume = state[StateIgnoreStrings::masterVolume].getWithDefault(false);
-        bool ignoreAmbisonicOrder = state[StateIgnoreStrings::ambisonicOrder].getWithDefault(false);
+        bool ignoreMasterVolume = state_ignore_flags & SIF_MASTERVOLUME;
+        bool ignoreAmbisonicOrder = state_ignore_flags & SIF_AMBISONICORDER;
         for (int i = 0; i < pars.size(); ++i)
         {
             if (ignoreMasterVolume && pars[i].id == ToneGranulator::PAR_MAINVOLUME)

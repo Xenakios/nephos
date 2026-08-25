@@ -100,7 +100,8 @@ inline void presetsInitSchema(SqliteDb &db)
 }
 
 inline int64_t insertOrUpdatePreset(SqliteDb &db, const std::string &name,
-                                    const std::string &category, choc::value::ValueView statedata)
+                                    const std::string &category, bool force_insert,
+                                    choc::value::ValueView statedata)
 {
     auto sdata = statedata.serialise();
     int64_t now = static_cast<int64_t>(std::time(nullptr));
@@ -109,7 +110,7 @@ inline int64_t insertOrUpdatePreset(SqliteDb &db, const std::string &name,
     SqliteStmt stmt(db.get(), "SELECT id, name, category, data FROM presets WHERE name = ?");
     sqlite3_bind_text(stmt.get(), 1, name.c_str(), -1, SQLITE_TRANSIENT);
 
-    if (sqlite3_step(stmt.get()) != SQLITE_ROW)
+    if (sqlite3_step(stmt.get()) != SQLITE_ROW || force_insert)
     {
         // not found, so insert
         outerstmt = SqliteStmt(db.get(), R"(
@@ -270,16 +271,14 @@ struct MIDIBinding
     NonParamAction npa = NPA_NONE;
 };
 
-namespace StateIgnoreStrings
+enum StateIgnoreFlags
 {
-using namespace std::literals;
-
-static constexpr auto masterVolume = "ignore_param_mastervolume"sv;
-static constexpr auto modulationRouting = "ignore_modulationrouting"sv;
-static constexpr auto dashboardsettings = "ignore_dashboard"sv;
-static constexpr auto ambisonicOrder = "ignore_ambiorder"sv;
-static constexpr auto midiBinds = "ignore_midibindings"sv;
-} // namespace StateIgnoreStrings
+    SIF_MASTERVOLUME = 1 << 0,
+    SIF_AMBISONICORDER = 1 << 1,
+    SIF_MODULATIONROUTINGS = 1 << 2,
+    SIF_DASHBOARDSETTING = 1 << 3,
+    SIF_MIDIBINDINGS = 1 << 4
+};
 
 class AudioPluginAudioProcessor final : public juce::AudioProcessor
 {

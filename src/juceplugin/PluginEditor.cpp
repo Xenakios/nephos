@@ -318,6 +318,11 @@ void MainPageComponent::mouseDown(const juce::MouseEvent &ev)
         });
         menu.addItem("Reset to default state",
                      [this]() { processorRef.loadPreset("Factory Reset", "Factory Presets"); });
+        menu.addItem("Quick save preset", [this]() {
+            auto state = processorRef.getState();
+            insertOrUpdatePreset(processorRef.presetsDataBase, "quick save", "Quick saves", true,
+                                 state);
+        });
         menu.showMenuAsync({});
     }
 }
