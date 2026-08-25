@@ -323,6 +323,13 @@ void MainPageComponent::mouseDown(const juce::MouseEvent &ev)
             insertOrUpdatePreset(processorRef.presetsDataBase, "quick save", "Quick saves", true,
                                  state);
         });
+        menu.addSectionHeader("Presets");
+        auto presets = listPresets(processorRef.presetsDataBase);
+        for (auto &e : presets)
+        {
+            menu.addItem(e.category + "/" + e.name,
+                         [this, e]() { processorRef.loadPreset(e.name, e.category); });
+        }
         menu.showMenuAsync({});
     }
 }

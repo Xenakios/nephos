@@ -184,6 +184,37 @@ inline std::optional<PresetRecord> presetsLoadPreset(SqliteDb &db, std::string n
     return rec;
 }
 
+struct PresetSummary
+{
+    int64_t id;
+    std::string name;
+    std::string category;
+};
+
+inline std::vector<PresetSummary> listPresets(SqliteDb &db, const std::string &categoryFilter = "")
+{
+    std::vector<PresetSummary> results;
+    std::string sql = "SELECT id, name, category FROM presets";
+    if (!categoryFilter.empty())
+        sql += " WHERE category = ?";
+    sql += " ORDER BY name COLLATE NOCASE";
+
+    SqliteStmt stmt(db.get(), sql);
+    if (!categoryFilter.empty())
+        sqlite3_bind_text(stmt.get(), 1, categoryFilter.c_str(), -1, SQLITE_TRANSIENT);
+
+    while (sqlite3_step(stmt.get()) == SQLITE_ROW)
+    {
+        PresetSummary s;
+        s.id = sqlite3_column_int64(stmt.get(), 0);
+        s.name = reinterpret_cast<const char *>(sqlite3_column_text(stmt.get(), 1));
+        if (const unsigned char *cat = sqlite3_column_text(stmt.get(), 2))
+            s.category = reinterpret_cast<const char *>(cat);
+        results.push_back(std::move(s));
+    }
+    return results;
+}
+
 inline bool is_debug()
 {
 #ifdef JUCE_DEBUG
