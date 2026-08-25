@@ -94,9 +94,9 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     {
         DBG(ex.what());
     }
-    snapshots.resize(64);
+    snapshots.resize(maxNumSnapshots);
 
-    for (int i = 0; i < 64; ++i)
+    for (int i = 0; i < maxNumSnapshots; ++i)
     {
         try
         {
@@ -164,6 +164,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         }
     }
     */
+    insertOrUpdatePreset(presetsDataBase, "Factory Reset", "Factory Presets", getState());
 }
 
 AudioPluginAudioProcessor::~AudioPluginAudioProcessor() {}
@@ -185,33 +186,39 @@ void AudioPluginAudioProcessor::saveSnapShot(int index, choc::value::ValueView s
     }
 }
 
+void AudioPluginAudioProcessor::loadPreset(std::string name, std::string category)
+{
+    try
+    {
+        auto dbstate = presetsLoadPreset(presetsDataBase, name, category);
+        if (dbstate)
+        {
+            if (dbstate->data.size() < 1)
+                return;
+            choc::value::InputData idata{(const uint8_t *)dbstate->data.data(),
+                                         (const uint8_t *)dbstate->data.data() +
+                                             dbstate->data.size()};
+            auto state = choc::value::Value::deserialise(idata);
+            state.setMember(StateIgnoreStrings::masterVolume, true);
+            state.setMember(StateIgnoreStrings::dashboardsettings, true);
+            state.setMember(StateIgnoreStrings::ambisonicOrder, true);
+            state.setMember(StateIgnoreStrings::midiBinds, true);
+            setState(state.getView());
+            
+        }
+    }
+    catch (std::exception &ex)
+    {
+        DBG(ex.what());
+    }
+}
+
 void AudioPluginAudioProcessor::loadSnapShot(int index)
 {
     if (index >= 0 && index < snapshots.size())
     {
-        try
-        {
-            auto dbstate = loadPreset(presetsDataBase, std::to_string(index));
-            if (dbstate)
-            {
-                if (dbstate->data.size() < 1)
-                    return;
-                choc::value::InputData idata{(const uint8_t *)dbstate->data.data(),
-                                             (const uint8_t *)dbstate->data.data() +
-                                                 dbstate->data.size()};
-                auto state = choc::value::Value::deserialise(idata);
-                state.setMember(StateIgnoreStrings::masterVolume, true);
-                state.setMember(StateIgnoreStrings::dashboardsettings, true);
-                state.setMember(StateIgnoreStrings::ambisonicOrder, true);
-                state.setMember(StateIgnoreStrings::midiBinds, true);
-                setState(state.getView());
-                granulator.currentSnapShot = index;
-            }
-        }
-        catch (std::exception &ex)
-        {
-            DBG(ex.what());
-        }
+        loadPreset(std::to_string(index), "snapshot");
+        granulator.currentSnapShot = index;
         return;
         auto &state = snapshots[index];
         if (!state.isVoid())

@@ -316,6 +316,8 @@ void MainPageComponent::mouseDown(const juce::MouseEvent &ev)
             }
             juce::SystemClipboard::copyTextToClipboard(result);
         });
+        menu.addItem("Reset to default state",
+                     [this]() { processorRef.loadPreset("Factory Reset", "Factory Presets"); });
         menu.showMenuAsync({});
     }
 }

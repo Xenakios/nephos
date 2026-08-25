@@ -156,11 +156,13 @@ struct PresetRecord
     std::vector<uint8_t> data;
 };
 
-inline std::optional<PresetRecord> loadPreset(SqliteDb &db, std::string name)
+inline std::optional<PresetRecord> presetsLoadPreset(SqliteDb &db, std::string name,
+                                                     std::string category)
 {
-    SqliteStmt stmt(db.get(), "SELECT id, name, category, data FROM presets WHERE name = ?");
+    SqliteStmt stmt(db.get(),
+                    "SELECT id, name, category, data FROM presets WHERE name = ? AND category = ?");
     sqlite3_bind_text(stmt.get(), 1, name.c_str(), -1, SQLITE_TRANSIENT);
-
+    sqlite3_bind_text(stmt.get(), 2, category.c_str(), -1, SQLITE_TRANSIENT);
     if (sqlite3_step(stmt.get()) != SQLITE_ROW)
     {
         return std::nullopt; // not found
@@ -282,6 +284,7 @@ static constexpr auto midiBinds = "ignore_midibindings"sv;
 class AudioPluginAudioProcessor final : public juce::AudioProcessor
 {
   public:
+    static constexpr size_t maxNumSnapshots = 64;
     AudioPluginAudioProcessor();
     ~AudioPluginAudioProcessor() override;
 
@@ -333,6 +336,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     choc::threading::SpinLock stateLock;
     std::vector<choc::value::Value> snapshots;
 
+    void loadPreset(std::string name, std::string category);
     void loadSnapShot(int index);
     void saveSnapShot(int index, choc::value::ValueView state);
     std::vector<MacroKnobBinding> macroBindings;
