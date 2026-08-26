@@ -35,7 +35,7 @@ inline void updateAllFonts(juce::Component &parent, const juce::Font &newFont)
 
 AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudioProcessor &p)
     : juce::AudioProcessorEditor(p), processorRef(p), mainPage(p), modulationPage(p), dashPage(p),
-      imTest(p), mainTabs(juce::TabbedButtonBar::Orientation::TabsAtTop)
+      mainTabs(juce::TabbedButtonBar::Orientation::TabsAtTop)
 {
     /*
     if (!processorRef.baconSpectrum)
@@ -53,7 +53,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
     };
     if (processorRef.baconSpectrum)
         mainTabs.addTab("ANALYSIS", juce::Colours::grey, processorRef.baconSpectrum.get(), false);
-    mainTabs.addTab("IM TEST", juce::Colours::grey, &imTest, false);
+    // mainTabs.addTab("IM TEST", juce::Colours::grey, &imTest, false);
     mainTabs.setCurrentTabIndex(0);
     addAndMakeVisible(mainTabs);
     for (int i = 0; i < 8; ++i)
@@ -99,6 +99,24 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
     }
     setSize(1500, 720);
     startTimerHz(20);
+}
+
+bool AudioPluginAudioProcessorEditor::keyPressed(const juce::KeyPress &ev)
+{
+    if (ev.getKeyCode() == juce::KeyPress::F1Key)
+    {
+        auto state = processorRef.getState();
+        try
+        {
+            insertPreset(processorRef.presetsDataBase, "quick save", "Quick saves", state);
+        }
+        catch (std::exception &ex)
+        {
+            DBG(ex.what());
+        }
+        return true;
+    }
+    return false;
 }
 
 void AudioPluginAudioProcessorEditor::addChildSlidersFrom(juce::Component &c)
@@ -323,7 +341,7 @@ void MainPageComponent::mouseDown(const juce::MouseEvent &ev)
             auto state = processorRef.getState();
             try
             {
-                insertPreset(processorRef.presetsDataBase, "quick save", "Quicj saves", state);
+                insertPreset(processorRef.presetsDataBase, "quick save", "Quick saves", state);
             }
             catch (std::exception &ex)
             {

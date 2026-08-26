@@ -482,11 +482,12 @@ class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor,
     void resized() override;
     void timerCallback() override;
     void updateParameterRemoteStates();
+    bool keyPressed(const juce::KeyPress& ev) override;
     AudioPluginAudioProcessor &processorRef;
     MainPageComponent mainPage;
     ModulationPage modulationPage;
     DashPage dashPage;
-    IMTestComponent imTest;
+    std::unique_ptr<IMTestComponent> imTest;
     juce::TabbedComponent mainTabs;
     std::unordered_map<uint32_t, XapSlider *> idToSlider;
     void addChildSlidersFrom(juce::Component &c);
