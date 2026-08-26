@@ -7,6 +7,7 @@
 #include "juce_audio_utils/juce_audio_utils.h"
 #include "juce_core/juce_core.h"
 #include "juce_events/juce_events.h"
+#include "sqlite_helpers.h"
 #include "text/choc_Files.h"
 #include "text/choc_JSON.h"
 #include <cmath>
@@ -75,6 +76,26 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
       avisComponent(2)
 {
     // init_clouds(granulator);
+    auto snaps = listPresets(presetsDataBase);
+    for (auto &e : snaps)
+    {
+        if (e.category == "snapshot")
+        {
+            try
+            {
+                int index = std::stoi(e.name);
+                snapIndexToPresetID[index] = e.id;
+            }
+            catch (std::exception &ex)
+            {
+                DBG(ex.what());
+            }
+        }
+        else if (e.category == "Factory Presets" && e.name == "Factory Reset")
+        {
+            factoryResetID = e.id;
+        }
+    }
     rc_fifo.reset(512);
     initMidiBindings();
     macroBindings.resize(16);
@@ -186,11 +207,11 @@ void AudioPluginAudioProcessor::saveSnapShot(int index, choc::value::ValueView s
     }
 }
 
-void AudioPluginAudioProcessor::loadPreset(std::string name, std::string category)
+void AudioPluginAudioProcessor::loadPreset(int64_t presetID)
 {
     try
     {
-        auto dbstate = presetsLoadPreset(presetsDataBase, name, category);
+        auto dbstate = presetsLoadPreset(presetsDataBase, presetID);
         if (dbstate)
         {
             if (dbstate->data.size() < 1)
@@ -212,10 +233,15 @@ void AudioPluginAudioProcessor::loadPreset(std::string name, std::string categor
 
 void AudioPluginAudioProcessor::loadSnapShot(int index)
 {
-    if (index >= 0 && index < snapshots.size())
+    if (index >= 0 && index < maxNumSnapshots)
     {
-        loadPreset(std::to_string(index), "snapshot");
-        granulator.currentSnapShot = index;
+        auto it = snapIndexToPresetID.find(index);
+        if (it != snapIndexToPresetID.end())
+        {
+            loadPreset(it->second);
+            granulator.currentSnapShot = index;
+        }
+
         return;
         auto &state = snapshots[index];
         if (!state.isVoid())

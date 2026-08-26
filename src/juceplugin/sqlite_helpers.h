@@ -147,13 +147,10 @@ struct PresetRecord
     std::vector<uint8_t> data;
 };
 
-inline std::optional<PresetRecord> presetsLoadPreset(SqliteDb &db, std::string name,
-                                                     std::string category)
+inline std::optional<PresetRecord> presetsLoadPreset(SqliteDb &db, int64_t presetID)
 {
-    SqliteStmt stmt(db.get(),
-                    "SELECT id, name, category, data FROM presets WHERE name = ? AND category = ?");
-    sqlite3_bind_text(stmt.get(), 1, name.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt.get(), 2, category.c_str(), -1, SQLITE_TRANSIENT);
+    SqliteStmt stmt(db.get(), "SELECT id, name, category, data FROM presets WHERE id = ?");
+    sqlite3_bind_int64(stmt.get(), 1, presetID);
     if (sqlite3_step(stmt.get()) != SQLITE_ROW)
     {
         return std::nullopt; // not found
@@ -184,6 +181,8 @@ struct PresetSummary
 inline std::vector<PresetSummary> listPresets(SqliteDb &db, const std::string &categoryFilter = "")
 {
     std::vector<PresetSummary> results;
+    // we expect the query will produce results
+    results.reserve(64);
     std::string sql = "SELECT id, name, category FROM presets";
     if (!categoryFilter.empty())
         sql += " WHERE category = ?";

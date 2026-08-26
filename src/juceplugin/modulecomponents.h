@@ -1093,7 +1093,7 @@ class TriggeredRandomModuleComponent : public juce::Component
             limitDrop.setSelectedId(rms.limit_mode);
             updateKnobs();
             rms.state_dirty = false;
-            DBG("updated random source " << index << " GUI");
+            // DBG("updated random source " << index << " GUI");
         }
     }
 };

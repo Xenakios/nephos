@@ -3,6 +3,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <memory>
+#include <unordered_map>
 #include "../granularsynth.h"
 #include "clap/id.h"
 #include "containers/choc_SingleReaderSingleWriterFIFO.h"
@@ -168,9 +169,12 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     choc::threading::SpinLock stateLock;
     std::vector<choc::value::Value> snapshots;
 
-    void loadPreset(std::string name, std::string category);
+    void loadPreset(int64_t presetID);
     void loadSnapShot(int index);
     void saveSnapShot(int index, choc::value::ValueView state);
+    std::unordered_map<int, int64_t> snapIndexToPresetID;
+    int64_t factoryResetID = -1;
+
     std::vector<MacroKnobBinding> macroBindings;
 
     std::vector<MIDIBinding> midiBindings;

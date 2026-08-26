@@ -115,7 +115,7 @@ AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor() {}
 
 void AudioPluginAudioProcessorEditor::updateParameterRemoteStates()
 {
-    DBG("updating knob remote control status leds");
+    // DBG("updating knob remote control status leds");
     for (auto &c : idToSlider)
     {
         uint32_t s = XapSlider::RCS_NONE;
@@ -317,7 +317,7 @@ void MainPageComponent::mouseDown(const juce::MouseEvent &ev)
             juce::SystemClipboard::copyTextToClipboard(result);
         });
         menu.addItem("Reset to default state",
-                     [this]() { processorRef.loadPreset("Factory Reset", "Factory Presets"); });
+                     [this]() { processorRef.loadPreset(processorRef.factoryResetID); });
         menu.addItem("Quick save preset", [this]() {
             auto state = processorRef.getState();
             insertOrUpdatePreset(processorRef.presetsDataBase, "quick save", "Quick saves", true,
@@ -328,7 +328,7 @@ void MainPageComponent::mouseDown(const juce::MouseEvent &ev)
         for (auto &e : presets)
         {
             menu.addItem(e.category + "/" + e.name,
-                         [this, e]() { processorRef.loadPreset(e.name, e.category); });
+                         [this, e]() { processorRef.loadPreset(e.id); });
         }
         menu.showMenuAsync({});
     }
