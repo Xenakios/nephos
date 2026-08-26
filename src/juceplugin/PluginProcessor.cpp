@@ -76,6 +76,14 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
       avisComponent(2)
 {
     // init_clouds(granulator);
+    try
+    {
+        presetsInitSchema(presetsDataBase);
+    }
+    catch (std::exception &ex)
+    {
+        DBG(ex.what());
+    }
     auto snaps = listPresets(presetsDataBase);
     for (auto &e : snaps)
     {
@@ -107,14 +115,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     presetsPath = R"(C:\develop\nephos\granulatorpresets\)";
 #endif
     loadMacroKnobs(macroKnobsPath);
-    try
-    {
-        presetsInitSchema(presetsDataBase);
-    }
-    catch (std::exception &ex)
-    {
-        DBG(ex.what());
-    }
+
     snapshots.resize(maxNumSnapshots);
 
     for (int i = 0; i < maxNumSnapshots; ++i)
@@ -185,20 +186,43 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         }
     }
     */
-    insertOrUpdatePreset(presetsDataBase, "Factory Reset", "Factory Presets", false, getState());
+    try
+    {
+        if (factoryResetID == -1)
+            factoryResetID =
+                insertPreset(presetsDataBase, "Factory Reset", "Factory Presets", getState());
+        else
+            updatePreset(presetsDataBase, factoryResetID, "Factory Reset", "Factory Presets",
+                         getState());
+    }
+    catch (std::exception &ex)
+    {
+        DBG(ex.what());
+    }
 }
 
 AudioPluginAudioProcessor::~AudioPluginAudioProcessor() {}
 
 void AudioPluginAudioProcessor::saveSnapShot(int index, choc::value::ValueView state)
 {
-    if (index >= 0 && index < snapshots.size())
+    if (index >= 0 && index < maxNumSnapshots)
     {
         std::lock_guard<choc::threading::SpinLock> locker(stateLock);
         snapshots[index] = state;
         try
         {
-            insertOrUpdatePreset(presetsDataBase, std::to_string(index), "snapshot", false, state);
+            auto found =
+                findPresetWithNameCategory(presetsDataBase, std::to_string(index), "snapshot");
+            if (found >= 0)
+            {
+                updatePreset(presetsDataBase, found, std::to_string(index), "snapshot", getState());
+            }
+            else
+            {
+                auto inserted =
+                    insertPreset(presetsDataBase, std::to_string(index), "snapshot", getState());
+                snapIndexToPresetID[index] = inserted;
+            }
         }
         catch (std::exception &ex)
         {
@@ -223,6 +247,10 @@ void AudioPluginAudioProcessor::loadPreset(int64_t presetID)
             state.setMember("state_ignore_flags", (int64_t)SIF_AMBISONICORDER | SIF_MASTERVOLUME |
                                                       SIF_DASHBOARDSETTING | SIF_MIDIBINDINGS);
             setState(state.getView());
+        }
+        else
+        {
+            DBG("preset with ID " << presetID << " does not exist");
         }
     }
     catch (std::exception &ex)

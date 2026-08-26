@@ -89,54 +89,69 @@ inline void presetsInitSchema(SqliteDb &db)
     }
 }
 
-inline int64_t insertOrUpdatePreset(SqliteDb &db, const std::string &name,
-                                    const std::string &category, bool force_insert,
-                                    choc::value::ValueView statedata)
+inline bool presetExists(SqliteDb &db, int64_t ID)
+{
+    SqliteStmt stmt(db.get(), "SELECT id FROM presets WHERE id = ?");
+    sqlite3_bind_int64(stmt.get(), 1, ID);
+    return sqlite3_step(stmt.get()) == SQLITE_ROW;
+}
+
+inline int64_t findPresetWithNameCategory(SqliteDb &db, std::string name, std::string category)
+{
+    SqliteStmt stmt(db.get(), "SELECT id FROM presets WHERE name = ? AND category = ?");
+    sqlite3_bind_text(stmt.get(), 1, name.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt.get(), 2, category.c_str(), -1, SQLITE_TRANSIENT);
+    if (sqlite3_step(stmt.get()) == SQLITE_ROW)
+    {
+        return sqlite3_column_int64(stmt.get(), 0);
+    }
+    return -1;
+}
+
+inline int64_t insertPreset(SqliteDb &db, std::string name, std::string category,
+                            choc::value::ValueView statedata)
 {
     auto sdata = statedata.serialise();
     int64_t now = static_cast<int64_t>(std::time(nullptr));
-    SqliteStmt outerstmt;
-
-    SqliteStmt stmt(db.get(), "SELECT id, name, category, data FROM presets WHERE name = ?");
-    sqlite3_bind_text(stmt.get(), 1, name.c_str(), -1, SQLITE_TRANSIENT);
-
-    if (sqlite3_step(stmt.get()) != SQLITE_ROW || force_insert)
-    {
-        // not found, so insert
-        outerstmt = SqliteStmt(db.get(), R"(
+    SqliteStmt outerstmt = SqliteStmt(db.get(), R"(
         INSERT INTO presets (name, category, created_at, modified_at, data)
         VALUES (?, ?, ?, ?, ?)
     )");
-        sqlite3_bind_text(outerstmt.get(), 1, name.c_str(), -1, SQLITE_TRANSIENT);
-        sqlite3_bind_text(outerstmt.get(), 2, category.c_str(), -1, SQLITE_TRANSIENT);
-        sqlite3_bind_int64(outerstmt.get(), 3, now);
-        sqlite3_bind_int64(outerstmt.get(), 4, now);
-        // SQLITE_TRANSIENT tells sqlite to copy the bytes now, since `data`
-        // may go out of scope before the statement executes
-        sqlite3_bind_blob(outerstmt.get(), 5, sdata.data.data(),
-                          static_cast<int>(sdata.data.size()), SQLITE_TRANSIENT);
-    }
-    else
-    {
-        // was already in db, so update
-        outerstmt = SqliteStmt(db.get(), R"(
-        UPDATE presets
-        SET name = ?, category = ?, data = ?, modified_at = ?
-        WHERE name = ?
-    )");
-        sqlite3_bind_text(outerstmt.get(), 1, name.c_str(), -1, SQLITE_TRANSIENT);
-        sqlite3_bind_text(outerstmt.get(), 2, category.c_str(), -1, SQLITE_TRANSIENT);
-        sqlite3_bind_blob(outerstmt.get(), 3, sdata.data.data(),
-                          static_cast<int>(sdata.data.size()), SQLITE_TRANSIENT);
-        sqlite3_bind_int64(outerstmt.get(), 4, now);
-        sqlite3_bind_text(outerstmt.get(), 5, name.c_str(), -1, SQLITE_TRANSIENT);
-    }
-
+    sqlite3_bind_text(outerstmt.get(), 1, name.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(outerstmt.get(), 2, category.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int64(outerstmt.get(), 3, now);
+    sqlite3_bind_int64(outerstmt.get(), 4, now);
+    // SQLITE_TRANSIENT tells sqlite to copy the bytes now, since `data`
+    // may go out of scope before the statement executes
+    sqlite3_bind_blob(outerstmt.get(), 5, sdata.data.data(), static_cast<int>(sdata.data.size()),
+                      SQLITE_TRANSIENT);
     if (sqlite3_step(outerstmt.get()) != SQLITE_DONE)
     {
         throw SqliteError("Insert failed: " + std::string(sqlite3_errmsg(db.get())));
     }
     return sqlite3_last_insert_rowid(db.get());
+}
+
+inline void updatePreset(SqliteDb &db, int64_t presetID, std::string name, std::string category,
+                         choc::value::ValueView statedata)
+{
+    auto sdata = statedata.serialise();
+    int64_t now = static_cast<int64_t>(std::time(nullptr));
+    SqliteStmt outerstmt = SqliteStmt(db.get(), R"(
+        UPDATE presets
+        SET name = ?, category = ?, data = ?, modified_at = ?
+        WHERE id = ?
+    )");
+    sqlite3_bind_text(outerstmt.get(), 1, name.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(outerstmt.get(), 2, category.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_blob(outerstmt.get(), 3, sdata.data.data(), static_cast<int>(sdata.data.size()),
+                      SQLITE_TRANSIENT);
+    sqlite3_bind_int64(outerstmt.get(), 4, now);
+    sqlite3_bind_int64(outerstmt.get(), 5, presetID);
+    if (sqlite3_step(outerstmt.get()) != SQLITE_DONE)
+    {
+        throw SqliteError("Update failed: " + std::string(sqlite3_errmsg(db.get())));
+    }
 }
 
 struct PresetRecord

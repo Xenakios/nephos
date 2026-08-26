@@ -8,6 +8,7 @@
 #include "juce_graphics/juce_graphics.h"
 #include "juce_gui_basics/juce_gui_basics.h"
 #include "modulecomponents.h"
+#include "sqlite_helpers.h"
 #include "text/choc_Files.h"
 #include "text/choc_JSON.h"
 #include "xap_slider.h"
@@ -320,15 +321,20 @@ void MainPageComponent::mouseDown(const juce::MouseEvent &ev)
                      [this]() { processorRef.loadPreset(processorRef.factoryResetID); });
         menu.addItem("Quick save preset", [this]() {
             auto state = processorRef.getState();
-            insertOrUpdatePreset(processorRef.presetsDataBase, "quick save", "Quick saves", true,
-                                 state);
+            try
+            {
+                insertPreset(processorRef.presetsDataBase, "quick save", "Quicj saves", state);
+            }
+            catch (std::exception &ex)
+            {
+                DBG(ex.what());
+            }
         });
         menu.addSectionHeader("Presets");
         auto presets = listPresets(processorRef.presetsDataBase);
         for (auto &e : presets)
         {
-            menu.addItem(e.category + "/" + e.name,
-                         [this, e]() { processorRef.loadPreset(e.id); });
+            menu.addItem(e.category + "/" + e.name, [this, e]() { processorRef.loadPreset(e.id); });
         }
         menu.showMenuAsync({});
     }
