@@ -761,6 +761,7 @@ class GranulatorVoice
         pitch_base = std::clamp(pitch_base, -48.0f, 64.0f);
         if (evpars.pitch_quantize_amount > 0.0f && tuning)
         {
+            // our middle C is 0.0, Tuning library has it at 60.0
             auto quantpitch = quantize_pitch_binary(*tuning, pitch_base + 60.0) - 60.0;
             pitch_base = pitch_base * (1.0f - evpars.pitch_quantize_amount) +
                          quantpitch * evpars.pitch_quantize_amount;
