@@ -994,7 +994,11 @@ void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
     {
         auto tunstate = state["tuning"];
         auto scalapath = tunstate["scala_file"].getWithDefault(std::string(""));
-        granulator.load_scala_file(scalapath, true);
+        auto err = granulator.load_scala_file(scalapath, true);
+        if (!err.empty())
+        {
+            DBG(err);
+        }
     }
     if (state.hasObjectMember("trigrandstates"))
     {

@@ -583,43 +583,6 @@ struct TuningContainerAdapter
     TuningContainerAdapter(Tunings::Tuning &t) : tuning(t) {}
 };
 
-inline bool is_monotonic_tuning(Tunings::Tuning &tuning)
-{
-    double prev = tuning.logScaledFrequencyForMidiNote(0) * 12.0;
-    for (int i = 1; i < 128; ++i)
-    {
-        double cur = tuning.logScaledFrequencyForMidiNote(i) * 12.0;
-        if (cur < prev)
-            return false;
-        prev = cur;
-    }
-    return true;
-}
-
-inline double quantize_pitch_binary(Tunings::Tuning &tuning, double sourcepitch)
-{
-    auto pitchAt = [&](int i) { return tuning.logScaledFrequencyForMidiNote(i) * 12.0; };
-
-    int lo = 0, hi = 128;
-    while (lo < hi)
-    {
-        int mid = lo + (hi - lo) / 2;
-        if (pitchAt(mid) < sourcepitch)
-            lo = mid + 1;
-        else
-            hi = mid;
-    }
-
-    if (lo == 0)
-        return pitchAt(0);
-    if (lo == 128)
-        return pitchAt(127);
-
-    double higher = pitchAt(lo);
-    double lower = pitchAt(lo - 1);
-    return (higher - sourcepitch < sourcepitch - lower) ? higher : lower;
-}
-
 inline double quantize_pitch(Tunings::Tuning &tuning, double sourcepitch)
 {
     double smallestdiff = 1000000.0;
@@ -643,11 +606,24 @@ inline void test_quantize_tuning()
 {
     auto scale = Tunings::readSCLFile(R"(C:\develop\nephos\Assets\scala_scales\penta_opt.scl)");
     Tunings::Tuning tuning{scale};
-    for (double x = 56.0; x < 73.0; x += 1.0)
+    const int numiters = 10000000;
+    xenakios::Xoroshiro128Plus rng;
+    std::vector<double> testdata;
+    testdata.reserve(numiters);
+    for (int i = 0; i < numiters; ++i)
+        testdata.push_back(rng.nextFloat64InRange(12.0, 96.0));
+    auto start_time = std::chrono::high_resolution_clock::now();
+    for (auto &e : testdata)
     {
-        auto quantized = quantize_pitch_binary(tuning, x);
-        std::cout << x << "\t" << quantized << "\n";
+        e = quantize_pitch_binary(tuning, e);
+        // auto quantized = quantize_pitch_binary(tuning, x);
+        // std::cout << fmt::format("{:4} {:.2f}\n", x, quantized);
     }
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    std::cout << "Total Time: " << duration.count() << " ms\n";
+    std::cout << fmt::format("Quantizations per second: {}\n",
+                             numiters / (duration.count() / 1000.0));
 }
 
 int main(int argc, char **argv)

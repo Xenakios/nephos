@@ -4,6 +4,7 @@
 #include <initializer_list>
 #include <mutex>
 #include <optional>
+#include <stdexcept>
 #include <unordered_map>
 #include <vector>
 #include <span>
@@ -537,6 +538,43 @@ inline int osc_name_to_index(std::string name)
 
 constexpr size_t numPitchBandAttens = 7;
 
+inline bool is_monotonic_tuning(Tunings::Tuning &tuning)
+{
+    double prev = tuning.logScaledFrequencyForMidiNote(0) * 12.0;
+    for (int i = 1; i < 128; ++i)
+    {
+        double cur = tuning.logScaledFrequencyForMidiNote(i) * 12.0;
+        if (cur < prev)
+            return false;
+        prev = cur;
+    }
+    return true;
+}
+
+inline double quantize_pitch_binary(Tunings::Tuning &tuning, double sourcepitch)
+{
+    auto pitchAt = [&](int i) { return tuning.logScaledFrequencyForMidiNote(i) * 12.0; };
+
+    int lo = 0, hi = 128;
+    while (lo < hi)
+    {
+        int mid = lo + (hi - lo) / 2;
+        if (pitchAt(mid) < sourcepitch)
+            lo = mid + 1;
+        else
+            hi = mid;
+    }
+
+    if (lo == 0)
+        return pitchAt(0);
+    if (lo == 128)
+        return pitchAt(127);
+
+    double higher = pitchAt(lo);
+    double lower = pitchAt(lo - 1);
+    return (higher - sourcepitch < sourcepitch - lower) ? higher : lower;
+}
+
 class GranulatorVoice
 {
   public:
@@ -722,6 +760,7 @@ class GranulatorVoice
         pitch_base = std::clamp(pitch_base, -48.0f, 64.0f);
         if (evpars.pitch_quantize_amount > 0.0f && tuning)
         {
+            /*
             double unquanhz = 440.0 * std::pow(2.0, 1.0 / 12.0 * (pitch_base - 9.0));
             double smallestdiff = 1000000.0;
             std::optional<double> closestfoundhz;
@@ -741,6 +780,10 @@ class GranulatorVoice
                 pitch_base = pitch_base * (1.0f - evpars.pitch_quantize_amount) +
                              quantpitch * evpars.pitch_quantize_amount;
             }
+                             */
+            auto quantpitch = quantize_pitch_binary(*tuning, pitch_base + 60.0) - 60.0;
+            pitch_base = pitch_base * (1.0f - evpars.pitch_quantize_amount) +
+                         quantpitch * evpars.pitch_quantize_amount;
         }
         auto syncratio = std::clamp(evpars.sync_octaves, 0.0f, 4.0f);
         syncratio = std::pow(2.0f, syncratio);
@@ -1605,6 +1648,8 @@ class ToneGranulator
         {
             auto scale = Tunings::readSCLFile(path);
             auto temp = Tunings::Tuning(scale);
+            if (!is_monotonic_tuning(temp))
+                throw std::runtime_error("tuning is not monotonic");
             if (!called_from_audio_thread)
                 spinLock.lock();
             tuning = temp;
