@@ -16,6 +16,7 @@
 #include "sst/filters++/model_config.h"
 #include "sst/filters/FastTiltNoiseFilter.h"
 #include "sst/filters/FilterConfiguration.h"
+#include "Tunings.h"
 
 inline void init_clouds(ToneGranulator &g)
 {
@@ -124,7 +125,7 @@ inline int test_nephos_render()
     events_t events;
     events.reserve(500);
     xenakios::Xoroshiro128Plus rng;
-    g->set_aux_envelope_interpolation_mode(0);
+    // g->set_aux_envelope_interpolation_mode(0);
     for (int i = 0; i < 500; ++i)
     {
         GrainEvent e;
@@ -139,17 +140,20 @@ inline int test_nephos_render()
             e.duration = 0.95;
             e.elevation = 90.0;
             e.generator_type = 4;
-            assert(e.modamounts[GrainEvent::MD_PITCH] == 0.0f);
-            e.modamounts[GrainEvent::MD_PITCH] = 12.0;
-            if (rng.nextFloat() < 0.5)
-                e.modamounts[GrainEvent::MD_PITCH] = -12.0;
+            // assert(e.modamounts[GrainEvent::MD_PITCH] == 0.0f);
+            // e.modamounts[GrainEvent::MD_PITCH] = 12.0;
+            // if (rng.nextFloat() < 0.5)
+            //     e.modamounts[GrainEvent::MD_PITCH] = -12.0;
         }
         else
-            assert(e.modamounts[GrainEvent::MD_PITCH] == 0.0f);
-        assert(e.modamounts[GrainEvent::MD_AZI] == 0.0f);
-        assert(e.modamounts[GrainEvent::MD_ELE] == 0.0f);
-        assert(e.modamounts[GrainEvent::MD_FIL0FREQ] == 0.0f);
-        assert(e.modamounts[GrainEvent::MD_FIL0RESO] == 0.0f);
+        {
+            // assert(e.modamounts[GrainEvent::MD_PITCH] == 0.0f);
+        }
+
+        // assert(e.modamounts[GrainEvent::MD_AZI] == 0.0f);
+        // assert(e.modamounts[GrainEvent::MD_ELE] == 0.0f);
+        // assert(e.modamounts[GrainEvent::MD_FIL0FREQ] == 0.0f);
+        // assert(e.modamounts[GrainEvent::MD_FIL0RESO] == 0.0f);
         e.volume = 1.0;
         events.push_back(e);
     }
@@ -190,7 +194,8 @@ inline int test_nephos_render()
                 {
                     if (!player.active)
                     {
-                        std::cout << tpos << " starting cloud with " << ev->cloud->events.size() << " evemts\n";
+                        std::cout << tpos << " starting cloud with " << ev->cloud->events.size()
+                                  << " evemts\n";
                         player.start(ev->timepos, ev->id, ev->cloud);
                         // std::cout << "started cloud with "
                         break;
@@ -472,7 +477,6 @@ inline void test_routing(std::vector<std::tuple<int, int, int>> routings)
     writer->appendFrames(outbuf.getView());
 }
 
-
 struct DegradeEngine
 {
     enum DistortMode
@@ -573,11 +577,85 @@ inline void test_degrade()
     writer->appendFrames(buf.getView());
 }
 
+struct TuningContainerAdapter
+{
+    Tunings::Tuning tuning;
+    TuningContainerAdapter(Tunings::Tuning &t) : tuning(t) {}
+};
+
+inline bool is_monotonic_tuning(Tunings::Tuning &tuning)
+{
+    double prev = tuning.logScaledFrequencyForMidiNote(0) * 12.0;
+    for (int i = 1; i < 128; ++i)
+    {
+        double cur = tuning.logScaledFrequencyForMidiNote(i) * 12.0;
+        if (cur < prev)
+            return false;
+        prev = cur;
+    }
+    return true;
+}
+
+inline double quantize_pitch_binary(Tunings::Tuning &tuning, double sourcepitch)
+{
+    auto pitchAt = [&](int i) { return tuning.logScaledFrequencyForMidiNote(i) * 12.0; };
+
+    int lo = 0, hi = 128;
+    while (lo < hi)
+    {
+        int mid = lo + (hi - lo) / 2;
+        if (pitchAt(mid) < sourcepitch)
+            lo = mid + 1;
+        else
+            hi = mid;
+    }
+
+    if (lo == 0)
+        return pitchAt(0);
+    if (lo == 128)
+        return pitchAt(127);
+
+    double higher = pitchAt(lo);
+    double lower = pitchAt(lo - 1);
+    return (higher - sourcepitch < sourcepitch - lower) ? higher : lower;
+}
+
+inline double quantize_pitch(Tunings::Tuning &tuning, double sourcepitch)
+{
+    double smallestdiff = 1000000.0;
+    std::optional<double> closestfoundpitch;
+    for (int i = 0; i < 128; ++i)
+    {
+        double tuningpitch = tuning.logScaledFrequencyForMidiNote(i) * 12.0f;
+        double diff = std::abs(tuningpitch - sourcepitch);
+        if (diff < smallestdiff)
+        {
+            closestfoundpitch = tuningpitch;
+            smallestdiff = diff;
+        }
+    }
+    if (closestfoundpitch)
+        return *closestfoundpitch;
+    return sourcepitch;
+}
+
+inline void test_quantize_tuning()
+{
+    auto scale = Tunings::readSCLFile(R"(C:\develop\nephos\Assets\scala_scales\penta_opt.scl)");
+    Tunings::Tuning tuning{scale};
+    for (double x = 56.0; x < 73.0; x += 1.0)
+    {
+        auto quantized = quantize_pitch_binary(tuning, x);
+        std::cout << x << "\t" << quantized << "\n";
+    }
+}
+
 int main(int argc, char **argv)
 {
     // test_degrade();
     // test_nephos_render();
-    test_colored_noise();
+    // test_colored_noise();
+    test_quantize_tuning();
     return 0;
     if (argc > 1)
     {
@@ -597,8 +675,8 @@ int main(int argc, char **argv)
             }
             for (auto &e : routings)
             {
-                //std::cout << fmt::format("{} -> {},{}\n", std::get<0>(e), std::get<1>(e),
-                //                         std::get<2>(e));
+                // std::cout << fmt::format("{} -> {},{}\n", std::get<0>(e), std::get<1>(e),
+                //                          std::get<2>(e));
             }
         }
         test_routing(routings);
