@@ -649,6 +649,15 @@ OscillatorModuleComponent::OscillatorModuleComponent(AudioPluginAudioProcessor &
     initSlider(p, *this, oscSyncKnob);
     initSlider(p, *this, oscPWKnob);
     initSlider(p, *this, oscFMPitchKnob);
+    oscFMPitchKnob.addMenuItemsCallback([this](juce::PopupMenu &menu) {
+        bool follows =
+            *processorRef.granulator.idtoparvalptr[ToneGranulator::PAR_FMPITCHFOLLOWSMAINPITCH] >=
+            0.5f;
+        menu.addItem("Follow main pitch", true, follows, [this, follows]() {
+            *processorRef.granulator.idtoparvalptr[ToneGranulator::PAR_FMPITCHFOLLOWSMAINPITCH] =
+                !follows;
+        });
+    });
     initSlider(p, *this, oscFMDepthKnob);
     initSlider(p, *this, oscFMFeedbackKnob);
     initSlider(p, *this, oscNoiseModeDrop);

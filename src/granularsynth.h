@@ -598,6 +598,7 @@ class GranulatorVoice
     int prior_osc_type = -1;
     EasingLUTS *eluts = nullptr;
     Tunings::Tuning *tuning = nullptr;
+    bool fmfollowsmainpitch = false;
     std::span<int> osctypemapping;
     // 2x up to 7th order Ambisonics
     alignas(32) std::array<float, 128> ambcoeffs;
@@ -760,27 +761,6 @@ class GranulatorVoice
         pitch_base = std::clamp(pitch_base, -48.0f, 64.0f);
         if (evpars.pitch_quantize_amount > 0.0f && tuning)
         {
-            /*
-            double unquanhz = 440.0 * std::pow(2.0, 1.0 / 12.0 * (pitch_base - 9.0));
-            double smallestdiff = 1000000.0;
-            std::optional<double> closestfoundhz;
-            for (int i = 0; i < 128; ++i)
-            {
-                double hz = tuning->frequencyForMidiNote(i);
-                double diff = std::abs(hz - unquanhz);
-                if (diff < smallestdiff)
-                {
-                    closestfoundhz = hz;
-                    smallestdiff = diff;
-                }
-            }
-            if (closestfoundhz)
-            {
-                float quantpitch = std::log2(*closestfoundhz / 261.6255653005986) * 12.0f;
-                pitch_base = pitch_base * (1.0f - evpars.pitch_quantize_amount) +
-                             quantpitch * evpars.pitch_quantize_amount;
-            }
-                             */
             auto quantpitch = quantize_pitch_binary(*tuning, pitch_base + 60.0) - 60.0;
             pitch_base = pitch_base * (1.0f - evpars.pitch_quantize_amount) +
                          quantpitch * evpars.pitch_quantize_amount;
@@ -789,6 +769,8 @@ class GranulatorVoice
         syncratio = std::pow(2.0f, syncratio);
         auto pw = evpars.pulse_width; // osc implementation clamps itself to 0..1
         fmpitch = evpars.fm_pitch;
+        if (fmfollowsmainpitch)
+            fmpitch += pitch_base;
         fmmodamount = std::clamp(evpars.fm_amount, 0.0f, 1.0f);
         fmfeedback = std::clamp(evpars.fm_feedback, -1.0f, 1.0f);
 
@@ -1397,6 +1379,7 @@ class ToneGranulator
         PAR_INSERTCFIRST = PAR_INSERTBFIRST + 32,
         PAR_INSERTDFIRST = PAR_INSERTCFIRST + 32,
         PAR_FMPITCH = 1500,
+        PAR_FMPITCHFOLLOWSMAINPITCH = 1550,
         PAR_FMDEPTH = 1600,
         PAR_FMFEEDBACK = 1700,
         PAR_OSC_SYNC = 1800,
@@ -1972,6 +1955,13 @@ class ToneGranulator
                                    .withID(PAR_FMPITCH)
                                    .withGroupName("Oscillator")
                                    .withFlags(CLAP_PARAM_IS_MODULATABLE));
+        parmetadatas.push_back(pmd()
+                                   .asBool()
+                                   .withOnOffFormatting()
+                                   .withDefault(0.0)
+                                   .withName("Follow Main Pitch")
+                                   .withID(PAR_FMPITCHFOLLOWSMAINPITCH)
+                                   .withGroupName("Oscillator"));
         parmetadatas.push_back(pmd()
                                    .withRange(0.0, 1.0)
                                    .withDefault(0.0)
@@ -2902,6 +2892,8 @@ class ToneGranulator
                     voices[j]->doambnormalization = true;
                     voices[j]->tail_len = taillen;
                     voices[j]->tail_fade_len = std::clamp(taillen * 0.5, 0.002, 1.0);
+                    voices[j]->fmfollowsmainpitch =
+                        *idtoparvalptr[PAR_FMPITCHFOLLOWSMAINPITCH] >= 0.5f;
                     voices[j]->start(*ev);
                     voicewasfound = true;
                     if (gatherGrainVisData)
