@@ -903,8 +903,8 @@ bool StepSeqComponent::keyPressed(const juce::KeyPress &ev)
     }
     else if (ev.getKeyCode() == 'P')
     {
-        runExternalProgram();
-        actiontaken = 2;
+        // runExternalProgram();
+        // actiontaken = 2;
     }
     else if (ev.getKeyCode() == 'T')
     {

@@ -167,7 +167,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     std::unordered_map<uint32_t, uint32_t> macroMidiMappings;
     choc::value::Value pendingState;
     choc::threading::SpinLock stateLock;
-    std::vector<choc::value::Value> snapshots;
+    
 
     void loadPreset(int64_t presetID);
     void loadSnapShot(int index);

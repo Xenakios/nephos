@@ -115,30 +115,6 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     presetsPath = R"(C:\develop\nephos\granulatorpresets\)";
 #endif
     loadMacroKnobs(macroKnobsPath);
-
-    snapshots.resize(maxNumSnapshots);
-
-    for (int i = 0; i < maxNumSnapshots; ++i)
-    {
-        try
-        {
-            auto fname = fmt::format("{}{}.json", presetsPath, i + 1);
-            if (std::filesystem::exists(fname))
-            {
-                auto jsontxt = choc::file::loadFileAsString(fname);
-                auto state = choc::json::parseValue(jsontxt);
-                // state.setMember(StateIgnoreStrings::masterVolume, true);
-                state.setMember("state_ignore_flags", (int64_t)SIF_MASTERVOLUME |
-                                                          SIF_DASHBOARDSETTING |
-                                                          SIF_AMBISONICORDER | SIF_MIDIBINDINGS);
-                snapshots[i] = state;
-            }
-        }
-        catch (std::exception &ex)
-        {
-            DBG(i << " error loading state : " << ex.what());
-        }
-    }
     for (int i = 0; i < 8; ++i)
     {
         macroMidiMappings[21 + i] = i;
@@ -208,7 +184,6 @@ void AudioPluginAudioProcessor::saveSnapShot(int index, choc::value::ValueView s
     if (index >= 0 && index < maxNumSnapshots)
     {
         std::lock_guard<choc::threading::SpinLock> locker(stateLock);
-        snapshots[index] = state;
         try
         {
             auto found =
@@ -269,14 +244,6 @@ void AudioPluginAudioProcessor::loadSnapShot(int index)
             loadPreset(it->second);
             granulator.currentSnapShot = index;
         }
-
-        return;
-        auto &state = snapshots[index];
-        if (!state.isVoid())
-        {
-            setState(state);
-        }
-        granulator.currentSnapShot = index;
     }
 }
 
@@ -401,8 +368,9 @@ void AudioPluginAudioProcessor::handleMIDICCMessage(int channel, int ccnumber, f
                 binding.npa == MIDIBinding::NPA_LOADPREVSNAP && binding.midichan == channel &&
                     ccvalue >= 64)
             {
-                if (!snapshots.empty())
+                if (!snapIndexToPresetID.empty())
                 {
+                    /*
                     const int count = static_cast<int>(snapshots.size());
                     int nextsnap = granulator.currentSnapShot;
                     if (binding.npa == MIDIBinding::NPA_LOADNEXTSNAP)
@@ -410,6 +378,7 @@ void AudioPluginAudioProcessor::handleMIDICCMessage(int channel, int ccnumber, f
                     else if (binding.npa == MIDIBinding::NPA_LOADPREVSNAP)
                         nextsnap = (nextsnap - 1 + count) % count;
                     loadSnapShot(nextsnap);
+                    */
                 }
             }
             if (binding.target_param != CLAP_INVALID_ID && binding.midichan == channel &&

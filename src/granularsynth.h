@@ -1561,22 +1561,6 @@ class ToneGranulator
         }
     }
 
-    /*
-        stepModSources[0].setSteps(generate_from_js(R"(
-        function generate_steps()
-        {
-            arr = [];
-            for (var i=0;i<100;++i)
-            {
-              if (i % 5 == 0 || i % 11 == 0)
-                arr.push(1.0);
-              else arr.push(-1.0);
-            }
-            return arr;
-        }
-
-    )"));
-        */
     std::atomic<int> currentSnapShot{-1};
     struct RampDownUp
     {
