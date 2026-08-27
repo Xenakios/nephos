@@ -167,7 +167,6 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     std::unordered_map<uint32_t, uint32_t> macroMidiMappings;
     choc::value::Value pendingState;
     choc::threading::SpinLock stateLock;
-    
 
     void loadPreset(int64_t presetID);
     void loadSnapShot(int index);
@@ -208,7 +207,13 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     // for testing
     std::atomic<bool> corruptAudioOnPurpose{false};
     void processRemoteControlMessages();
+    // the sqlite file path obviously has to be eventually dynamically generated or something
+#ifdef JUCE_MAC
+    SqliteDb presetsDataBase{
+        R"(/Users/teemu/codeprojects/2026/nephos/granulatorpresets/presets.dat)"};
+#else
     SqliteDb presetsDataBase{R"(C:\develop\nephos\granulatorpresets\presets.dat)"};
+#endif
 
   private:
     alignas(32) std::vector<float> workBuffer;
