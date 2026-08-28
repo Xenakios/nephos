@@ -1507,40 +1507,6 @@ class ToneGranulator
                 }
                 midiNoteModValue = midiNoteModSource.next();
                 scheduledIndex = 0;
-                // why is this still around...?
-                if (false)
-                {
-                    bool wasfound = false;
-                    for (int j = 0; j < voices.size(); ++j)
-                    {
-                        if (!voices[j]->active)
-                        {
-                            // std::print("starting voice {} alternating value {}\n", j,
-                            // alternatingValue);
-                            for (size_t sm = 0; sm < stepModSources.size(); ++sm)
-                                stepModValues[sm] = stepModSources[sm].next();
-                            voices[j]->grainid = graincount;
-                            voices[j]->start(genev);
-                            float ambdif = 0.0f; // *idtoparvalptr[PAR_AMBIDIFFUSION];
-                            if (ambdif > 0.0f)
-                            {
-                                ambdif *= 0.1f;
-                                for (size_t coeff = 4; coeff < 16; ++coeff)
-                                {
-                                    float diffamount = rng.nextHypCos(0.0f, ambdif);
-                                    voices[j]->ambcoeffs[coeff] += diffamount;
-                                }
-                            }
-                            wasfound = true;
-                            ++graincount;
-                            break;
-                        }
-                    }
-                    if (!wasfound)
-                    {
-                        ++missedgrains;
-                    }
-                }
             }
             graingen_phase_prior = graingen_phase;
             graingen_phase += 1.0 / m_sr / grate;
