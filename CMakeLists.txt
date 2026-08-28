@@ -129,6 +129,7 @@ juce_add_plugin(NephosPlugin
 
 target_sources(NephosPlugin
     PRIVATE
+        src/granularsynth.cpp
         src/juceplugin/PluginProcessor.cpp
         src/juceplugin/PluginEditor.cpp
         src/juceplugin/dashboardcomponent.cpp

@@ -1,6 +1,6 @@
 ![Diagram](./Assets/nephos_screenshot_01.png)
 
-# Nephos - opinionatd granular synthesis
+# Nephos - opinionated granular synthesis
 
 Grains from pure synthesis, spatialized into Ambisonics.
 
