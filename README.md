@@ -1,6 +1,6 @@
 ![Diagram](./Assets/nephos_screenshot_01.png)
 
-# Nephos - granular synthesizer
+# Nephos - opinionatd granular synthesis
 
 Grains from pure synthesis, spatialized into Ambisonics.
 
@@ -22,6 +22,7 @@ in a DAW that supports the required channel counts to pass the Ambisonics signal
 example, 16 channels for 3rd order Ambisonics. The [IEM plugin suite](https://plugins.iem.at/)
 is recommended for visualization, post-processing, and decoding of Nephos's output.
 
-Since the synthesis architecture in Nephos doesn't have a concept of voices, no straightforward way to play Nephos with MIDI keyboard/notes is provided. It can receive MIDI note messages and use the key, velocity and polyphonic aftertouch as modulation sources, though. It may be quite challenging to play standard music that way and this is deliberate, again going back to the beginnings of experimental music. Consider Nephos more like a modular synthesis module[^1] and not a traditional virtual synth. In the future, ways to use Nephos more easily for standard music may be provided, but this is not a priority at the moment. 
+Since the synthesis architecture in Nephos doesn't have a concept of triggered voices, no straightforward way to play Nephos with MIDI keyboard/notes is provided. It can receive MIDI note messages and the key, velocity and polyphonic aftertouch can be used as modulation sources, though. It will be quite challenging to play standard music that way and this is deliberate, again looking back to the beginnings of experimental music. 
+Nephos should be considered more like a modular synthesizer module[^1] and not a traditional virtual synth. In the future, ways to use Nephos more easily for standard music may be developed, but this is not a priority at the moment. 
 
-[^1]: This may raise the question why Nephos wasn't developed for example as a VCV Rack module, then? The reason would be that VCV Rack and its ecosystem does not currently (2026) adequately support the considerable amount of audio channels needed for the higher Ambisonic orders. If they increase the channel count per cable to 64 channels from the current 16 channels and make their VCV Host module for hosting 3rd party plugins compatible with high channel counts, a VCV Rack module may be developed in the future.
+[^1]: This may raise the question why Nephos wasn't developed for example as a VCV Rack module, then? The reason would be that VCV Rack and its ecosystem does not currently (2026) adequately support the considerable amount of audio channels needed for the higher Ambisonic orders. If VCV Rack increases the channel count per cable to 64 channels from the current 16 channels and makes their VCV Host module for hosting 3rd party plugins compatible with high channel counts, a VCV Rack module of Nephos may be developed in the future.
