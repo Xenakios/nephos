@@ -589,6 +589,15 @@ void ToneGranulator::create_voices()
         voices.push_back(std::move(v));
     }
 }
+void ToneGranulator::set_oscillator_type_mapping(std::span<int> mapping)
+{
+    std::lock_guard<choc::threading::SpinLock> locker(spinLock);
+    for (size_t i = 0; i < osctypemapping.size(); ++i)
+    {
+        if (i < mapping.size())
+            osctypemapping[i] = mapping[i];
+    }
+}
 std::string ToneGranulator::load_scala_file(std::string path, bool called_from_audio_thread)
 {
     try
@@ -609,6 +618,34 @@ std::string ToneGranulator::load_scala_file(std::string path, bool called_from_a
         return excep.what();
     }
     return {};
+}
+void ToneGranulator::set_ambisonics_order(int order)
+{
+    assert(order > 0 && order < 8);
+    if (current_ambisonic_order == order || fadeForLargeStateChange.is_active())
+        return;
+    pending_ambisonic_order = order;
+    fadeForLargeStateChange.start(m_sr, 500.0f, [this]() {
+        current_ambisonic_order = pending_ambisonic_order;
+        num_out_chans = ambisonicOrderNumChannels(current_ambisonic_order);
+        masterHighPassFilter.numactivechannels = num_out_chans;
+        // std::print(std::cerr, "changed ambisonic order to {}\n", current_ambisonic_order);
+        for (auto &vc : voices)
+        {
+            vc->active = false;
+            vc->ambisonic_order = current_ambisonic_order;
+            vc->num_outputchans = num_out_chans;
+        }
+    });
+    return;
+    current_ambisonic_order = order;
+    for (auto &v : voices)
+    {
+        v->active = false;
+        v->ambisonic_order = order;
+        v->num_outputchans = ambisonicOrderNumChannels(order);
+    }
+    num_out_chans = ambisonicOrderNumChannels(order);
 }
 void ToneGranulator::advanceCloudPlayers()
 {
