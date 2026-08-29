@@ -140,7 +140,8 @@ class GrainInsertFX
         if (mainmode == GFXSSTFILTER)
         {
             sstfilter.setSampleRateAndBlockSize(sampleRate, ablockSize);
-            sstfilter.prepareInstance();
+            bool success = sstfilter.prepareInstance();
+            assert(success);
         }
         if (mainmode == GFXAIRWINDOWS && awplugin)
             awplugin->setSampleRate(sampleRate);
@@ -218,53 +219,22 @@ class GrainInsertFX
             }
             break;
         }
-        }
-    }
-    void processStereo(float &inleft, float &inright)
-    {
-        switch (mainmode)
-        {
-        case GFXNONE:
-            break;
-        case GFXSSTFILTER:
-        {
-            float outLeft = 0.0f;
-            float outRight = 0.0f;
-            sstfilter.processStereoSample(inleft, inright, outLeft, outRight);
-            inleft = sstmixcoeffs[0] * inleft + sstmixcoeffs[1] * outLeft;
-            inright = sstmixcoeffs[0] * inright + sstmixcoeffs[1] * outRight;
-            break;
-        }
-        case GFXAIRWINDOWS:
-        {
-            assert(awplugin);
-            float input0 = inleft;
-            float input1 = inright;
-            float *inputs[2] = {&input0, &input1};
-            float output0 = 0.0f;
-            float output1 = 0.0f;
-            float *outputs[2] = {&output0, &output1};
-            awplugin->processReplacing(inputs, outputs, 1);
-            inleft = output0;
-            inright = output1;
-            break;
-        }
         case GFXXENAKIOS:
         {
             assert(xenplugin);
-            float input0 = inleft;
-            float input1 = inright;
-            float *inputs[2] = {&input0, &input1};
-            float output0 = 0.0f;
-            float output1 = 0.0f;
-            float *outputs[2] = {&output0, &output1};
-            xenplugin->process(inputs, outputs, 1);
-            inleft = output0;
-            inright = output1;
+            alignas(16) float *inputs[2] = {&block[0], &block[BlockSize]};
+            alignas(16) float outputbuffer[2][BlockSize];
+            alignas(16) float *outputs[2] = {outputbuffer[0], outputbuffer[1]};
+            xenplugin->process(inputs, outputs, BlockSize);
+            for (size_t i = 0; i < BlockSize; ++i)
+            {
+                block[i] = outputs[0][i];
+                block[i + BlockSize] = outputs[1][i];
+            }
             break;
         }
         }
-    };
+    }
     void concludeBlock()
     {
         if (mainmode == GFXSSTFILTER)

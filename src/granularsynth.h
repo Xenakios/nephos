@@ -935,8 +935,8 @@ class GranulatorVoice
                 {
                     // signalstoinserts[insertindex][0] = outsample0;
                     // signalstoinserts[insertindex][1] = outsample1;
-                    insert_fx[insertindex].processStereo(signalstoinserts[insertindex][0],
-                                                         signalstoinserts[insertindex][1]);
+                    // insert_fx[insertindex].processStereo(signalstoinserts[insertindex][0],
+                    //                                     signalstoinserts[insertindex][1]);
                     summedinserts[0] += signalstoinserts[insertindex][0];
                     summedinserts[1] += signalstoinserts[insertindex][1];
                 }
