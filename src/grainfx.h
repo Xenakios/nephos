@@ -183,6 +183,27 @@ class GrainInsertFX
                 xenplugin->set_parameter(i, paramvalues[i]);
         }
     }
+    template <size_t BlockSize> void processBlock(float *block)
+    {
+        switch (mainmode)
+        {
+        case GFXNONE:
+            break;
+        case GFXSSTFILTER:
+        {
+            for (size_t i = 0; i < BlockSize; ++i)
+            {
+                float inleft = block[i];
+                float inright = block[BlockSize + i];
+                float outLeft = 0.0f;
+                float outRight = 0.0f;
+                sstfilter.processStereoSample(inleft, inright, outLeft, outRight);
+                block[i] = sstmixcoeffs[0] * inleft + sstmixcoeffs[1] * outLeft;
+                block[BlockSize + i] = sstmixcoeffs[0] * inright + sstmixcoeffs[1] * outRight;
+            }
+        }
+        }
+    }
     void processStereo(float &inleft, float &inright)
     {
         switch (mainmode)

@@ -578,126 +578,12 @@ inline double quantize_pitch_binary(Tunings::Tuning &tuning, double sourcepitch)
 class GranulatorVoice
 {
   public:
-    std::variant<NoiseGen, FMOsc, sst::basic_blocks::dsp::EBApproxSin<>,
-                 sst::basic_blocks::dsp::EBApproxSemiSin<>, sst::basic_blocks::dsp::EBTri<>,
-                 sst::basic_blocks::dsp::EBSaw<>, sst::basic_blocks::dsp::EBPulse<>>
-        theoscillator;
-
-    static constexpr size_t numInsertSlots = 4;
-    static constexpr size_t maxParamsPerInsert = 10;
-    alignas(32) std::array<GrainInsertFX, numInsertSlots> insert_fx;
-
-    int phase = 0;
-    int grain_end_phase = 0;
-    double sr = 0.0;
-    bool samplerate_was_changed = false;
-    bool active = false;
-    float tail_len = 0.005;
-    float tail_fade_len = 0.005;
-    float polarity_gain = 1.0f;
-    int prior_osc_type = -1;
-    EasingLUTS *eluts = nullptr;
-    Tunings::Tuning *tuning = nullptr;
-    bool fmfollowsmainpitch = false;
-    std::span<int> osctypemapping;
-    // 2x up to 7th order Ambisonics
-    alignas(32) std::array<float, 128> ambcoeffs;
-    enum FilterRouting
-    {
-        FR_ALLOFF,
-        FR_ALLSERIAL,
-        FR_ALLPARALLEL
-    };
-    FilterRouting filter_routing = FR_ALLSERIAL;
-    static constexpr size_t num_aux_envelopes = 4;
-    std::array<SimpleEnvelope, num_aux_envelopes> *aux_envelopes = nullptr;
-    struct ModSlot
-    {
-        uint32_t source_id = CLAP_INVALID_ID;
-        float depth = 0.0f;
-        uint32_t target_id = CLAP_INVALID_ID;
-    };
-    alignas(16) std::array<ModSlot, GrainEvent::max_grain_mod_slots> modulation_slots;
-    alignas(16) sst::basic_blocks::dsp::OnePoleLag<float, true> envgainlag;
-    float pitch_base = 0.0f;
-    float grain_base_volume = 0.0;
-    float used_azi0 = 0.0f;
-    float used_azi1 = 0.0f;
-    float used_ele0 = 0.0f;
-    float used_ele1 = 0.0f;
-    float auxsend1 = 0.0;
-    std::span<float> pitchBandAttens;
-    uint8_t envstarttype = 0;
-    uint8_t envendtype = 0;
-    double envshape = 0.5;
-    std::array<float, num_aux_envelopes * 2> auxenvparams = {0.0f};
-    int grainid = 0;
-    bool doambnormalization = false;
-    int ambisonic_order = 1;
-    int num_outputchans = 0;
-
     GranulatorVoice()
     {
         std::fill(ambcoeffs.begin(), ambcoeffs.end(), 0.0f);
         for (int i = 0; i < GrainEvent::max_grain_mod_slots; ++i)
             modulation_slots[i] = {CLAP_INVALID_ID, 0.0f, CLAP_INVALID_ID};
     }
-    void set_samplerate(double hz)
-    {
-        sr = hz;
-        for (auto &fx : insert_fx)
-            fx.prepareInstance(sr, granul_block_size);
-        samplerate_was_changed = true;
-    }
-    struct PendingInsertConf
-    {
-        bool is_pending = false;
-        uint8_t mainmode = 0;
-        uint8_t awtype = 0;
-        sst::filtersplusplus::FilterModel sstmodel;
-        sst::filtersplusplus::ModelConfig sstconfig;
-    };
-    std::array<PendingInsertConf, 4> pendingInsertConfs;
-    void set_insert_type(size_t filtindex, uint8_t mainmode, uint8_t awtype,
-                         sfpp::FilterModel model, sfpp::ModelConfig config)
-    {
-        assert(filtindex < pendingInsertConfs.size());
-        pendingInsertConfs[filtindex] = {true, mainmode, awtype, model, config};
-    }
-    void calculate_ambisonic_coeffs(float *destarray, float azimuth, float elevation)
-    {
-        float x = 0.0;
-        float y = 0.0;
-        float z = 0.0;
-        sphericalToCartesian(azimuth, elevation, x, y, z);
-    }
-    void update_ambisonic_coeffs()
-    {
-        float azi0 = degreesToRadians(used_azi0);
-        float azi1 = degreesToRadians(used_azi1);
-        float ele = degreesToRadians(used_ele0);
-        /*
-        calculate_ambisonic_coeffs(ambcoeffs.data(), azi0, ele);
-        calculate_ambisonic_coeffs(ambcoeffs.data() + 64, azi1, ele);
-        if (ambisonic_order == 1)
-            SHEval1(x, y, z, coeffdata);
-        else if (ambisonic_order == 2)
-            SHEval2(x, y, z, coeffdata);
-        else if (ambisonic_order == 3)
-            SHEval3(x, y, z, coeffdata);
-        else if (ambisonic_order == 4)
-            SHEval4(x, y, z, coeffdata);
-        if (doambnormalization)
-        {
-            for (int i = 0; i < num_outputchans; ++i)
-                coeffdata[i] *= n3d2sn3d[i];
-        }
-        */
-    }
-    float fmpitch = 0.0f;
-    float fmmodamount = 0.0f;
-    float fmfeedback = 0.0f;
-    float omniboostinverse = 1.0f;
     void start(GrainEvent &evpars)
     {
         for (size_t i = 0; i < pendingInsertConfs.size(); ++i)
@@ -943,68 +829,6 @@ class GranulatorVoice
         envendtype = std::clamp<uint8_t>(evpars.envelope_end_type, 0, 30);
         envshape = std::clamp(evpars.envelope_shape, 0.0f, 1.0f);
     }
-    enum MODTARGET
-    {
-        MT_PITCH = 0,
-        MT_VOLUME,
-        MT_FMDEPTH,
-        MT_FMPITCH,
-        MT_AZIMUTH,
-        MT_ELEVATION,
-        MT_INSERTASTART,
-        MT_INSERTBSTART = MT_INSERTASTART + 10,
-        NUMMODTARGETS = MT_INSERTBSTART + 10,
-    };
-    std::string get_mod_target_name(MODTARGET target)
-    {
-        if (target == MT_PITCH)
-            return "PITCH";
-        else if (target == MT_VOLUME)
-            return "VOLUME";
-        else if (target == MT_FMDEPTH)
-            return "FM DEPTH";
-        else if (target == MT_FMPITCH)
-            return "FM PITCH";
-        else if (target == MT_AZIMUTH)
-            return "AZIMUTH (not implemented yet)";
-        else if (target == MT_ELEVATION)
-            return "ELEVATION (not implemented yet)";
-        else if (target >= MT_INSERTASTART && target < NUMMODTARGETS)
-        {
-            int i = target - MT_INSERTASTART;
-            int whichinsert = i / 10;
-            int whichparam = i % 10;
-            return fmt::format("INSERT {} PAR {}", char('A' + whichinsert),
-                               insert_fx[whichinsert].getParameterName(whichparam));
-        }
-        return "error";
-    }
-    static void process_mod_matrix(
-        double normphase, std::span<float> auxenvparams,
-        std::array<ModSlot, GrainEvent::max_grain_mod_slots> &mod_slots,
-        std::array<SimpleEnvelope, GranulatorVoice::num_aux_envelopes> &aux_envelopes,
-        std::span<float> targetmodvalues)
-    {
-        assert(auxenvparams.size() == 8);
-        alignas(16) float aux_env_values[4] = {0.0f};
-        for (size_t i = 0; i < num_aux_envelopes; ++i)
-        {
-            float shiftedphase = wrap_value(0.0, normphase + auxenvparams[i + 4], 1.0);
-            aux_env_values[i] = aux_envelopes[i].get_value(shiftedphase, auxenvparams[i]);
-        }
-
-        for (const auto &e : mod_slots)
-        {
-            if (e.source_id < CLAP_INVALID_ID && e.target_id < CLAP_INVALID_ID)
-            {
-                targetmodvalues[e.target_id] += aux_env_values[e.source_id] * e.depth;
-            }
-        }
-        for (auto &e : targetmodvalues)
-        {
-            e = std::clamp(e, -1.0f, 1.0f);
-        }
-    }
     void process(float *outputs, int nframes)
     {
         double normphase = (double)phase / grain_end_phase;
@@ -1193,6 +1017,183 @@ class GranulatorVoice
         }
         for (auto &f : insert_fx)
             f.concludeBlock();
+    }
+    std::variant<NoiseGen, FMOsc, sst::basic_blocks::dsp::EBApproxSin<>,
+                 sst::basic_blocks::dsp::EBApproxSemiSin<>, sst::basic_blocks::dsp::EBTri<>,
+                 sst::basic_blocks::dsp::EBSaw<>, sst::basic_blocks::dsp::EBPulse<>>
+        theoscillator;
+
+    static constexpr size_t numInsertSlots = 4;
+    static constexpr size_t maxParamsPerInsert = 10;
+    alignas(32) std::array<GrainInsertFX, numInsertSlots> insert_fx;
+
+    int phase = 0;
+    int grain_end_phase = 0;
+    double sr = 0.0;
+    bool samplerate_was_changed = false;
+    bool active = false;
+    float tail_len = 0.005;
+    float tail_fade_len = 0.005;
+    float polarity_gain = 1.0f;
+    int prior_osc_type = -1;
+    EasingLUTS *eluts = nullptr;
+    Tunings::Tuning *tuning = nullptr;
+    bool fmfollowsmainpitch = false;
+    std::span<int> osctypemapping;
+    // 2x up to 7th order Ambisonics
+    alignas(32) std::array<float, 128> ambcoeffs;
+    enum FilterRouting
+    {
+        FR_ALLOFF,
+        FR_ALLSERIAL,
+        FR_ALLPARALLEL
+    };
+    FilterRouting filter_routing = FR_ALLSERIAL;
+    static constexpr size_t num_aux_envelopes = 4;
+    std::array<SimpleEnvelope, num_aux_envelopes> *aux_envelopes = nullptr;
+    struct ModSlot
+    {
+        uint32_t source_id = CLAP_INVALID_ID;
+        float depth = 0.0f;
+        uint32_t target_id = CLAP_INVALID_ID;
+    };
+    alignas(16) std::array<ModSlot, GrainEvent::max_grain_mod_slots> modulation_slots;
+    alignas(16) sst::basic_blocks::dsp::OnePoleLag<float, true> envgainlag;
+    float pitch_base = 0.0f;
+    float grain_base_volume = 0.0;
+    float used_azi0 = 0.0f;
+    float used_azi1 = 0.0f;
+    float used_ele0 = 0.0f;
+    float used_ele1 = 0.0f;
+    float auxsend1 = 0.0;
+    std::span<float> pitchBandAttens;
+    uint8_t envstarttype = 0;
+    uint8_t envendtype = 0;
+    double envshape = 0.5;
+    std::array<float, num_aux_envelopes * 2> auxenvparams = {0.0f};
+    int grainid = 0;
+    bool doambnormalization = false;
+    int ambisonic_order = 1;
+    int num_outputchans = 0;
+
+    void set_samplerate(double hz)
+    {
+        sr = hz;
+        for (auto &fx : insert_fx)
+            fx.prepareInstance(sr, granul_block_size);
+        samplerate_was_changed = true;
+    }
+    struct PendingInsertConf
+    {
+        bool is_pending = false;
+        uint8_t mainmode = 0;
+        uint8_t awtype = 0;
+        sst::filtersplusplus::FilterModel sstmodel;
+        sst::filtersplusplus::ModelConfig sstconfig;
+    };
+    std::array<PendingInsertConf, 4> pendingInsertConfs;
+    void set_insert_type(size_t filtindex, uint8_t mainmode, uint8_t awtype,
+                         sfpp::FilterModel model, sfpp::ModelConfig config)
+    {
+        assert(filtindex < pendingInsertConfs.size());
+        pendingInsertConfs[filtindex] = {true, mainmode, awtype, model, config};
+    }
+    void calculate_ambisonic_coeffs(float *destarray, float azimuth, float elevation)
+    {
+        float x = 0.0;
+        float y = 0.0;
+        float z = 0.0;
+        sphericalToCartesian(azimuth, elevation, x, y, z);
+    }
+    void update_ambisonic_coeffs()
+    {
+        float azi0 = degreesToRadians(used_azi0);
+        float azi1 = degreesToRadians(used_azi1);
+        float ele = degreesToRadians(used_ele0);
+        /*
+        calculate_ambisonic_coeffs(ambcoeffs.data(), azi0, ele);
+        calculate_ambisonic_coeffs(ambcoeffs.data() + 64, azi1, ele);
+        if (ambisonic_order == 1)
+            SHEval1(x, y, z, coeffdata);
+        else if (ambisonic_order == 2)
+            SHEval2(x, y, z, coeffdata);
+        else if (ambisonic_order == 3)
+            SHEval3(x, y, z, coeffdata);
+        else if (ambisonic_order == 4)
+            SHEval4(x, y, z, coeffdata);
+        if (doambnormalization)
+        {
+            for (int i = 0; i < num_outputchans; ++i)
+                coeffdata[i] *= n3d2sn3d[i];
+        }
+        */
+    }
+    float fmpitch = 0.0f;
+    float fmmodamount = 0.0f;
+    float fmfeedback = 0.0f;
+    float omniboostinverse = 1.0f;
+
+    enum MODTARGET
+    {
+        MT_PITCH = 0,
+        MT_VOLUME,
+        MT_FMDEPTH,
+        MT_FMPITCH,
+        MT_AZIMUTH,
+        MT_ELEVATION,
+        MT_INSERTASTART,
+        MT_INSERTBSTART = MT_INSERTASTART + 10,
+        NUMMODTARGETS = MT_INSERTBSTART + 10,
+    };
+    std::string get_mod_target_name(MODTARGET target)
+    {
+        if (target == MT_PITCH)
+            return "PITCH";
+        else if (target == MT_VOLUME)
+            return "VOLUME";
+        else if (target == MT_FMDEPTH)
+            return "FM DEPTH";
+        else if (target == MT_FMPITCH)
+            return "FM PITCH";
+        else if (target == MT_AZIMUTH)
+            return "AZIMUTH (not implemented yet)";
+        else if (target == MT_ELEVATION)
+            return "ELEVATION (not implemented yet)";
+        else if (target >= MT_INSERTASTART && target < NUMMODTARGETS)
+        {
+            int i = target - MT_INSERTASTART;
+            int whichinsert = i / 10;
+            int whichparam = i % 10;
+            return fmt::format("INSERT {} PAR {}", char('A' + whichinsert),
+                               insert_fx[whichinsert].getParameterName(whichparam));
+        }
+        return "error";
+    }
+    static void process_mod_matrix(
+        double normphase, std::span<float> auxenvparams,
+        std::array<ModSlot, GrainEvent::max_grain_mod_slots> &mod_slots,
+        std::array<SimpleEnvelope, GranulatorVoice::num_aux_envelopes> &aux_envelopes,
+        std::span<float> targetmodvalues)
+    {
+        assert(auxenvparams.size() == 8);
+        alignas(16) float aux_env_values[4] = {0.0f};
+        for (size_t i = 0; i < num_aux_envelopes; ++i)
+        {
+            float shiftedphase = wrap_value(0.0, normphase + auxenvparams[i + 4], 1.0);
+            aux_env_values[i] = aux_envelopes[i].get_value(shiftedphase, auxenvparams[i]);
+        }
+
+        for (const auto &e : mod_slots)
+        {
+            if (e.source_id < CLAP_INVALID_ID && e.target_id < CLAP_INVALID_ID)
+            {
+                targetmodvalues[e.target_id] += aux_env_values[e.source_id] * e.depth;
+            }
+        }
+        for (auto &e : targetmodvalues)
+        {
+            e = std::clamp(e, -1.0f, 1.0f);
+        }
     }
 };
 
