@@ -201,6 +201,22 @@ class GrainInsertFX
                 block[i] = sstmixcoeffs[0] * inleft + sstmixcoeffs[1] * outLeft;
                 block[BlockSize + i] = sstmixcoeffs[0] * inright + sstmixcoeffs[1] * outRight;
             }
+            break;
+        }
+        case GFXAIRWINDOWS:
+        {
+            assert(awplugin);
+            alignas(16) float *inputs[2] = {&block[0], &block[BlockSize]};
+            // do we actually need the separate output buffer for AirWindows...?
+            alignas(16) float outputbuffer[2][BlockSize];
+            alignas(16) float *outputs[2] = {outputbuffer[0], outputbuffer[1]};
+            awplugin->processReplacing(inputs, outputs, BlockSize);
+            for (size_t i = 0; i < BlockSize; ++i)
+            {
+                block[i] = outputs[0][i];
+                block[i + BlockSize] = outputs[1][i];
+            }
+            break;
         }
         }
     }
