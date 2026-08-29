@@ -584,251 +584,7 @@ class GranulatorVoice
         for (int i = 0; i < GrainEvent::max_grain_mod_slots; ++i)
             modulation_slots[i] = {CLAP_INVALID_ID, 0.0f, CLAP_INVALID_ID};
     }
-    void start(GrainEvent &evpars)
-    {
-        for (size_t i = 0; i < pendingInsertConfs.size(); ++i)
-        {
-            if (pendingInsertConfs[i].is_pending)
-            {
-                GrainInsertFX::ModeInfo gmode;
-                gmode.mainmode = pendingInsertConfs[i].mainmode;
-                gmode.awtype = pendingInsertConfs[i].awtype;
-                gmode.sstconfig = pendingInsertConfs[i].sstconfig;
-                gmode.sstmodel = pendingInsertConfs[i].sstmodel;
-                insert_fx[i].setMode(gmode);
-                pendingInsertConfs[i].is_pending = false;
-            }
-        }
-        active = true;
-        int newosctype = std::clamp(evpars.generator_type, 0, 6);
-        assert(osctypemapping.size() == 7);
-        newosctype = osctypemapping[newosctype];
-        newosctype = std::clamp(newosctype, 0, 6);
-        if (newosctype != prior_osc_type)
-        {
-            prior_osc_type = newosctype;
-            if (newosctype == 0)
-                theoscillator = sst::basic_blocks::dsp::EBApproxSin<>();
-            else if (newosctype == 1)
-                theoscillator = sst::basic_blocks::dsp::EBApproxSemiSin<>();
-            else if (newosctype == 2)
-                theoscillator = sst::basic_blocks::dsp::EBTri<>();
-            else if (newosctype == 3)
-                theoscillator = sst::basic_blocks::dsp::EBSaw<>();
-            else if (newosctype == 4)
-                theoscillator = sst::basic_blocks::dsp::EBPulse<>();
-            else if (newosctype == 5)
-                theoscillator = FMOsc();
-            else if (newosctype == 6)
-                theoscillator = NoiseGen();
-            std::visit(
-                [this](auto &q) {
-                    q.setSampleRate(sr);
-                    q.setFrequencySmoothingRateMS(5.0);
-                },
-                theoscillator);
-        }
-        if (samplerate_was_changed)
-        {
-            samplerate_was_changed = false;
-            envgainlag.setRateInMilliseconds(5.0, sr, 1.0);
-            std::visit(
-                [this](auto &q) {
-                    q.setSampleRate(sr);
-                    q.setFrequencySmoothingRateMS(5.0);
-                },
-                theoscillator);
-        }
-
-        envgainlag.snapTo(0.0f);
-        pitch_base = evpars.pitch_semitones;
-        if (newosctype == 6)
-            pitch_base += 12.0;
-        pitch_base = std::clamp(pitch_base, -48.0f, 64.0f);
-        if (evpars.pitch_quantize_amount > 0.0f && tuning)
-        {
-            // our middle C is 0.0, Tuning library has it at 60.0
-            auto quantpitch = quantize_pitch_binary(*tuning, pitch_base + 60.0) - 60.0;
-            pitch_base = pitch_base * (1.0f - evpars.pitch_quantize_amount) +
-                         quantpitch * evpars.pitch_quantize_amount;
-        }
-        auto syncratio = std::clamp(evpars.sync_octaves, 0.0f, 4.0f);
-        syncratio = std::pow(2.0f, syncratio);
-        auto pw = evpars.pulse_width; // osc implementation clamps itself to 0..1
-        fmpitch = evpars.fm_pitch;
-        if (fmfollowsmainpitch)
-            fmpitch += pitch_base;
-        fmmodamount = std::clamp(evpars.fm_amount, 0.0f, 1.0f);
-        fmfeedback = std::clamp(evpars.fm_feedback, -1.0f, 1.0f);
-
-        auto logisticr = fmmodamount;
-
-        auto noisecorr = std::clamp(evpars.noisecorr, -1.0f, 1.0f);
-        auto noisemode = evpars.noiseimode;
-        std::visit(
-            [this, syncratio, pw, noisecorr, noisemode, logisticr](auto &q) {
-                q.reset();
-                q.setSyncRatio(syncratio);
-                // handle extra parameters of osc types
-                if constexpr (std::is_same_v<decltype(q), sst::basic_blocks::dsp::EBPulse<> &>)
-                {
-                    q.setWidth(pw);
-                }
-                if constexpr (std::is_same_v<decltype(q), FMOsc &>)
-                {
-                    float fmhz = 440.0 * std::pow(2.0, 1.0 / 12.0 * (fmpitch - 9.0));
-                    q.setModulatorFreq(fmhz);
-                    q.setModIndex(fmmodamount);
-                    q.setFeedbackAmount(fmfeedback);
-                }
-                if constexpr (std::is_same_v<decltype(q), NoiseGen &>)
-                {
-                    q.setRandSeed(grainid);
-                    q.setCorrelation(noisecorr);
-                    q.imode = noisemode;
-                    q.logisticr = 3.4 + logisticr * 0.6;
-                    q.logisticx0 = 0.01 + 0.98 * (1.0 / 1024 * (grainid % 1024));
-                }
-            },
-            theoscillator);
-
-        float ambspread = std::clamp(evpars.ambi_spread, -180.0f, 180.0f);
-        float ambrotate = std::clamp(evpars.ambi_rotate, -180.0f, 180.0f);
-        float xa0 = -ambspread;
-        float ya0 = 0.0f;
-        float xb0 = ambspread;
-        float yb0 = 0.0f;
-        float rotrads = degreesToRadians(ambrotate);
-        float rotsin = std::sin(rotrads);
-        float rotcos = std::cos(rotrads);
-        float xa1 = xa0 * rotcos - ya0 * rotsin;
-        float ya1 = xa0 * rotsin + ya0 * rotcos;
-        float xb1 = xb0 * rotcos - yb0 * rotsin;
-        float yb1 = xb0 * rotsin + yb0 * rotcos;
-        float azi0 = xa1 + -evpars.azimuth;
-        float ele0 = ya1 + evpars.elevation;
-        float azi1 = xb1 + -evpars.azimuth;
-        float ele1 = yb1 + evpars.elevation;
-        azi0 = wrap_value(-180.0f, azi0, 180.0f);
-        azi1 = wrap_value(-180.0f, azi1, 180.0f);
-        ele0 = wrap_value(-180.0f, ele0, 180.0f);
-        ele1 = wrap_value(-180.0f, ele1, 180.0f);
-        assert(azi0 >= -180.0f && azi0 <= 180.0f);
-        assert(azi1 >= -180.0f && azi1 <= 180.0f);
-        assert(ele0 >= -180.0f && ele0 <= 180.0f);
-        assert(ele1 >= -180.0f && ele1 <= 180.0f);
-        used_azi0 = azi0;
-        used_azi1 = azi1;
-        used_ele0 = ele0;
-        used_ele1 = ele1;
-        azi0 = degreesToRadians(azi0);
-        azi1 = degreesToRadians(azi1);
-        ele0 = degreesToRadians(ele0);
-        ele1 = degreesToRadians(ele1);
-
-        auto calc_ambicoeffs = [this](int inchan, float azimuth, float elevation) {
-            assert(inchan >= 0 && inchan < 2);
-
-            float x = 0.0;
-            float y = 0.0;
-            float z = 0.0;
-            sphericalToCartesian(azimuth, elevation, x, y, z);
-            float *coeffdata = ambcoeffs.data() + inchan * 64;
-            if (ambisonic_order == 1)
-                SHEval1(x, y, z, coeffdata);
-            else if (ambisonic_order == 2)
-                SHEval2(x, y, z, coeffdata);
-            else if (ambisonic_order == 3)
-                SHEval3(x, y, z, coeffdata);
-            else if (ambisonic_order == 4)
-                SHEval4(x, y, z, coeffdata);
-            else if (ambisonic_order == 5)
-                SHEval5(x, y, z, coeffdata);
-            else if (ambisonic_order == 6)
-                SHEval6(x, y, z, coeffdata);
-            else if (ambisonic_order == 7)
-                SHEval7(x, y, z, coeffdata);
-            if (doambnormalization)
-            {
-                // if we use the actual output channel count, this won't autovectorize
-                // but using the constant, it will and will always take 8 steps
-                // so we lose a little with the lowest ambisonic orders, but otherwise
-                // this works better than using the actual active output channel count
-                for (int i = 0; i < 64; ++i)
-                    coeffdata[i] *= n3d2sn3d[i];
-            }
-        };
-        calc_ambicoeffs(0, azi0, ele0);
-        calc_ambicoeffs(1, azi1, ele1);
-        omniboostinverse = -std::clamp(evpars.ambi_omni_boost, 0.0f, 18.0f);
-        omniboostinverse = xenakios::decibelsToGain(omniboostinverse);
-        phase = 0;
-        float actdur = std::clamp(evpars.duration, 0.0f, 1.0f);
-        actdur = actdur * actdur * actdur;
-        actdur = 0.002f + 0.498f * actdur;
-        grain_end_phase = sr * actdur;
-
-        auxenvparams = evpars.auxenvparams;
-
-        for (size_t i = 0; i < 2; ++i)
-        {
-            insert_fx[i].reset();
-            if (insert_fx[i].mainmode == GrainInsertFX::GFXSSTFILTER)
-            {
-                for (size_t j = 0; j < 5; ++j)
-                {
-                    assert(evpars.insertparams[i][j] >= 0.0f && evpars.insertparams[i][j] <= 1.0f);
-                }
-                float filtpitch =
-                    xenakios::mapvalue(evpars.insertparams[i][0], 0.0f, 1.0f, -48.0f, 72.0f);
-                insert_fx[i].paramvalues[0] = std::clamp(filtpitch - 9.0f, -48.0f, 64.0f);
-                insert_fx[i].paramvalues[1] = std::clamp(evpars.insertparams[i][1], 0.0f, 1.0f);
-                insert_fx[i].paramvalues[2] = std::clamp(evpars.insertparams[i][2], -1.0f, 1.0f);
-                float filtpitchspread =
-                    xenakios::mapvalue(evpars.insertparams[i][3], 0.0f, 1.0f, -24.0f, 24.0f);
-                insert_fx[i].paramvalues[3] = std::clamp(filtpitchspread, -24.0f, 24.0f);
-                insert_fx[i].paramvalues[4] = std::clamp(evpars.insertparams[i][4], 0.0f, 1.0f);
-            }
-            else if (insert_fx[i].mainmode == GrainInsertFX::GFXAIRWINDOWS)
-            {
-                for (size_t j = 0; j < insert_fx[i].numParams; ++j)
-                {
-                    assert(evpars.insertparams[i][j] >= 0.0f && evpars.insertparams[i][j] <= 1.0f);
-                    insert_fx[i].paramvalues[j] = evpars.insertparams[i][j];
-                }
-            }
-            else if (insert_fx[i].mainmode == GrainInsertFX::GFXXENAKIOS)
-            {
-                for (size_t j = 0; j < insert_fx[i].numParams; ++j)
-                {
-                    assert(evpars.insertparams[i][j] >= 0.0f && evpars.insertparams[i][j] <= 1.0f);
-                    insert_fx[i].paramvalues[j] = evpars.insertparams[i][j];
-                }
-            }
-        }
-        for (int i = 0; i < GrainEvent::max_grain_mod_slots; ++i)
-            modulation_slots[i].depth = evpars.modamounts[i];
-
-        grain_base_volume = std::clamp(evpars.volume, 0.0f, 1.0f);
-
-        float bandpos =
-            xenakios::mapvalue<float>(pitch_base, -48.0f, 64.0f, 0.0f, numPitchBandAttens - 1);
-        bandpos = std::clamp(bandpos, 0.0f, (float)numPitchBandAttens - 1);
-        int ind0 = bandpos;
-        int ind1 = ind0 + 1;
-        float frac = bandpos - ind0;
-        float g0 = pitchBandAttens[ind0];
-        float g1 = pitchBandAttens[ind1];
-        float gatten = g0 + (g1 - g0) * frac;
-        gatten = std::clamp(gatten, 0.0f, 1.0f);
-        grain_base_volume *= gatten;
-
-        auxsend1 = std::clamp(evpars.auxsend, 0.0f, 1.0f);
-
-        envstarttype = std::clamp<uint8_t>(evpars.envelope_start_type, 0, 30);
-        envendtype = std::clamp<uint8_t>(evpars.envelope_end_type, 0, 30);
-        envshape = std::clamp(evpars.envelope_shape, 0.0f, 1.0f);
-    }
+    void start(GrainEvent &evpars);
     void process(float *outputs)
     {
         double normphase = (double)phase / grain_end_phase;
@@ -915,13 +671,10 @@ class GranulatorVoice
             tempbuffer[granul_block_size + i] = outsample;
             ++phase;
         }
-        // float outsample0 = outsample;
-        // float outsample1 = outsample;
         if (filter_routing == FR_ALLSERIAL)
         {
             for (size_t insertIndex = 0; insertIndex < 2; ++insertIndex)
             {
-                // insert_fx[insertIndex].processStereo(outsample0, outsample1);
                 insert_fx[insertIndex].processBlock<granul_block_size>(tempbuffer);
             }
         }
@@ -941,14 +694,6 @@ class GranulatorVoice
                     summedinserts[1] += signalstoinserts[insertindex][1];
                 }
             }
-
-            /*
-            float split = outsample;
-            split = filters[0].processMonoSample(split + feedbacksignals[0]);
-            feedbacksignals[0] = split * feedbackamt;
-            outsample = filters[1].processMonoSample(outsample);
-            outsample = split + outsample;
-            */
         }
 
         for (size_t i = 0; i < granul_block_size; ++i)
@@ -972,8 +717,7 @@ class GranulatorVoice
             ++cachedphase;
             tempbuffer[i] *= fadegain;
             tempbuffer[i + granul_block_size] *= fadegain;
-            // outsample0 *= fadegain;
-            // outsample1 *= fadegain;
+            
 #define USE_AVX2_AMBIS
 #ifdef USE_AVX2_AMBIS
             // Process 8 channels at a time using AVX
