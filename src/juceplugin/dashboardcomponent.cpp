@@ -65,8 +65,8 @@ void DashBoardComponent::paintAmbisonicFieldPolar(juce::Graphics &g)
                 else
                     g.drawEllipse(xcor - ptsize / 2.0, ycor - ptsize / 2.0, ptsize, ptsize, 1.0f);
             };
-            drawpointfunc(0, e.azimuth0degrees, e.elevation0degrees);
-            drawpointfunc(1, e.azimuth1degrees, e.elevation1degrees);
+            drawpointfunc(0, e.ambidegrees[0], e.ambidegrees[2]);
+            drawpointfunc(1, e.ambidegrees[1], e.ambidegrees[3]);
             e.visualfade *= visualfadecoefficient;
         }
     }
@@ -79,7 +79,7 @@ void DashBoardComponent::paintAmbisonicFieldHammerProjection(juce::Graphics &g)
     {
         if (e.visualfade > 0.01)
         {
-            auto ptcor = haGrid.anglesToPoint(e.azimuth0degrees, -e.elevation0degrees);
+            auto ptcor = haGrid.anglesToPoint(e.ambidegrees[0], -e.ambidegrees[2]);
             float x = ptcor.getX();
             float y = ptcor.getY();
             haGrid.toArea.transformPoint(x, y);
@@ -128,10 +128,10 @@ void DashBoardComponent::paintAmbisonicFieldHammerProjection(juce::Graphics &g)
         {
             auto drawgrain = [this, halfW, halfH, centerX, centerY, &g, &e](int chan) {
                 const float sqrt2 = 1.41421356f;
-                float radAzi = juce::degreesToRadians(-e.azimuth0degrees);
+                float radAzi = juce::degreesToRadians(-e.ambidegrees[0]);
                 if (chan == 1)
-                    radAzi = juce::degreesToRadians(-e.azimuth1degrees);
-                float radElev = juce::degreesToRadians(e.elevation0degrees);
+                    radAzi = juce::degreesToRadians(-e.ambidegrees[1]);
+                float radElev = juce::degreesToRadians(e.ambidegrees[2]);
                 float cosElev = std::cos(radElev);
                 float cosHalfAzi = std::cos(radAzi * 0.5f);
 
@@ -160,7 +160,7 @@ void DashBoardComponent::paintAmbisonicFieldHammerProjection(juce::Graphics &g)
                     g.setColour(juce::Colours::lightcyan.withAlpha(e.visualfade));
                 g.fillEllipse(pixelX - 6.0f, pixelY - 6.0f, 12.0f, 12.0f);
             };
-            if (std::abs(e.azimuth0degrees - e.azimuth1degrees) > 0.0f)
+            if (std::abs(e.ambidegrees[0] - e.ambidegrees[1]) > 0.0f)
             {
                 drawgrain(0);
                 drawgrain(1);

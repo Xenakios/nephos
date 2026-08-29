@@ -730,10 +730,7 @@ void ToneGranulator::advanceCloudPlayers()
                             vmsg.pitch = voices[j]->pitch_base;
                             vmsg.duration = voices[j]->grain_end_phase / m_sr;
                             vmsg.gain = voices[j]->grain_base_volume;
-                            vmsg.azimuth0degrees = voices[j]->used_azi0;
-                            vmsg.azimuth1degrees = voices[j]->used_azi1;
-                            vmsg.elevation0degrees = voices[j]->used_ele0;
-                            vmsg.elevation1degrees = voices[j]->used_ele1;
+                            vmsg.ambidegrees = voices[j]->current_coordinates;
                             visualizer_fifo.push(vmsg);
                         }
                         wasfound = true;
@@ -1002,10 +999,8 @@ void GranulatorVoice::start(GrainEvent &evpars)
     assert(azi1 >= -180.0f && azi1 <= 180.0f);
     assert(ele0 >= -180.0f && ele0 <= 180.0f);
     assert(ele1 >= -180.0f && ele1 <= 180.0f);
-    used_azi0 = azi0;
-    used_azi1 = azi1;
-    used_ele0 = ele0;
-    used_ele1 = ele1;
+    current_coordinates = {azi0, azi1, ele0, ele1};
+    
     azi0 = degreesToRadians(azi0);
     azi1 = degreesToRadians(azi1);
     ele0 = degreesToRadians(ele0);

@@ -717,7 +717,7 @@ class GranulatorVoice
             ++cachedphase;
             tempbuffer[i] *= fadegain;
             tempbuffer[i + granul_block_size] *= fadegain;
-            
+
 #define USE_AVX2_AMBIS
 #ifdef USE_AVX2_AMBIS
             // Process 8 channels at a time using AVX
@@ -807,10 +807,7 @@ class GranulatorVoice
     alignas(16) sst::basic_blocks::dsp::OnePoleLag<float, true> envgainlag;
     float pitch_base = 0.0f;
     float grain_base_volume = 0.0;
-    float used_azi0 = 0.0f;
-    float used_azi1 = 0.0f;
-    float used_ele0 = 0.0f;
-    float used_ele1 = 0.0f;
+    std::array<float, 4> current_coordinates = {0.0f};
     float auxsend1 = 0.0;
     std::span<float> pitchBandAttens;
     uint8_t envstarttype = 0;
@@ -853,9 +850,9 @@ class GranulatorVoice
     }
     void update_ambisonic_coeffs()
     {
-        float azi0 = degreesToRadians(used_azi0);
-        float azi1 = degreesToRadians(used_azi1);
-        float ele = degreesToRadians(used_ele0);
+        // float azi0 = degreesToRadians(used_azi0);
+        // float azi1 = degreesToRadians(used_azi1);
+        // float ele = degreesToRadians(used_ele0);
         /*
         calculate_ambisonic_coeffs(ambcoeffs.data(), azi0, ele);
         calculate_ambisonic_coeffs(ambcoeffs.data() + 64, azi1, ele);
@@ -1544,10 +1541,7 @@ class ToneGranulator
         float pitch = 0.0;
         float duration = 0.001;
         float gain = 0.0f;
-        float azimuth0degrees = 0.0f;
-        float azimuth1degrees = 0.0f;
-        float elevation0degrees = 0.0f;
-        float elevation1degrees = 0.0f;
+        std::array<float, 4> ambidegrees = {0.0f};
         float visualfade = 1.0f;
     };
     struct GrainVisualizerSettings
@@ -1891,11 +1885,7 @@ class ToneGranulator
                         vmsg.pitch = voices[j]->pitch_base;
                         vmsg.duration = voices[j]->grain_end_phase / m_sr;
                         vmsg.gain = voices[j]->grain_base_volume;
-                        vmsg.azimuth0degrees = voices[j]->used_azi0;
-                        vmsg.azimuth1degrees = voices[j]->used_azi1;
-                        vmsg.elevation0degrees = voices[j]->used_ele0;
-                        vmsg.elevation1degrees = voices[j]->used_ele1;
-
+                        vmsg.ambidegrees = voices[j]->current_coordinates;
                         visualizer_fifo.push(vmsg);
                     }
                     modulatedOscType = ev->generator_type;
