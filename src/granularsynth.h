@@ -829,7 +829,7 @@ class GranulatorVoice
         envendtype = std::clamp<uint8_t>(evpars.envelope_end_type, 0, 30);
         envshape = std::clamp(evpars.envelope_shape, 0.0f, 1.0f);
     }
-    void process(float *outputs, int nframes)
+    void process(float *outputs)
     {
         double normphase = (double)phase / grain_end_phase;
         alignas(16) float modulatedvalues[NUMMODTARGETS] = {0.0f};
@@ -878,14 +878,6 @@ class GranulatorVoice
                 insert_fx[i].parammodvalues[4] =
                     modulatedvalues[MT_INSERTASTART + i * 10 + 4] * 0.5f;
             }
-            /*
-            else if (i == 1 && insert_fx[i].mainmode == GrainInsertFX::GFXAIRWINDOWS &&
-                     insert_fx[i].submode == 3)
-            {
-                // for testing purposes using airwindows ringmodulator freq a
-                insert_fx[i].parammodvalues[0] = modulation_slots[2].depth * modulatedvalues[2];
-            }
-                */
             insert_fx[i].prepareBlock();
         }
         int envpeakpos = envshape * grain_end_phase;
@@ -895,7 +887,9 @@ class GranulatorVoice
         int tail_fade_samples = tail_fade_len * sr;
         int tail_fade_start = grain_end_phase + tail_len_samples - tail_fade_samples;
         int tail_fade_end = grain_end_phase + tail_len_samples;
-        for (int i = 0; i < nframes; ++i)
+        alignas(16) float tempbuffer[granul_block_size * 2];
+        int cachedphase = phase;
+        for (size_t i = 0; i < granul_block_size; ++i)
         {
             float outsample = 0.0f;
             if (phase >= 0 && phase < grain_end_phase)
@@ -917,61 +911,69 @@ class GranulatorVoice
                 outsample *= envgain * envgainlag.getValue() * polarity_gain;
                 envgainlag.process();
             }
-            float outsample0 = outsample;
-            float outsample1 = outsample;
-            if (filter_routing == FR_ALLSERIAL)
-            {
-                for (size_t insertIndex = 0; insertIndex < 2; ++insertIndex)
-                {
-                    insert_fx[insertIndex].processStereo(outsample0, outsample1);
-                }
-                // feedbacksignals[0] = outsample * feedbackamt;
-            }
-            else if (filter_routing == FR_ALLPARALLEL)
-            {
-                float signalstoinserts[4][2];
-                float summedinserts[2] = {0.0f, 0.0f};
-                for (size_t insertindex = 0; insertindex < numInsertSlots; ++insertindex)
-                {
-                    if (insert_fx[insertindex].mainmode != GrainInsertFX::GFXNONE)
-                    {
-                        signalstoinserts[insertindex][0] = outsample0;
-                        signalstoinserts[insertindex][1] = outsample1;
-                        insert_fx[insertindex].processStereo(signalstoinserts[insertindex][0],
-                                                             signalstoinserts[insertindex][1]);
-                        summedinserts[0] += signalstoinserts[insertindex][0];
-                        summedinserts[1] += signalstoinserts[insertindex][1];
-                    }
-                }
-
-                /*
-                float split = outsample;
-                split = filters[0].processMonoSample(split + feedbacksignals[0]);
-                feedbacksignals[0] = split * feedbackamt;
-                outsample = filters[1].processMonoSample(outsample);
-                outsample = split + outsample;
-                */
-            }
-
+            tempbuffer[i] = outsample;
+            tempbuffer[granul_block_size + i] = outsample;
             ++phase;
-            float fadegain = 1.0f;
-            if (phase >= grain_end_phase)
+        }
+        // float outsample0 = outsample;
+        // float outsample1 = outsample;
+        if (filter_routing == FR_ALLSERIAL)
+        {
+            for (size_t insertIndex = 0; insertIndex < 2; ++insertIndex)
             {
-                if (phase >= tail_fade_end)
+                // insert_fx[insertIndex].processStereo(outsample0, outsample1);
+                insert_fx[insertIndex].processBlock<granul_block_size>(tempbuffer);
+            }
+        }
+        else if (filter_routing == FR_ALLPARALLEL)
+        {
+            float signalstoinserts[4][2];
+            float summedinserts[2] = {0.0f, 0.0f};
+            for (size_t insertindex = 0; insertindex < numInsertSlots; ++insertindex)
+            {
+                if (insert_fx[insertindex].mainmode != GrainInsertFX::GFXNONE)
+                {
+                    // signalstoinserts[insertindex][0] = outsample0;
+                    // signalstoinserts[insertindex][1] = outsample1;
+                    insert_fx[insertindex].processStereo(signalstoinserts[insertindex][0],
+                                                         signalstoinserts[insertindex][1]);
+                    summedinserts[0] += signalstoinserts[insertindex][0];
+                    summedinserts[1] += signalstoinserts[insertindex][1];
+                }
+            }
+
+            /*
+            float split = outsample;
+            split = filters[0].processMonoSample(split + feedbacksignals[0]);
+            feedbacksignals[0] = split * feedbackamt;
+            outsample = filters[1].processMonoSample(outsample);
+            outsample = split + outsample;
+            */
+        }
+
+        for (size_t i = 0; i < granul_block_size; ++i)
+        {
+            float fadegain = 1.0f;
+            if (cachedphase >= grain_end_phase)
+            {
+                if (cachedphase >= tail_fade_end)
                 {
                     active = false;
                     fadegain = 0.0f;
                 }
-                else if (phase >= tail_fade_start)
+                else if (cachedphase >= tail_fade_start)
                 {
-                    fadegain = xenakios::mapvalue<float>(phase, tail_fade_start, tail_fade_end,
-                                                         1.0f, 0.0f);
+                    fadegain = xenakios::mapvalue<float>(cachedphase, tail_fade_start,
+                                                         tail_fade_end, 1.0f, 0.0f);
                     if (fadegain < 0.0f)
                         fadegain = 0.0f;
                 }
             }
-            outsample0 *= fadegain;
-            outsample1 *= fadegain;
+            ++cachedphase;
+            tempbuffer[i] *= fadegain;
+            tempbuffer[i + granul_block_size] *= fadegain;
+            // outsample0 *= fadegain;
+            // outsample1 *= fadegain;
 #define USE_AVX2_AMBIS
 #ifdef USE_AVX2_AMBIS
             // Process 8 channels at a time using AVX
@@ -983,8 +985,8 @@ class GranulatorVoice
                 __m256 coeffs1 = _mm256_load_ps(&ambcoeffs[chan + 64]); // coeffs for outsample1
 
                 // Broadcast the scalar audio samples across all 8 lanes
-                __m256 sample0 = _mm256_set1_ps(outsample0);
-                __m256 sample1 = _mm256_set1_ps(outsample1);
+                __m256 sample0 = _mm256_set1_ps(tempbuffer[i]);
+                __m256 sample1 = _mm256_set1_ps(tempbuffer[i + granul_block_size]);
 
                 // Multiply-accumulate: sample * coefficients
                 __m256 result =
@@ -998,8 +1000,8 @@ class GranulatorVoice
             // Scalar fallback for any remaining channels (if num_outputchans isn't a multiple of 8)
             for (; chan < num_outputchans; ++chan)
             {
-                outputs[i * 64 + chan] =
-                    outsample0 * ambcoeffs[chan] + outsample1 * ambcoeffs[chan + 64];
+                outputs[i * 64 + chan] = tempbuffer[i] * ambcoeffs[chan] +
+                                         tempbuffer[i + granul_block_size] * ambcoeffs[chan + 64];
             }
             for (chan = 1; chan < num_outputchans; ++chan)
             {
@@ -1316,7 +1318,7 @@ class ToneGranulator
             if (voices[j]->active)
             {
                 ++numactive;
-                voices[j]->process(voiceout, granul_block_size);
+                voices[j]->process(voiceout);
                 for (int k = 0; k < granul_block_size; ++k)
                 {
                     for (int chan = 0; chan < num_out_chans; ++chan)
