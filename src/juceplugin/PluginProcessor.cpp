@@ -162,7 +162,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         }
     }
     */
-    granulator.set_grain_modulation_routing(0, 0, 0, false);
+    granulator.set_grain_modulation_routing(0, 0, GranulatorVoice::MT_PITCH, false);
     try
     {
         if (factoryResetID == -1)
