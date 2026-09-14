@@ -252,12 +252,14 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
       volumeModuleComponent(p), stackModuleComponent(p), mainOutModuleComponent(p),
       keyboardComponent(p.keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard)
 {
+    /*
     addAndMakeVisible(corruptButton);
     corruptButton.setButtonText("CORRUPT AUDIO");
     corruptButton.onClick = [this]() {
         processorRef.corruptAudioOnPurpose = true;
         juce::Timer::callAfterDelay(1000, [this]() { processorRef.corruptAudioOnPurpose = false; });
     };
+    */
     mainOutModuleComponent.perfComponent.RequestData = [this](int &maxvoices, int &usedvoices,
                                                               float &cpu) {
         maxvoices = processorRef.granulator.voices.size();
