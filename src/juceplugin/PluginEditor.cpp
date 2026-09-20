@@ -34,8 +34,8 @@ inline void updateAllFonts(juce::Component &parent, const juce::Font &newFont)
 }
 
 AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudioProcessor &p)
-    : juce::AudioProcessorEditor(p), processorRef(p), mainPage(p), modulationPage(p), dashPage(p),
-      mainTabs(juce::TabbedButtonBar::Orientation::TabsAtTop)
+    : juce::AudioProcessorEditor(p), processorRef(p), macrosPresetsComp(p), mainPage(p),
+      modulationPage(p), dashPage(p), mainTabs(juce::TabbedButtonBar::Orientation::TabsAtTop)
 {
     /*
     if (!processorRef.baconSpectrum)
@@ -44,6 +44,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
             std::make_unique<baconpaul::six_sines::ui::SpectrumAnalyzerComponent>(44100.0);
     }
     */
+    addAndMakeVisible(macrosPresetsComp);
     addChildComponent(overlaylabel);
     mainTabs.addTab("MAIN", juce::Colours::grey, &mainPage, false);
     mainTabs.addTab("MODULATION", juce::Colours::grey, &modulationPage, false);
@@ -97,7 +98,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
             addMidiLearnToMenu(menu, processorRef, parid);
         });
     }
-    setSize(1500, 720);
+    setSize(1500, 820);
     startTimerHz(20);
 }
 
@@ -242,7 +243,9 @@ void AudioPluginAudioProcessorEditor::timerCallback()
 
 void AudioPluginAudioProcessorEditor::resized()
 {
-    mainTabs.setBounds(0, 0, getWidth(), getHeight());
+    macrosPresetsComp.setBounds(0, 0, getWidth(), 100);
+    mainTabs.setBounds(0, macrosPresetsComp.getBottom() + 1, getWidth(),
+                       getHeight() - macrosPresetsComp.getHeight() - 2);
     auto area = getLocalBounds().reduced(100, 300);
     overlaylabel.setBounds(area);
 }
@@ -389,7 +392,7 @@ void DashPage::saveSnapShot(int index)
     auto state = processorRef.getState();
     processorRef.saveSnapShot(index, state);
 }
-void PresetsComponent::mouseDown(const juce::MouseEvent &ev)
+void MacrosPresetsComponent::mouseDown(const juce::MouseEvent &ev)
 {
     if (ev.mods.isPopupMenu())
     {
@@ -414,18 +417,28 @@ void PresetsComponent::mouseDown(const juce::MouseEvent &ev)
         menu.showMenuAsync({});
     }
 }
-void PresetsComponent::resized()
+void MacrosPresetsComponent::resized()
 {
+    {
+        juce::FlexBox flex;
+        flex.flexDirection = juce::FlexBox::Direction::row;
+        flex.flexWrap = juce::FlexBox::Wrap::wrap;
+        for (auto &b : buttons)
+        {
+            flex.items.add(
+                juce::FlexItem(*b).withFlex(1.0).withMinWidth(40.0f).withMaxWidth(40.0f));
+        }
+        flex.performLayout(juce::Rectangle<int>(0, 0, getWidth(), 50));
+    }
     juce::FlexBox flex;
     flex.flexDirection = juce::FlexBox::Direction::row;
-    flex.flexWrap = juce::FlexBox::Wrap::wrap;
-    for (auto &b : buttons)
+    for (auto &c : perfSliders)
     {
-        flex.items.add(juce::FlexItem(*b).withFlex(1.0).withMinWidth(40.0f).withMaxWidth(40.0f));
+        flex.items.add(juce::FlexItem(*c).withFlex(1.0).withMaxHeight(70));
     }
-    flex.performLayout(getLocalBounds());
+    flex.performLayout(juce::Rectangle<int>(0, 51, getWidth(), 50));
 }
-void PresetsComponent::updateButtonColors()
+void MacrosPresetsComponent::updateButtonColors()
 {
     for (int i = 0; i < buttons.size(); ++i)
     {
