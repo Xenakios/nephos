@@ -9,7 +9,7 @@ cmake .. \
   -DCMAKE_BUILD_TYPE=Release
 
 cmake --build . --target NephosPlugin_VST3
-# clone into libs : choc, clap, clap-helpers, fmt, juce, simde, sst-basic-blocks, sst-cpputils
+# clone into libs : choc, clap, clap-helpers, fmt, juce, simde, xenakios sst-basic-blocks, sst-cpputils
 # sst-filters, git clone https://github.com/surge-synthesizer/tuning-library.git
 # JUCE commit 91ad83ae34a81e0833b1a2b0866f54846370ae53
 #  https://github.com/Xenakios/sst-basic-blocks.git

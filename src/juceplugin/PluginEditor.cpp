@@ -309,11 +309,95 @@ MainPageComponent::~MainPageComponent()
 
 void MainPageComponent::paint(juce::Graphics &g) { g.fillAll(juce::Colours::darkgrey); }
 
-void MainPageComponent::mouseDown(const juce::MouseEvent &ev)
+void MainPageComponent::resized()
 {
-    if (ev.mods.isRightButtonDown())
+    oscModuleComponent.setBounds(0, 0, 920, 280);
+    volumeModuleComponent.setBounds(0, oscModuleComponent.getBottom() + 1, 700, 150);
+
+    timeModuleComponent.setBounds(oscModuleComponent.getRight() + 2, 0, 300, 125);
+
+    spatModuleComponent.setBounds(0, volumeModuleComponent.getBottom() + 2, 600, 125);
+    mainOutModuleComponent.setBounds(spatModuleComponent.getRight() + 2,
+                                     volumeModuleComponent.getBottom() + 2, 600, 125);
+    insertComponents[0]->setBounds(0, spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 125);
+    insertComponents[1]->setBounds(insertComponents[0]->getRight() + 1,
+                                   spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 125);
+
+    stackModuleComponent.setBounds(oscModuleComponent.getRight() + 2,
+                                   timeModuleComponent.getBottom() + 2, 490, 175);
+    // processorRef.xenAvisComponent.setBounds(getWidth() - 501, stackModuleComponent.getBottom() +
+    // 2,
+    //                                         500, 250);
+    //  keyboardComponent.setBounds(1, getHeight() - 50, getWidth() - 300, 49);
+    //  testTree.setBounds(getWidth() - 299, timeModuleComponent.getBottom() + 2, 300, 300);
+    corruptButton.setBounds(getWidth() - 200, stackModuleComponent.getBottom() + 2, 190, 25);
+}
+
+MacrosPresetsComponent::MacrosPresetsComponent(AudioPluginAudioProcessor &p) : processorRef(p)
+{
+    for (int i = 0; i < 16; ++i)
     {
+        ParamDesc pmd = ParamDesc()
+                            .asFloat()
+                            .withRange(0.0, 1.0)
+                            .withName(fmt::format("M{}", i + 1))
+                            .withLinearScaleFormatting("");
+        auto knob = std::make_unique<XapSlider>(XapSlider::SS_Knob, pmd);
+        knob->OnValueChanged = [this, i, knobptr = knob.get()]() {
+            RemoteControlMessage msg;
+            msg.chan = 4096;
+            msg.src = i;
+            msg.value = knobptr->getValue();
+            processorRef.rc_fifo.push(msg);
+            // processorRef.handleMacroKnob(i, knobptr->getValue(), false);
+        };
+        addAndMakeVisible(knob.get());
+        perfSliders.push_back(std::move(knob));
+    }
+    for (int i = 0; i < 64; ++i)
+    {
+        auto but = std::make_unique<juce::TextButton>();
+        but->setButtonText(juce::String(i + 1));
+        but->onClick = [this, i]() {
+            auto mods = juce::ModifierKeys::getCurrentModifiers();
+            if (mods.isCommandDown())
+            {
+                lastSaved = i;
+                auto state = processorRef.getState();
+                processorRef.saveSnapShot(i, state);
+            }
+            else
+            {
+                lastLoaded = i;
+                processorRef.loadSnapShot(i);
+            }
+            updateButtonColors();
+        };
+        addAndMakeVisible(*but);
+        buttons.push_back(std::move(but));
+    }
+    defaultButtonColor = buttons.front()->findColour(juce::TextButton::ColourIds::buttonColourId);
+    addAndMakeVisible(menuButton);
+    menuButton.setButtonText("...");
+    menuButton.onClick = [this]() {
         juce::PopupMenu menu;
+        menu.addItem("Learn MIDI CC range to load snapshots 1-8",
+                     [this]() { processorRef.midiLearnAction = MIDIBinding::NPA_LOADSNAP0108; });
+        menu.addItem("Learn MIDI CC range to load snapshots 9-16",
+                     [this]() { processorRef.midiLearnAction = MIDIBinding::NPA_LOADSNAP0916; });
+        for (auto &b : processorRef.midiBindings)
+        {
+            if (b.npa == MIDIBinding::NPA_LOADSNAP0108 || b.npa == MIDIBinding::NPA_LOADSNAP0916)
+            {
+                std::string rtxt = "1-8";
+                if (b.npa == MIDIBinding::NPA_LOADSNAP0916)
+                    rtxt = "9-16";
+                menu.addItem(
+                    fmt::format("Remove MIDI CC range {}-{} to load snapshots {}", b.midicc,
+                                b.midicc + 7, rtxt),
+                    [this, npa = b.npa]() { processorRef.removeMidiAssignmentForAction(npa); });
+            }
+        }
         menu.addItem("Reset all MIDI assignments", [this]() {
             ThreadMessage msg;
             msg.opcode = ThreadMessage::OP_UNLEARNMIDI;
@@ -360,83 +444,29 @@ void MainPageComponent::mouseDown(const juce::MouseEvent &ev)
             menu.addItem(e.category + "/" + e.name, [this, e]() { processorRef.loadPreset(e.id); });
         }
         menu.showMenuAsync({});
-    }
-}
-
-void MainPageComponent::resized()
-{
-    oscModuleComponent.setBounds(0, 0, 920, 280);
-    volumeModuleComponent.setBounds(0, oscModuleComponent.getBottom() + 1, 700, 150);
-
-    timeModuleComponent.setBounds(oscModuleComponent.getRight() + 2, 0, 300, 125);
-
-    spatModuleComponent.setBounds(0, volumeModuleComponent.getBottom() + 2, 600, 125);
-    mainOutModuleComponent.setBounds(spatModuleComponent.getRight() + 2,
-                                     volumeModuleComponent.getBottom() + 2, 600, 125);
-    insertComponents[0]->setBounds(0, spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 125);
-    insertComponents[1]->setBounds(insertComponents[0]->getRight() + 1,
-                                   spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 125);
-
-    stackModuleComponent.setBounds(oscModuleComponent.getRight() + 2,
-                                   timeModuleComponent.getBottom() + 2, 490, 175);
-    // processorRef.xenAvisComponent.setBounds(getWidth() - 501, stackModuleComponent.getBottom() +
-    // 2,
-    //                                         500, 250);
-    //  keyboardComponent.setBounds(1, getHeight() - 50, getWidth() - 300, 49);
-    //  testTree.setBounds(getWidth() - 299, timeModuleComponent.getBottom() + 2, 300, 300);
-    corruptButton.setBounds(getWidth() - 200, stackModuleComponent.getBottom() + 2, 190, 25);
-}
-
-void DashPage::saveSnapShot(int index)
-{
-    auto state = processorRef.getState();
-    processorRef.saveSnapShot(index, state);
-}
-void MacrosPresetsComponent::mouseDown(const juce::MouseEvent &ev)
-{
-    if (ev.mods.isPopupMenu())
-    {
-        juce::PopupMenu menu;
-        menu.addItem("Learn MIDI CC range to load snapshots 1-8",
-                     [this]() { processorRef.midiLearnAction = MIDIBinding::NPA_LOADSNAP0108; });
-        menu.addItem("Learn MIDI CC range to load snapshots 9-16",
-                     [this]() { processorRef.midiLearnAction = MIDIBinding::NPA_LOADSNAP0916; });
-        for (auto &b : processorRef.midiBindings)
-        {
-            if (b.npa == MIDIBinding::NPA_LOADSNAP0108 || b.npa == MIDIBinding::NPA_LOADSNAP0916)
-            {
-                std::string rtxt = "1-8";
-                if (b.npa == MIDIBinding::NPA_LOADSNAP0916)
-                    rtxt = "9-16";
-                menu.addItem(
-                    fmt::format("Remove MIDI CC range {}-{} to load snapshots {}", b.midicc,
-                                b.midicc + 7, rtxt),
-                    [this, npa = b.npa]() { processorRef.removeMidiAssignmentForAction(npa); });
-            }
-        }
-        menu.showMenuAsync({});
-    }
+    };
 }
 void MacrosPresetsComponent::resized()
 {
-    {
-        juce::FlexBox flex;
-        flex.flexDirection = juce::FlexBox::Direction::row;
-        flex.flexWrap = juce::FlexBox::Wrap::wrap;
-        for (auto &b : buttons)
-        {
-            flex.items.add(
-                juce::FlexItem(*b).withFlex(1.0).withMinWidth(40.0f).withMaxWidth(40.0f));
-        }
-        flex.performLayout(juce::Rectangle<int>(0, 0, getWidth(), 50));
-    }
+
     juce::FlexBox flex;
     flex.flexDirection = juce::FlexBox::Direction::row;
+    flex.flexWrap = juce::FlexBox::Wrap::wrap;
+    for (auto &b : buttons)
+    {
+        flex.items.add(juce::FlexItem(*b).withFlex(1.0).withMinWidth(40.0f).withMaxWidth(40.0f));
+    }
+    flex.items.add(
+        juce::FlexItem(menuButton).withFlex(1.0).withMinWidth(40.0f).withMaxWidth(40.0f));
+    flex.performLayout(juce::Rectangle<int>(0, 0, getWidth(), 50));
+
+    juce::FlexBox knobsflex;
+    knobsflex.flexDirection = juce::FlexBox::Direction::row;
     for (auto &c : perfSliders)
     {
-        flex.items.add(juce::FlexItem(*c).withFlex(1.0).withMaxHeight(70));
+        knobsflex.items.add(juce::FlexItem(*c).withFlex(1.0).withMaxHeight(70));
     }
-    flex.performLayout(juce::Rectangle<int>(0, 51, getWidth(), 50));
+    knobsflex.performLayout(juce::Rectangle<int>(0, 51, getWidth(), 50));
 }
 void MacrosPresetsComponent::updateButtonColors()
 {

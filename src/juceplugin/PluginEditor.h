@@ -22,60 +22,16 @@
 struct MacrosPresetsComponent : public juce::Component
 {
     AudioPluginAudioProcessor &processorRef;
-    MacrosPresetsComponent(AudioPluginAudioProcessor &p) : processorRef(p)
-    {
-        for (int i = 0; i < 16; ++i)
-        {
-            ParamDesc pmd = ParamDesc()
-                                .asFloat()
-                                .withRange(0.0, 1.0)
-                                .withName(fmt::format("M{}", i + 1))
-                                .withLinearScaleFormatting("");
-            auto knob = std::make_unique<XapSlider>(XapSlider::SS_Knob, pmd);
-            knob->OnValueChanged = [this, i, knobptr = knob.get()]() {
-                RemoteControlMessage msg;
-                msg.chan = 4096;
-                msg.src = i;
-                msg.value = knobptr->getValue();
-                processorRef.rc_fifo.push(msg);
-                // processorRef.handleMacroKnob(i, knobptr->getValue(), false);
-            };
-            addAndMakeVisible(knob.get());
-            perfSliders.push_back(std::move(knob));
-        }
-        for (int i = 0; i < 64; ++i)
-        {
-            auto but = std::make_unique<juce::TextButton>();
-            but->setButtonText(juce::String(i + 1));
-            but->onClick = [this, i]() {
-                auto mods = juce::ModifierKeys::getCurrentModifiers();
-                if (mods.isCommandDown())
-                {
-                    lastSaved = i;
-                    auto state = processorRef.getState();
-                    processorRef.saveSnapShot(i, state);
-                }
-                else
-                {
-                    lastLoaded = i;
-                    processorRef.loadSnapShot(i);
-                }
-                updateButtonColors();
-            };
-            addAndMakeVisible(*but);
-            buttons.push_back(std::move(but));
-        }
-        defaultButtonColor =
-            buttons.front()->findColour(juce::TextButton::ColourIds::buttonColourId);
-    }
-    void mouseDown(const juce::MouseEvent &ev) override;
+    MacrosPresetsComponent(AudioPluginAudioProcessor &p);
+
     void resized() override;
     void updateButtonColors();
-    
+
     int lastSaved = -1;
     int lastLoaded = -1;
     juce::Colour defaultButtonColor;
     std::vector<std::unique_ptr<juce::TextButton>> buttons;
+    juce::TextButton menuButton;
     std::vector<std::unique_ptr<XapSlider>> perfSliders;
 };
 
@@ -310,7 +266,7 @@ class MainPageComponent final : public juce::Component
     //==============================================================================
     void paint(juce::Graphics &) override;
     void resized() override;
-    void mouseDown(const juce::MouseEvent &) override;
+    
 
     AudioPluginAudioProcessor &processorRef;
     OscillatorModuleComponent oscModuleComponent;
@@ -353,10 +309,7 @@ class DashPage : public juce::Component
         };
         addAndMakeVisible(dashBoardComponent);
     }
-    void loadSnapShot(int index) { processorRef.loadSnapShot(index); }
-    void saveSnapShot(int index);
-
-    void resized() override { dashBoardComponent.setBounds(0, 121, getWidth(), getHeight() - 121); }
+    void resized() override { dashBoardComponent.setBounds(0, 0, getWidth(), getHeight()); }
     AudioPluginAudioProcessor &processorRef;
     DashBoardComponent dashBoardComponent;
 };
