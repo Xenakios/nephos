@@ -687,6 +687,7 @@ void OscillatorModuleComponent::populateScalaDrop()
     int id = 0;
     juce::File scalaFilesPath =
         juce::File::getSpecialLocation(juce::File::SpecialLocationType::userDocumentsDirectory)
+            .getChildFile("nephos_data")
             .getChildFile("scala_scales");
     for (auto &e : juce::RangedDirectoryIterator(scalaFilesPath, false))
     {
