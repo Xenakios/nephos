@@ -684,16 +684,23 @@ void OscillatorModuleComponent::populateScalaDrop()
 {
     scalaDrop.rootNode.children.clear();
     scalaIdToPath.clear();
-    int id = 0;
     juce::File scalaFilesPath =
         juce::File::getSpecialLocation(juce::File::SpecialLocationType::userDocumentsDirectory)
             .getChildFile("nephos_data")
             .getChildFile("scala_scales");
+    std::vector<juce::File> files;
     for (auto &e : juce::RangedDirectoryIterator(scalaFilesPath, false))
     {
-        auto strpath = e.getFile().getFileNameWithoutExtension().toStdString();
+        files.push_back(e.getFile());
+    }
+    int id = 0;
+    std::sort(files.begin(), files.end(),
+              [](const juce::File &lhs, const juce::File &rhs) { return lhs < rhs; });
+    for (auto &e : files)
+    {
+        auto strpath = e.getFileNameWithoutExtension().toStdString();
         scalaDrop.rootNode.children.emplace_back(strpath, id);
-        strpath = e.getFile().getFullPathName().toStdString();
+        strpath = e.getFullPathName().toStdString();
         scalaIdToPath[id] = strpath;
         ++id;
     }
