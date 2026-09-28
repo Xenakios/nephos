@@ -121,7 +121,16 @@ struct ModulationRowComponent : public juce::Component
         juce::MessageManager::getInstance()->callAsync(
             [this]() { getParentComponent()->addChildComponent(sourcePicker); });
 
-        addAndMakeVisible(viaDrop);
+        addAndMakeVisible(showViaPicker);
+        showViaPicker.setButtonText("None");
+        showViaPicker.onClick = [this]() {
+            viaPicker.toFront(true);
+            viaPicker.setBounds(1, 1, getParentWidth() - 2, getParentHeight() - 2);
+            viaPicker.setVisible(!viaPicker.isVisible());
+        };
+        juce::MessageManager::getInstance()->callAsync(
+            [this]() { getParentComponent()->addChildComponent(viaPicker); });
+
         addAndMakeVisible(depthSlider);
 
         auto updatfunc = [this] {
@@ -129,7 +138,7 @@ struct ModulationRowComponent : public juce::Component
             msg.modslot = modslotindex;
             msg.depth = depthSlider.getValue();
             msg.modsource = sourcePicker.selectedID;
-            msg.modvia = viaDrop.selectedId;
+            msg.modvia = viaPicker.selectedID;
             msg.moddest = destDrop.selectedId;
             msg.modcurve = curveDrop.selectedId;
             msg.opcode = ThreadMessage::OP_MODROUTING;
@@ -142,7 +151,13 @@ struct ModulationRowComponent : public juce::Component
             updatfunc();
         };
         fillPickerWithSources(sourcePicker);
-        viaDrop.OnItemSelected = updatfunc;
+        fillPickerWithSources(viaPicker);
+        viaPicker.OnSelected = [this, updatfunc](int64_t id) {
+            auto txt = viaPicker.get_text_from_id(id);
+            if (txt)
+                showViaPicker.setButtonText(*txt);
+            updatfunc();
+        };
         depthSlider.OnValueChanged = [this]() {
             ParameterMessage msg;
             msg.id = ToneGranulator::PAR_MAINMODDEPTHSTART + modslotindex;
@@ -180,6 +195,13 @@ struct ModulationRowComponent : public juce::Component
         auto txt = sourcePicker.get_text_from_id(id);
         if (txt)
             showSourcePicker.setButtonText(*txt);
+    }
+    void update_via(int64_t id)
+    {
+        viaPicker.selectedID = id;
+        auto txt = viaPicker.get_text_from_id(id);
+        if (txt)
+            showViaPicker.setButtonText(*txt);
     }
     void initDestinationDrop()
     {
@@ -235,7 +257,7 @@ struct ModulationRowComponent : public juce::Component
                                     juce::FlexBox::JustifyContent::flexStart);
         layout.items.add(juce::FlexItem(slotLabel).withFlex(0.15));
         layout.items.add(juce::FlexItem(showSourcePicker).withFlex(0.5));
-        layout.items.add(juce::FlexItem(viaDrop).withFlex(0.5));
+        layout.items.add(juce::FlexItem(showViaPicker).withFlex(0.5));
         layout.items.add(juce::FlexItem(depthSlider).withFlex(2.0));
         layout.items.add(juce::FlexItem(curveDrop).withFlex(0.5));
         layout.items.add(juce::FlexItem(destDrop).withFlex(0.5));
@@ -258,7 +280,8 @@ struct ModulationRowComponent : public juce::Component
     GalleryPicker sourcePicker;
     juce::TextButton showSourcePicker;
 
-    DropDownComponent viaDrop;
+    GalleryPicker viaPicker;
+    juce::TextButton showViaPicker;
 
     DropDownComponent curveDrop;
     DropDownComponent destDrop;

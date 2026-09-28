@@ -232,7 +232,7 @@ void AudioPluginAudioProcessorEditor::timerCallback()
         {
             modulationPage.modRowComps[msg.modslot]->update_source(msg.modsource);
             
-            modulationPage.modRowComps[msg.modslot]->viaDrop.setSelectedId(msg.modvia);
+            modulationPage.modRowComps[msg.modslot]->update_via(msg.modvia);
 
             modulationPage.modRowComps[msg.modslot]->destDrop.setSelectedId(msg.moddest);
 
