@@ -699,6 +699,17 @@ class InsertModuleComponent : public juce::GroupComponent
         }
         flex.performLayout(juce::Rectangle<int>(7, 21 + 17, getWidth() - 14, getHeight() - 40));
     }
+    void setSelectedEffect(GrainInsertFX::ModeInfo &info)
+    {
+        for (auto &e : filterInfoMapForPicker)
+        {
+            if (e.second == info)
+            {
+                fxPicker.selectedID = e.first;
+                break;
+            }
+        }
+    }
     AudioPluginAudioProcessor &processorRef;
     int insertsIndex = -1;
     std::function<void(void)> OnInsertTypeChanged;

@@ -219,6 +219,7 @@ void AudioPluginAudioProcessorEditor::timerCallback()
                     e.second.sstmodel == msg.filtermodel && e.second.sstconfig == msg.filterconfig)
                 {
                     mainPage.insertComponents[msg.filterindex]->insertDrop.setSelectedId(e.first);
+                    mainPage.insertComponents[msg.filterindex]->setSelectedEffect(e.second);
                     break;
                 }
             }
@@ -264,8 +265,6 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
         juce::Timer::callAfterDelay(1000, [this]() { processorRef.corruptAudioOnPurpose = false; });
     };
     */
-    
-    
 
     mainOutModuleComponent.perfComponent.RequestData = [this](int &maxvoices, int &usedvoices,
                                                               float &cpu) {
@@ -335,7 +334,6 @@ void MainPageComponent::resized()
     //  keyboardComponent.setBounds(1, getHeight() - 50, getWidth() - 300, 49);
     //  testTree.setBounds(getWidth() - 299, timeModuleComponent.getBottom() + 2, 300, 300);
     corruptButton.setBounds(getWidth() - 200, stackModuleComponent.getBottom() + 2, 190, 25);
-    
 }
 
 MacrosPresetsComponent::MacrosPresetsComponent(AudioPluginAudioProcessor &p) : processorRef(p)

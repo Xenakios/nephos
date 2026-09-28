@@ -136,6 +136,7 @@ class GalleryPicker : public juce::Component
     };
     std::vector<Category> categories;
     std::function<void(int64_t)> OnSelected;
+    int64_t selectedID = -1;
     GalleryPicker() { setWantsKeyboardFocus(true); }
     bool keyPressed(const juce::KeyPress &ev) override
     {
@@ -146,36 +147,7 @@ class GalleryPicker : public juce::Component
         }
         return false;
     }
-    void resized() override
-    {
-        float itemh = 20.0f;
-        float yoffs = 1.0f;
-        float cellw = 140.0f;
-        for (size_t i = 0; i < categories.size(); ++i)
-        {
-            if (!categories[i].text.empty())
-            {
-                juce::Rectangle<float> r{1.0f, yoffs, cellw, itemh};
-                categories[i].rect = r;
-                yoffs += itemh;
-            }
-            float xoffs = 1.0f;
-            for (int j = 0; j < categories[i].items.size(); ++j)
-            {
-                if (xoffs + cellw >= getWidth())
-                {
-                    xoffs = 1.0f;
-                    yoffs += itemh;
-                }
-                auto &it = categories[i].items[j];
-                juce::Rectangle<float> r{xoffs, yoffs, cellw, itemh};
-                r = r.reduced(2.0f);
-                it.rect = r;
-                xoffs += cellw;
-            }
-            yoffs += itemh;
-        }
-    }
+    void resized() override;
     void mouseDown(const juce::MouseEvent &ev) override
     {
         int64_t id = -1;
@@ -194,7 +166,9 @@ class GalleryPicker : public juce::Component
         }
         if (id != -1 && OnSelected)
         {
+            selectedID = id;
             OnSelected(id);
+            repaint();
         }
     }
     void paint(juce::Graphics &g) override;

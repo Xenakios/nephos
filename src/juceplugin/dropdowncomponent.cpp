@@ -1,23 +1,20 @@
 #include "dropdowncomponent.h"
+#include "juce_graphics/juce_graphics.h"
 
-void GalleryPicker::paint(juce::Graphics &g)
+void GalleryPicker::resized()
 {
-    g.fillAll(juce::Colours::black);
     float itemh = 20.0f;
     float yoffs = 1.0f;
-    float cellw = 140.0f;
+    float cellw = 145.0f;
     for (size_t i = 0; i < categories.size(); ++i)
     {
-        if (!categories[i].text.empty() && !categories[i].rect.isEmpty())
+        if (!categories[i].text.empty())
         {
-            auto r = categories[i].rect;
-            // g.setColour(juce::Colours::darkgrey);
-            // g.fillRect(r);
-            g.setColour(juce::Colours::white);
-            g.drawText(categories[i].text, r, juce::Justification::centred);
-            yoffs += itemh;
+            juce::Rectangle<float> r{1.0f, yoffs, cellw, itemh};
+            categories[i].rect = r;
+            // yoffs += itemh;
         }
-        float xoffs = 1.0f;
+        float xoffs = cellw;
         for (int j = 0; j < categories[i].items.size(); ++j)
         {
             if (xoffs + cellw >= getWidth())
@@ -25,20 +22,48 @@ void GalleryPicker::paint(juce::Graphics &g)
                 xoffs = 1.0f;
                 yoffs += itemh;
             }
+            auto &it = categories[i].items[j];
+            juce::Rectangle<float> r{xoffs, yoffs, cellw, itemh};
+            r = r.reduced(1.0f);
+            it.rect = r;
+            xoffs += cellw;
+        }
+        yoffs += itemh + 1.0f;
+    }
+}
+
+void GalleryPicker::paint(juce::Graphics &g)
+{
+    g.fillAll(juce::Colours::black);
+    for (size_t i = 0; i < categories.size(); ++i)
+    {
+        if (!categories[i].text.empty() && !categories[i].rect.isEmpty())
+        {
+            auto r = categories[i].rect;
+            // g.setColour(juce::Colours::darkgrey);
+            // g.fillRect(r);
+            g.setColour(juce::Colours::yellow);
+            g.drawText(categories[i].text, r, juce::Justification::centredRight);
+        }
+        for (int j = 0; j < categories[i].items.size(); ++j)
+        {
             const auto &it = categories[i].items[j];
             if (!it.rect.isEmpty())
             {
                 auto r = it.rect;
-                r = r.reduced(2.0f);
-                g.setColour(juce::Colours::darkgrey);
-                g.fillRect(r);
-                g.setColour(juce::Colours::yellow);
+                g.setColour(juce::Colours::grey);
+                if (it.id == selectedID)
+                {
+                    g.fillRoundedRectangle(r, 4.0f);
+                    g.setColour(juce::Colours::white);
+                }
+                else
+                {
+                    g.drawRoundedRectangle(r, 4.0f, 1.0f);
+                    g.setColour(juce::Colours::white.darker());
+                }
                 g.drawText(it.text, r, juce::Justification::centred);
             }
-            // juce::Rectangle<float> r{xoffs, yoffs, cellw, itemh};
-
-            xoffs += cellw;
         }
-        yoffs += itemh;
     }
 }

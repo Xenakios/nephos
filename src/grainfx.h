@@ -91,6 +91,11 @@ class GrainInsertFX
         uint8_t awtype = 0;
         sst::filtersplusplus::FilterModel sstmodel;
         sst::filtersplusplus::ModelConfig sstconfig;
+        bool operator==(const ModeInfo other) const
+        {
+            return mainmode == other.mainmode && awtype == other.awtype &&
+                   sstmodel == other.sstmodel && sstconfig == other.sstconfig;
+        }
     };
     alignas(16) std::array<float, 10> paramvalues;
     alignas(16) std::array<float, 10> parammodvalues;
