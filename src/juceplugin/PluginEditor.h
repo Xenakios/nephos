@@ -139,7 +139,7 @@ struct ModulationRowComponent : public juce::Component
             msg.depth = depthSlider.getValue();
             msg.modsource = sourcePicker.selectedID;
             msg.modvia = viaPicker.selectedID;
-            msg.moddest = destDrop.selectedId;
+            msg.moddest = destPicker.selectedID;
             msg.modcurve = curveDrop.selectedId;
             msg.opcode = ThreadMessage::OP_MODROUTING;
             processorRef.from_gui_fifo.push(msg);
@@ -170,18 +170,26 @@ struct ModulationRowComponent : public juce::Component
         fillDropWithCurves(curveDrop, "Curve");
         curveDrop.OnItemSelected = updatfunc;
 
-        addAndMakeVisible(destDrop);
-        initDestinationDrop();
-        destDrop.setSelectedId(1);
-        destDrop.OnItemSelected = [updatfunc, this]() {
-            auto id = destDrop.selectedId;
+        addAndMakeVisible(showDestButton);
+        showDestButton.setButtonText("None");
+        showDestButton.onClick = [this]() {
+            destPicker.toFront(true);
+            destPicker.setBounds(1, 1, getParentWidth() - 2, getParentHeight() - 2);
+            destPicker.setVisible(!destPicker.isVisible());
+        };
+        juce::MessageManager::getInstance()->callAsync(
+            [this]() { getParentComponent()->addChildComponent(destPicker); });
+        initDestinationPicker();
+        // destDrop.setSelectedId(1);
+        destPicker.OnSelected = [updatfunc, this](int64_t id) {
             if (id > 0)
             {
                 if (id > 1)
                 {
-                    auto pmd = gr->idtoparmetadata[destDrop.selectedId];
-                    auto d = gr->modRanges[destDrop.selectedId];
+                    auto pmd = gr->idtoparmetadata[id];
+                    auto d = gr->modRanges[id];
                     depthSlider.setModulationDisplayDepth(d, pmd->unit);
+                    showDestButton.setButtonText(pmd->name);
                 }
                 updatfunc();
             }
@@ -203,21 +211,30 @@ struct ModulationRowComponent : public juce::Component
         if (txt)
             showViaPicker.setButtonText(*txt);
     }
-    void initDestinationDrop()
+    void update_destination(int64_t id)
     {
-        destDrop.rootNode.children.clear();
-        destDrop.rootNode.text = "Modulation target";
-        destDrop.rootNode.children.push_back({"No target", 1});
-        std::map<std::string, Node *> nodemap;
-        destDrop.rootNode.children.reserve(128);
+        destPicker.selectedID = id;
+        auto txt = destPicker.get_text_from_id(id);
+        if (txt)
+            showDestButton.setButtonText(*txt);
+    }
+    void initDestinationPicker()
+    {
+        destPicker.categories.clear();
+        destPicker.categories.reserve(64);
+        std::map<std::string, GalleryPicker::Category *> catmap;
+        destPicker.categories.emplace_back("");
+        destPicker.categories.back().items.push_back(GalleryPicker::Item(1,"None"));
         for (auto &pmd : gr->parmetadatas)
         {
             if (pmd.flags & CLAP_PARAM_IS_MODULATABLE && !pmd.groupName.empty())
             {
-                if (nodemap.count(pmd.groupName) == 0)
+                if (catmap.count(pmd.groupName) == 0)
                 {
-                    destDrop.rootNode.children.push_back({pmd.groupName, 0});
-                    nodemap[pmd.groupName] = &destDrop.rootNode.children.back();
+                    GalleryPicker::Category cat;
+                    cat.text = pmd.groupName;
+                    destPicker.categories.push_back(cat);
+                    catmap[pmd.groupName] = &destPicker.categories.back();
                 }
             }
         }
@@ -225,25 +242,23 @@ struct ModulationRowComponent : public juce::Component
         {
             if (pmd.flags & CLAP_PARAM_IS_MODULATABLE)
             {
-                if (pmd.groupName.empty())
+                if (!pmd.groupName.empty())
                 {
-                    destDrop.rootNode.children.push_back({pmd.name, (int)pmd.id});
-                }
-                else
-                {
-                    nodemap[pmd.groupName]->children.push_back({pmd.name, (int)pmd.id});
+                    GalleryPicker::Item item;
+                    item.text = pmd.name;
+                    item.id = pmd.id;
+                    catmap[pmd.groupName]->items.push_back(item);
                 }
             }
         }
-        destDrop.setSelectedId(destDrop.getSelectedId());
     }
     void setTarget(uint32_t parid)
     {
-        destDrop.setSelectedId(parid);
+        destPicker.selectedID = parid;
         if (parid > 1)
         {
-            auto pmd = gr->idtoparmetadata[destDrop.selectedId];
-            auto d = gr->modRanges[destDrop.selectedId];
+            auto pmd = gr->idtoparmetadata[parid];
+            auto d = gr->modRanges[parid];
             depthSlider.setModulationDisplayDepth(d, pmd->unit);
         }
     }
@@ -260,7 +275,7 @@ struct ModulationRowComponent : public juce::Component
         layout.items.add(juce::FlexItem(showViaPicker).withFlex(0.5));
         layout.items.add(juce::FlexItem(depthSlider).withFlex(2.0));
         layout.items.add(juce::FlexItem(curveDrop).withFlex(0.5));
-        layout.items.add(juce::FlexItem(destDrop).withFlex(0.5));
+        layout.items.add(juce::FlexItem(showDestButton).withFlex(0.5));
         layout.performLayout(juce::Rectangle<int>{0, 0, getWidth(), getHeight()});
     }
     ToneGranulator *gr = nullptr;
@@ -284,7 +299,8 @@ struct ModulationRowComponent : public juce::Component
     juce::TextButton showViaPicker;
 
     DropDownComponent curveDrop;
-    DropDownComponent destDrop;
+    GalleryPicker destPicker;
+    juce::TextButton showDestButton;
 
   private:
     XapSlider depthSlider;

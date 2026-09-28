@@ -89,7 +89,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
         c->OnInsertTypeChanged = [this]() {
             for (auto &modrow : modulationPage.modRowComps)
             {
-                modrow->initDestinationDrop();
+                modrow->initDestinationPicker();
             }
         };
     }
@@ -234,7 +234,7 @@ void AudioPluginAudioProcessorEditor::timerCallback()
             
             modulationPage.modRowComps[msg.modslot]->update_via(msg.modvia);
 
-            modulationPage.modRowComps[msg.modslot]->destDrop.setSelectedId(msg.moddest);
+            modulationPage.modRowComps[msg.modslot]->update_destination(msg.moddest);
 
             modulationPage.modRowComps[msg.modslot]->setTarget(msg.moddest);
             modulationPage.modRowComps[msg.modslot]->curveDrop.setSelectedId(msg.modcurve);
