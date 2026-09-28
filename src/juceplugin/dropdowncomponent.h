@@ -1,5 +1,6 @@
 #pragma once
 
+#include "juce_graphics/juce_graphics.h"
 #include "juce_gui_basics/juce_gui_basics.h"
 
 struct DropDownComponent : public juce::Component
@@ -116,4 +117,85 @@ struct DropDownComponent : public juce::Component
     int64_t selectedId = 0;
     std::string selectedText;
     std::function<void(void)> OnItemSelected;
+};
+
+class GalleryPicker : public juce::Component
+{
+  public:
+    struct Item
+    {
+        int64_t id = 0;
+        std::string text;
+        juce::Rectangle<float> rect;
+    };
+    struct Category
+    {
+        std::string text;
+        juce::Rectangle<float> rect;
+        std::vector<Item> items;
+    };
+    std::vector<Category> categories;
+    std::function<void(int64_t)> OnSelected;
+    GalleryPicker() { setWantsKeyboardFocus(true); }
+    bool keyPressed(const juce::KeyPress &ev) override
+    {
+        if (ev.getKeyCode() == juce::KeyPress::escapeKey)
+        {
+            setVisible(false);
+            return true;
+        }
+        return false;
+    }
+    void resized() override
+    {
+        float itemh = 20.0f;
+        float yoffs = 1.0f;
+        float cellw = 140.0f;
+        for (size_t i = 0; i < categories.size(); ++i)
+        {
+            if (!categories[i].text.empty())
+            {
+                juce::Rectangle<float> r{1.0f, yoffs, cellw, itemh};
+                categories[i].rect = r;
+                yoffs += itemh;
+            }
+            float xoffs = 1.0f;
+            for (int j = 0; j < categories[i].items.size(); ++j)
+            {
+                if (xoffs + cellw >= getWidth())
+                {
+                    xoffs = 1.0f;
+                    yoffs += itemh;
+                }
+                auto &it = categories[i].items[j];
+                juce::Rectangle<float> r{xoffs, yoffs, cellw, itemh};
+                r = r.reduced(2.0f);
+                it.rect = r;
+                xoffs += cellw;
+            }
+            yoffs += itemh;
+        }
+    }
+    void mouseDown(const juce::MouseEvent &ev) override
+    {
+        int64_t id = -1;
+        for (auto &cate : categories)
+        {
+            for (auto &it : cate.items)
+            {
+                if (it.rect.contains(ev.position))
+                {
+                    id = it.id;
+                    break;
+                }
+            }
+            if (id != -1)
+                break;
+        }
+        if (id != -1 && OnSelected)
+        {
+            OnSelected(id);
+        }
+    }
+    void paint(juce::Graphics &g) override;
 };

@@ -65,8 +65,9 @@ std::vector<GrainInsertFX::ModeInfo> GrainInsertFX::getAvailableModes()
             {
                 subname += " " + sfpp::toString(smt);
             }
-            result.emplace_back(sfpp::toString(mo) + " " + subname, sfpp::toString(mo),
-                                GFXSSTFILTER, 0, mo, co);
+            // result.emplace_back(sfpp::toString(mo) + " " + subname, sfpp::toString(mo),
+            //                     GFXSSTFILTER, 0, mo, co);
+            result.emplace_back(subname, sfpp::toString(mo), GFXSSTFILTER, 0, mo, co);
         }
     }
     std::sort(result.begin(), result.end(), [](auto const &lhs, auto const &rhs) {

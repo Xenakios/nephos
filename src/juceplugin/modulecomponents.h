@@ -560,6 +560,51 @@ class InsertModuleComponent : public juce::GroupComponent
         : juce::GroupComponent("", fmt::format("Insert FX {}", char('A' + insertIndex))),
           processorRef(p), insertsIndex(insertIndex)
     {
+        addAndMakeVisible(showPickerButton);
+        showPickerButton.setButtonText("Show");
+        showPickerButton.onClick = [this]() {
+            fxPicker.setVisible(!fxPicker.isVisible());
+            fxPicker.toFront(true);
+        };
+        juce::MessageManager::getInstance()->callAsync(
+            [this]() { getParentComponent()->addChildComponent(fxPicker); });
+
+        auto fxmodes = GrainInsertFX::getAvailableModes();
+        std::map<std::string, GalleryPicker::Category *> categories;
+        fxPicker.categories.reserve(64);
+        int64_t fxid = 0;
+        for (auto &fmode : fxmodes)
+        {
+            if (!categories.count(fmode.groupname))
+            {
+                GalleryPicker::Category item;
+                item.text = fmode.groupname;
+                fxPicker.categories.push_back(item);
+                categories[fmode.groupname] = &fxPicker.categories.back();
+            }
+            GalleryPicker::Item item;
+            item.text = fmode.displayname;
+            item.id = fxid;
+            filterInfoMapForPicker[fxid] = fmode;
+            ++fxid;
+            categories[fmode.groupname]->items.push_back(item);
+        }
+        fxPicker.OnSelected = [this](int64_t id) {
+            auto it = filterInfoMapForPicker.find(id);
+            if (it != filterInfoMapForPicker.end())
+            {
+                DBG(it->second.displayname);
+                ThreadMessage msg;
+                msg.opcode = ThreadMessage::OP_FILTERTYPE;
+                msg.filterindex = insertsIndex;
+                msg.insertmainmode = it->second.mainmode;
+                msg.awtype = it->second.awtype;
+                msg.filtermodel = it->second.sstmodel;
+                msg.filterconfig = it->second.sstconfig;
+                processorRef.from_gui_fifo.push(msg);
+            }
+            juce::Timer::callAfterDelay(250, [this]() { updateInsertMetadatas(); });
+        };
         fillInsertDrop();
         addAndMakeVisible(insertDrop);
         insertDrop.OnItemSelected = [this]() { handleInsertSelection(); };
@@ -643,6 +688,9 @@ class InsertModuleComponent : public juce::GroupComponent
     void resized() override
     {
         insertDrop.setBounds(7, 17, 275, 20);
+        showPickerButton.setBounds(insertDrop.getRight(), insertDrop.getY(), 75, 20);
+        fxPicker.setBounds(1, 1, getParentComponent()->getWidth() - 2,
+                           getParentComponent()->getHeight() - 2);
         juce::FlexBox flex;
         flex.flexDirection = juce::FlexBox::Direction::row;
         for (auto &c : knobs)
@@ -655,8 +703,11 @@ class InsertModuleComponent : public juce::GroupComponent
     int insertsIndex = -1;
     std::function<void(void)> OnInsertTypeChanged;
     std::map<int64_t, GrainInsertFX::ModeInfo> filterInfoMap;
+    std::map<int64_t, GrainInsertFX::ModeInfo> filterInfoMapForPicker;
     DropDownComponent insertDrop;
     std::vector<std::unique_ptr<XapSlider>> knobs;
+    GalleryPicker fxPicker;
+    juce::TextButton showPickerButton;
 };
 
 class VolumeModuleComponent : public juce::GroupComponent
