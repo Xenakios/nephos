@@ -349,7 +349,8 @@ class OscillatorModuleComponent : public juce::GroupComponent
     XapSlider oscNoiseCorrelationKnob;
     XapSlider oscNoiseModeDrop;
     XapSlider quantizePitchToggle;
-    DropDownComponent scalaDrop;
+    GalleryPicker scalaPicker;
+    juce::TextButton showScalaPicker;
     GrainEnvelopeEditorComponent pitchEnvelopeComponent;
     GrainModulationVisualizationComponent grainModComponent;
     juce::TextEditor oscTypeEditor;

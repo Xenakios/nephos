@@ -137,6 +137,7 @@ class GalleryPicker : public juce::Component
     std::vector<Category> categories;
     std::function<void(int64_t)> OnSelected;
     int64_t selectedID = -1;
+    float cellw = 145.0f;
     GalleryPicker() { setWantsKeyboardFocus(true); }
     bool keyPressed(const juce::KeyPress &ev) override
     {

@@ -5,7 +5,7 @@ void GalleryPicker::resized()
 {
     float itemh = 20.0f;
     float yoffs = 1.0f;
-    float cellw = 145.0f;
+    
     for (size_t i = 0; i < categories.size(); ++i)
     {
         if (!categories[i].text.empty())

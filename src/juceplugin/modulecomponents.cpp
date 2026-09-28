@@ -1,7 +1,9 @@
 #include "modulecomponents.h"
 #include "PluginProcessor.h"
 #include "clap/id.h"
+#include "dropdowncomponent.h"
 #include "juce_core/juce_core.h"
+#include "juce_events/juce_events.h"
 #include "juce_graphics/juce_graphics.h"
 #include "juce_gui_basics/juce_gui_basics.h"
 #include "sst/basic-blocks/dsp/SpecialFunctions.h"
@@ -593,16 +595,27 @@ OscillatorModuleComponent::OscillatorModuleComponent(AudioPluginAudioProcessor &
 {
     addAndMakeVisible(grainModComponent);
     addAndMakeVisible(oscTypeComponent);
-    addAndMakeVisible(scalaDrop);
-    populateScalaDrop();
-    scalaDrop.OnItemSelected = [this]() {
-        auto strpath = scalaIdToPath[scalaDrop.getSelectedId()];
+    addAndMakeVisible(showScalaPicker);
+    showScalaPicker.setButtonText("12-edo");
+    showScalaPicker.onClick = [this]() {
+        scalaPicker.toFront(true);
+        scalaPicker.setVisible(!scalaPicker.isVisible());
+        scalaPicker.setBounds(1, 1, getParentWidth(), getParentHeight());
+    };
+    scalaPicker.cellw = 290.0f;
+    scalaPicker.OnSelected = [this](int64_t id) {
+        auto strpath = scalaIdToPath[id];
         auto err = processorRef.granulator.load_scala_file(strpath, false);
         if (!err.empty())
         {
             DBG(err);
         }
     };
+    juce::MessageManager::getInstance()->callAsync(
+        [this]() { getParentComponent()->addChildComponent(scalaPicker); });
+
+    populateScalaDrop();
+
     initSlider(p, *this, oscPitchKnob);
     initSlider(p, *this, quantizePitchToggle);
     for (int i = 0; i < GrainEvent::max_grain_mod_slots; ++i)
@@ -674,7 +687,7 @@ void OscillatorModuleComponent::updateScalaDropFromPath(std::string path)
     {
         if (e.second == path)
         {
-            scalaDrop.setSelectedId(e.first);
+            scalaPicker.selectedID = e.first;
             break;
         }
     }
@@ -682,7 +695,10 @@ void OscillatorModuleComponent::updateScalaDropFromPath(std::string path)
 
 void OscillatorModuleComponent::populateScalaDrop()
 {
-    scalaDrop.rootNode.children.clear();
+    scalaPicker.categories.clear();
+    GalleryPicker::Category c;
+    c.text = "Scala Scales/Tunings";
+    scalaPicker.categories.push_back(c);
     scalaIdToPath.clear();
     juce::File scalaFilesPath =
         juce::File::getSpecialLocation(juce::File::SpecialLocationType::userDocumentsDirectory)
@@ -699,12 +715,15 @@ void OscillatorModuleComponent::populateScalaDrop()
     for (auto &e : files)
     {
         auto strpath = e.getFileNameWithoutExtension().toStdString();
-        scalaDrop.rootNode.children.emplace_back(strpath, id);
+        GalleryPicker::Item item;
+        item.text = strpath;
+        item.id = id;
+        scalaPicker.categories.front().items.push_back(item);
         strpath = e.getFullPathName().toStdString();
         scalaIdToPath[id] = strpath;
         ++id;
     }
-    scalaDrop.setSelectedId(0);
+    scalaPicker.selectedID = 0;
 }
 
 void OscillatorModuleComponent::resized()
@@ -725,7 +744,7 @@ void OscillatorModuleComponent::resized()
                                      200, 200);
     grainModComponent.setBounds(pitchEnvelopeComponent.getRight() + 2, oscTypeComponent.getBottom(),
                                 200, 200);
-    scalaDrop.setBounds(grainModComponent.getRight() + 2, getHeight() - 40, 250, 20);
+    showScalaPicker.setBounds(grainModComponent.getRight() + 2, getHeight() - 40, 250, 20);
     oscSyncKnob.setBounds(grainModComponent.getRight() + 2, oscTypeComponent.getBottom() + 1, 80,
                           50);
     oscPWKnob.setBounds(grainModComponent.getRight() + 2, oscSyncKnob.getBottom() + 1, 80, 50);
