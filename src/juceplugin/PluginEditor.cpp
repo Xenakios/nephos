@@ -230,8 +230,8 @@ void AudioPluginAudioProcessorEditor::timerCallback()
         if (msg.opcode == ThreadMessage::OP_MODROUTING &&
             msg.modslot < modulationPage.modRowComps.size())
         {
-            modulationPage.modRowComps[msg.modslot]->sourceDrop.setSelectedId(msg.modsource);
-
+            modulationPage.modRowComps[msg.modslot]->update_source(msg.modsource);
+            
             modulationPage.modRowComps[msg.modslot]->viaDrop.setSelectedId(msg.modvia);
 
             modulationPage.modRowComps[msg.modslot]->destDrop.setSelectedId(msg.moddest);

@@ -69,36 +69,36 @@ struct ModulationRowComponent : public juce::Component
         }
         drop.setSelectedId(0);
     }
-    void fillDropWithSources(DropDownComponent &drop, std::string roottext)
+    void fillPickerWithSources(GalleryPicker &gal)
     {
-        drop.rootNode.text = roottext;
-        std::map<std::string, DropDownComponent::Node *> nodemap;
-        drop.rootNode.children.reserve(16);
+        std::map<std::string, GalleryPicker::Category *> catmap;
+        gal.categories.clear();
+        gal.categories.reserve(64);
         for (int i = 0; i < gr->modSourceInfos.size(); ++i)
         {
             auto &ms = gr->modSourceInfos[i];
             if (!ms.groupname.empty())
             {
-                if (nodemap.count(ms.groupname) == 0)
+                if (catmap.count(ms.groupname) == 0)
                 {
-                    drop.rootNode.children.push_back({ms.groupname, -1});
-                    nodemap[ms.groupname] = &drop.rootNode.children.back();
+                    GalleryPicker::Category cate;
+                    cate.text = ms.groupname;
+                    gal.categories.push_back(cate);
+                    catmap[ms.groupname] = &gal.categories.back();
                 }
             }
         }
         for (int i = 0; i < gr->modSourceInfos.size(); ++i)
         {
             auto &ms = gr->modSourceInfos[i];
-            if (ms.groupname.empty())
+            if (!ms.groupname.empty())
             {
-                drop.rootNode.children.push_back({ms.name, (int)ms.id.src});
-            }
-            else
-            {
-                nodemap[ms.groupname]->children.push_back({ms.name, (int)ms.id.src});
+                GalleryPicker::Item it;
+                it.id = ms.id.src;
+                it.text = ms.name;
+                catmap[ms.groupname]->items.push_back(it);
             }
         }
-        drop.setSelectedId(0);
     }
     using Node = DropDownComponent::Node;
     AudioPluginAudioProcessor &processorRef;
@@ -111,7 +111,16 @@ struct ModulationRowComponent : public juce::Component
                           .withLinearScaleFormatting("")
                           .withID(ToneGranulator::PAR_MAINMODDEPTHSTART + modindex))
     {
-        addAndMakeVisible(sourceDrop);
+        addAndMakeVisible(showSourcePicker);
+        showSourcePicker.setButtonText("None");
+        showSourcePicker.onClick = [this]() {
+            sourcePicker.toFront(true);
+            sourcePicker.setBounds(1, 1, getParentWidth() - 2, getParentHeight() - 2);
+            sourcePicker.setVisible(!sourcePicker.isVisible());
+        };
+        juce::MessageManager::getInstance()->callAsync(
+            [this]() { getParentComponent()->addChildComponent(sourcePicker); });
+
         addAndMakeVisible(viaDrop);
         addAndMakeVisible(depthSlider);
 
@@ -119,16 +128,20 @@ struct ModulationRowComponent : public juce::Component
             ThreadMessage msg;
             msg.modslot = modslotindex;
             msg.depth = depthSlider.getValue();
-            msg.modsource = sourceDrop.selectedId;
+            msg.modsource = sourcePicker.selectedID;
             msg.modvia = viaDrop.selectedId;
             msg.moddest = destDrop.selectedId;
             msg.modcurve = curveDrop.selectedId;
             msg.opcode = ThreadMessage::OP_MODROUTING;
             processorRef.from_gui_fifo.push(msg);
         };
-        fillDropWithSources(sourceDrop, "Modulation source");
-        sourceDrop.OnItemSelected = updatfunc;
-        fillDropWithSources(viaDrop, "Modulation via source");
+        sourcePicker.OnSelected = [this, updatfunc](int64_t id) {
+            auto txt = sourcePicker.get_text_from_id(id);
+            if (txt)
+                showSourcePicker.setButtonText(*txt);
+            updatfunc();
+        };
+        fillPickerWithSources(sourcePicker);
         viaDrop.OnItemSelected = updatfunc;
         depthSlider.OnValueChanged = [this]() {
             ParameterMessage msg;
@@ -136,18 +149,6 @@ struct ModulationRowComponent : public juce::Component
             msg.value = depthSlider.getValue();
             processorRef.params_from_gui_fifo.push(msg);
         };
-        /*
-        depthSlider.OnValueChanged = [this]() {
-            CallbackParams pars{true,
-                                modslotindex,
-                                (int)sourceDrop.selectedId,
-                                (int)viaDrop.selectedId,
-                                (int)curveDrop.selectedId,
-                                (float)depthSlider.getValue(),
-                                (uint32_t)destDrop.selectedId};
-            stateChangedCallback(pars);
-        };
-        */
         addAndMakeVisible(curveDrop);
 
         using mcf = GranulatorModConfig;
@@ -172,6 +173,13 @@ struct ModulationRowComponent : public juce::Component
         };
         addAndMakeVisible(slotLabel);
         slotLabel.setJustificationType(juce::Justification::centred);
+    }
+    void update_source(int64_t id)
+    {
+        sourcePicker.selectedID = id;
+        auto txt = sourcePicker.get_text_from_id(id);
+        if (txt)
+            showSourcePicker.setButtonText(*txt);
     }
     void initDestinationDrop()
     {
@@ -226,7 +234,7 @@ struct ModulationRowComponent : public juce::Component
                                     juce::FlexBox::AlignItems::stretch,
                                     juce::FlexBox::JustifyContent::flexStart);
         layout.items.add(juce::FlexItem(slotLabel).withFlex(0.15));
-        layout.items.add(juce::FlexItem(sourceDrop).withFlex(0.5));
+        layout.items.add(juce::FlexItem(showSourcePicker).withFlex(0.5));
         layout.items.add(juce::FlexItem(viaDrop).withFlex(0.5));
         layout.items.add(juce::FlexItem(depthSlider).withFlex(2.0));
         layout.items.add(juce::FlexItem(curveDrop).withFlex(0.5));
@@ -247,7 +255,9 @@ struct ModulationRowComponent : public juce::Component
 
     int modslotindex = -1;
     juce::Label slotLabel;
-    DropDownComponent sourceDrop;
+    GalleryPicker sourcePicker;
+    juce::TextButton showSourcePicker;
+
     DropDownComponent viaDrop;
 
     DropDownComponent curveDrop;
@@ -266,7 +276,6 @@ class MainPageComponent final : public juce::Component
     //==============================================================================
     void paint(juce::Graphics &) override;
     void resized() override;
-    
 
     AudioPluginAudioProcessor &processorRef;
     OscillatorModuleComponent oscModuleComponent;
