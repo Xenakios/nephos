@@ -139,6 +139,20 @@ class GalleryPicker : public juce::Component
     int64_t selectedID = -1;
     float cellw = 145.0f;
     GalleryPicker() { setWantsKeyboardFocus(true); }
+    std::optional<std::string> get_text_from_id(int64_t id)
+    {
+        for (auto &c : categories)
+        {
+            for (auto &it : c.items)
+            {
+                if (it.id == id)
+                {
+                    return it.text;
+                }
+            }
+        }
+        return {};
+    }
     bool keyPressed(const juce::KeyPress &ev) override
     {
         if (ev.getKeyCode() == juce::KeyPress::escapeKey)

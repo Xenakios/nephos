@@ -213,12 +213,11 @@ void AudioPluginAudioProcessorEditor::timerCallback()
         }
         if (msg.opcode == ThreadMessage::OP_FILTERTYPE)
         {
-            for (auto &e : mainPage.insertComponents.front()->filterInfoMap)
+            for (auto &e : mainPage.insertComponents.front()->filterInfoMapForPicker)
             {
                 if (e.second.mainmode == msg.insertmainmode && e.second.awtype == msg.awtype &&
                     e.second.sstmodel == msg.filtermodel && e.second.sstconfig == msg.filterconfig)
                 {
-                    mainPage.insertComponents[msg.filterindex]->insertDrop.setSelectedId(e.first);
                     mainPage.insertComponents[msg.filterindex]->setSelectedEffect(e.second);
                     break;
                 }

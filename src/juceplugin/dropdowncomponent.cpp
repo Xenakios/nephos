@@ -5,7 +5,7 @@ void GalleryPicker::resized()
 {
     float itemh = 20.0f;
     float yoffs = 1.0f;
-    
+
     for (size_t i = 0; i < categories.size(); ++i)
     {
         if (!categories[i].text.empty())
@@ -24,7 +24,7 @@ void GalleryPicker::resized()
             }
             auto &it = categories[i].items[j];
             juce::Rectangle<float> r{xoffs, yoffs, cellw, itemh};
-            r = r.reduced(1.0f);
+            r = r.reduced(2.0f);
             it.rect = r;
             xoffs += cellw;
         }
@@ -40,6 +40,7 @@ void GalleryPicker::paint(juce::Graphics &g)
         if (!categories[i].text.empty() && !categories[i].rect.isEmpty())
         {
             auto r = categories[i].rect;
+            r.reduce(2.0f, 0.0f);
             // g.setColour(juce::Colours::darkgrey);
             // g.fillRect(r);
             g.setColour(juce::Colours::yellow);

@@ -594,6 +594,7 @@ class InsertModuleComponent : public juce::GroupComponent
             auto it = filterInfoMapForPicker.find(id);
             if (it != filterInfoMapForPicker.end())
             {
+                showPickerButton.setButtonText(it->second.displayname);
                 DBG(it->second.displayname);
                 ThreadMessage msg;
                 msg.opcode = ThreadMessage::OP_FILTERTYPE;
@@ -606,9 +607,6 @@ class InsertModuleComponent : public juce::GroupComponent
             }
             juce::Timer::callAfterDelay(250, [this]() { updateInsertMetadatas(); });
         };
-        fillInsertDrop();
-        addAndMakeVisible(insertDrop);
-        insertDrop.OnItemSelected = [this]() { handleInsertSelection(); };
         int parstartindex = ToneGranulator::PAR_INSERTAFIRST + 32 * insertIndex;
         for (auto &pmd : p.granulator.parmetadatas)
         {
@@ -626,52 +624,7 @@ class InsertModuleComponent : public juce::GroupComponent
             }
         }
     }
-    void fillInsertDrop()
-    {
-        insertDrop.rootNode.text = "FOO";
-        std::map<std::string, DropDownComponent::Node *> nodemap;
-        insertDrop.rootNode.children.reserve(32);
-        auto inserttypes = GrainInsertFX::getAvailableModes();
-        int filterID = 0;
-        for (auto &mod : inserttypes)
-        {
-            if (!mod.groupname.empty() && !nodemap.contains(mod.groupname))
-            {
-                insertDrop.rootNode.children.push_back({mod.groupname, -1});
-                nodemap[mod.groupname] = &insertDrop.rootNode.children.back();
-            }
-            if (!mod.groupname.empty())
-            {
-                nodemap[mod.groupname]->children.push_back({mod.displayname, filterID});
-                filterInfoMap[filterID] = mod;
-                ++filterID;
-            }
-            else
-            {
-                insertDrop.rootNode.children.push_back({mod.displayname, filterID});
-                filterInfoMap[filterID] = mod;
-                ++filterID;
-            }
-        }
-        insertDrop.setSelectedId(0);
-    }
-    void handleInsertSelection()
-    {
-        auto it = filterInfoMap.find(insertDrop.getSelectedId());
-        if (it != filterInfoMap.end())
-        {
-            DBG(it->second.displayname);
-            ThreadMessage msg;
-            msg.opcode = ThreadMessage::OP_FILTERTYPE;
-            msg.filterindex = insertsIndex;
-            msg.insertmainmode = it->second.mainmode;
-            msg.awtype = it->second.awtype;
-            msg.filtermodel = it->second.sstmodel;
-            msg.filterconfig = it->second.sstconfig;
-            processorRef.from_gui_fifo.push(msg);
-        }
-        juce::Timer::callAfterDelay(250, [this]() { updateInsertMetadatas(); });
-    }
+
     void updateInsertMetadatas()
     {
         for (auto &s : knobs)
@@ -688,8 +641,7 @@ class InsertModuleComponent : public juce::GroupComponent
     }
     void resized() override
     {
-        insertDrop.setBounds(7, 17, 275, 20);
-        showPickerButton.setBounds(insertDrop.getRight(), insertDrop.getY(), 75, 20);
+        showPickerButton.setBounds(7, 17, 275, 20);
         fxPicker.setBounds(1, 1, getParentComponent()->getWidth() - 2,
                            getParentComponent()->getHeight() - 2);
         juce::FlexBox flex;
@@ -707,6 +659,7 @@ class InsertModuleComponent : public juce::GroupComponent
             if (e.second == info)
             {
                 fxPicker.selectedID = e.first;
+                showPickerButton.setButtonText(e.second.displayname);
                 break;
             }
         }
@@ -714,9 +667,9 @@ class InsertModuleComponent : public juce::GroupComponent
     AudioPluginAudioProcessor &processorRef;
     int insertsIndex = -1;
     std::function<void(void)> OnInsertTypeChanged;
-    std::map<int64_t, GrainInsertFX::ModeInfo> filterInfoMap;
+
     std::map<int64_t, GrainInsertFX::ModeInfo> filterInfoMapForPicker;
-    DropDownComponent insertDrop;
+
     std::vector<std::unique_ptr<XapSlider>> knobs;
     GalleryPicker fxPicker;
     juce::TextButton showPickerButton;

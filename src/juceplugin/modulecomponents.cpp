@@ -610,6 +610,12 @@ OscillatorModuleComponent::OscillatorModuleComponent(AudioPluginAudioProcessor &
         {
             DBG(err);
         }
+        else
+        {
+            auto txt = scalaPicker.get_text_from_id(id);
+            if (txt)
+                showScalaPicker.setButtonText(*txt);
+        }
     };
     juce::MessageManager::getInstance()->callAsync(
         [this]() { getParentComponent()->addChildComponent(scalaPicker); });
@@ -688,6 +694,9 @@ void OscillatorModuleComponent::updateScalaDropFromPath(std::string path)
         if (e.second == path)
         {
             scalaPicker.selectedID = e.first;
+            auto txt = scalaPicker.get_text_from_id(e.first);
+            if (txt)
+                showScalaPicker.setButtonText(*txt);
             break;
         }
     }
