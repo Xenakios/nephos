@@ -77,7 +77,7 @@ struct ModulationRowComponent : public juce::Component
         for (int i = 0; i < gr->modSourceInfos.size(); ++i)
         {
             auto &ms = gr->modSourceInfos[i];
-            if (!ms.groupname.empty())
+            // if (!ms.groupname.empty())
             {
                 if (catmap.count(ms.groupname) == 0)
                 {
@@ -91,7 +91,7 @@ struct ModulationRowComponent : public juce::Component
         for (int i = 0; i < gr->modSourceInfos.size(); ++i)
         {
             auto &ms = gr->modSourceInfos[i];
-            if (!ms.groupname.empty())
+            // if (!ms.groupname.empty())
             {
                 GalleryPicker::Item it;
                 it.id = ms.id.src;
