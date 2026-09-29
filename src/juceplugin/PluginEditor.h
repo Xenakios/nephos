@@ -37,37 +37,31 @@ struct MacrosPresetsComponent : public juce::Component
 
 struct ModulationRowComponent : public juce::Component
 {
-    void fillDropWithCurves(DropDownComponent &drop, std::string roottext)
+    void fillPickerWithCurves(GalleryPicker &picker)
     {
         auto curves = GranulatorModConfig::get_curve_metadata();
-        drop.rootNode.text = roottext;
-        std::map<std::string, DropDownComponent::Node *> nodemap;
-        drop.rootNode.children.reserve(16);
+        std::map<std::string, GalleryPicker::Category *> catmap;
+        picker.categories.reserve(32);
         for (int i = 0; i < curves.size(); ++i)
         {
             auto &md = curves[i];
-            if (!md.groupname.empty())
+            // if (!md.groupname.empty())
             {
-                if (nodemap.count(md.groupname) == 0)
+                if (catmap.count(md.groupname) == 0)
                 {
-                    drop.rootNode.children.push_back({md.groupname, -1});
-                    nodemap[md.groupname] = &drop.rootNode.children.back();
+                    GalleryPicker::Category cat;
+                    cat.text = md.groupname;
+                    picker.categories.push_back(cat);
+                    catmap[md.groupname] = &picker.categories.back();
                 }
             }
         }
         for (int i = 0; i < curves.size(); ++i)
         {
             auto &md = curves[i];
-            if (md.groupname.empty())
-            {
-                drop.rootNode.children.push_back({md.name, (int)md.id});
-            }
-            else
-            {
-                nodemap[md.groupname]->children.push_back({md.name, (int)md.id});
-            }
+
+            catmap[md.groupname]->items.push_back({md.id, md.name});
         }
-        drop.setSelectedId(0);
     }
     void fillPickerWithSources(GalleryPicker &gal)
     {
@@ -140,7 +134,7 @@ struct ModulationRowComponent : public juce::Component
             msg.modsource = sourcePicker.selectedID;
             msg.modvia = viaPicker.selectedID;
             msg.moddest = destPicker.selectedID;
-            msg.modcurve = curveDrop.selectedId;
+            msg.modcurve = curvePicker.selectedID;
             msg.opcode = ThreadMessage::OP_MODROUTING;
             processorRef.from_gui_fifo.push(msg);
         };
@@ -164,11 +158,25 @@ struct ModulationRowComponent : public juce::Component
             msg.value = depthSlider.getValue();
             processorRef.params_from_gui_fifo.push(msg);
         };
-        addAndMakeVisible(curveDrop);
+
+        addAndMakeVisible(showCurvePicker);
+        showCurvePicker.setButtonText("-Linear-");
+        showCurvePicker.onClick = [this]() {
+            curvePicker.setBounds(1, 1, getParentWidth() - 2, getParentHeight() - 2);
+            curvePicker.setVisible(!curvePicker.isVisible());
+            curvePicker.toFront(true);
+        };
 
         using mcf = GranulatorModConfig;
-        fillDropWithCurves(curveDrop, "Curve");
-        curveDrop.OnItemSelected = updatfunc;
+        fillPickerWithCurves(curvePicker);
+        curvePicker.OnSelected = [this, updatfunc](int64_t id) {
+            auto txt = curvePicker.get_text_from_id(id);
+            if (txt)
+                showCurvePicker.setButtonText(*txt);
+            updatfunc();
+        };
+        juce::MessageManager::getInstance()->callAsync(
+            [this]() { getParentComponent()->addChildComponent(curvePicker); });
 
         addAndMakeVisible(showDestButton);
         showDestButton.setButtonText("None");
@@ -211,6 +219,13 @@ struct ModulationRowComponent : public juce::Component
         if (txt)
             showViaPicker.setButtonText(*txt);
     }
+    void update_curve(int64_t id)
+    {
+        curvePicker.selectedID = id;
+        auto txt = curvePicker.get_text_from_id(id);
+        if (txt)
+            showCurvePicker.setButtonText(*txt);
+    }
     void update_destination(int64_t id)
     {
         destPicker.selectedID = id;
@@ -224,7 +239,7 @@ struct ModulationRowComponent : public juce::Component
         destPicker.categories.reserve(64);
         std::map<std::string, GalleryPicker::Category *> catmap;
         destPicker.categories.emplace_back("");
-        destPicker.categories.back().items.push_back(GalleryPicker::Item(1,"None"));
+        destPicker.categories.back().items.push_back(GalleryPicker::Item(1, "None"));
         for (auto &pmd : gr->parmetadatas)
         {
             if (pmd.flags & CLAP_PARAM_IS_MODULATABLE && !pmd.groupName.empty())
@@ -274,7 +289,7 @@ struct ModulationRowComponent : public juce::Component
         layout.items.add(juce::FlexItem(showSourcePicker).withFlex(0.5));
         layout.items.add(juce::FlexItem(showViaPicker).withFlex(0.5));
         layout.items.add(juce::FlexItem(depthSlider).withFlex(2.0));
-        layout.items.add(juce::FlexItem(curveDrop).withFlex(0.5));
+        layout.items.add(juce::FlexItem(showCurvePicker).withFlex(0.5));
         layout.items.add(juce::FlexItem(showDestButton).withFlex(0.5));
         layout.performLayout(juce::Rectangle<int>{0, 0, getWidth(), getHeight()});
     }
@@ -298,7 +313,9 @@ struct ModulationRowComponent : public juce::Component
     GalleryPicker viaPicker;
     juce::TextButton showViaPicker;
 
-    DropDownComponent curveDrop;
+    GalleryPicker curvePicker;
+    juce::TextButton showCurvePicker;
+
     GalleryPicker destPicker;
     juce::TextButton showDestButton;
 

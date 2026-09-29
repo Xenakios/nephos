@@ -237,7 +237,7 @@ void AudioPluginAudioProcessorEditor::timerCallback()
             modulationPage.modRowComps[msg.modslot]->update_destination(msg.moddest);
 
             modulationPage.modRowComps[msg.modslot]->setTarget(msg.moddest);
-            modulationPage.modRowComps[msg.modslot]->curveDrop.setSelectedId(msg.modcurve);
+            modulationPage.modRowComps[msg.modslot]->update_curve(msg.modcurve);
         }
     }
 }
