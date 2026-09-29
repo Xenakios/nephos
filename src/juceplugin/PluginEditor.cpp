@@ -494,3 +494,132 @@ void MacrosPresetsComponent::updateButtonColors()
             buttons[i]->setColour(juce::TextButton::ColourIds::buttonColourId, juce::Colours::red);
     }
 }
+ModulationRowComponent::ModulationRowComponent(AudioPluginAudioProcessor &proc, int modindex)
+    : processorRef(proc), gr(&proc.granulator), modslotindex(modindex),
+      depthSlider(XapSlider::SS_HorizontalSlider,
+                  ParamDesc()
+                      .withRange(-1.0f, 1.0f)
+                      .withName("DEPTH")
+                      .withLinearScaleFormatting("")
+                      .withID(ToneGranulator::PAR_MAINMODDEPTHSTART + modindex))
+{
+    addAndMakeVisible(showSourcePicker);
+    showSourcePicker.setButtonText("None");
+    showSourcePicker.onClick = [this]() {
+        sourcePicker.setBounds(1, 1, getParentWidth() - 2, getParentHeight() - 2);
+        sourcePicker.setVisible(!sourcePicker.isVisible());
+        sourcePicker.toFront(true);
+    };
+    juce::MessageManager::getInstance()->callAsync(
+        [this]() { getParentComponent()->addChildComponent(sourcePicker); });
+
+    addAndMakeVisible(showViaPicker);
+    showViaPicker.setButtonText("None");
+    showViaPicker.onClick = [this]() {
+        viaPicker.setBounds(1, 1, getParentWidth() - 2, getParentHeight() - 2);
+        viaPicker.setVisible(!viaPicker.isVisible());
+        viaPicker.toFront(true);
+    };
+    juce::MessageManager::getInstance()->callAsync(
+        [this]() { getParentComponent()->addChildComponent(viaPicker); });
+
+    addAndMakeVisible(depthSlider);
+
+    auto updatfunc = [this] {
+        ThreadMessage msg;
+        msg.modslot = modslotindex;
+        msg.depth = depthSlider.getValue();
+        msg.modsource = sourcePicker.selectedID;
+        msg.modvia = viaPicker.selectedID;
+        msg.moddest = destPicker.selectedID;
+        msg.modcurve = curvePicker.selectedID;
+        msg.opcode = ThreadMessage::OP_MODROUTING;
+        processorRef.from_gui_fifo.push(msg);
+    };
+    sourcePicker.OnSelected = [this, updatfunc](int64_t id) {
+        auto txt = sourcePicker.get_text_from_id(id);
+        if (txt)
+            showSourcePicker.setButtonText(*txt);
+        updatfunc();
+    };
+    fillPickerWithSources(sourcePicker);
+    fillPickerWithSources(viaPicker);
+    viaPicker.OnSelected = [this, updatfunc](int64_t id) {
+        auto txt = viaPicker.get_text_from_id(id);
+        if (txt)
+            showViaPicker.setButtonText(*txt);
+        updatfunc();
+    };
+    depthSlider.OnValueChanged = [this]() {
+        ParameterMessage msg;
+        msg.id = ToneGranulator::PAR_MAINMODDEPTHSTART + modslotindex;
+        msg.value = depthSlider.getValue();
+        processorRef.params_from_gui_fifo.push(msg);
+    };
+
+    addAndMakeVisible(showCurvePicker);
+    showCurvePicker.setButtonText("-Linear-");
+    showCurvePicker.onClick = [this]() {
+        curvePicker.setBounds(1, 1, getParentWidth() - 2, getParentHeight() - 2);
+        curvePicker.setVisible(!curvePicker.isVisible());
+        curvePicker.toFront(true);
+    };
+
+    using mcf = GranulatorModConfig;
+    fillPickerWithCurves(curvePicker);
+    curvePicker.has_thumbs = true;
+    curvePicker.itemh = 65.0f;
+    curvePicker.DrawThumb = [this](int64_t id, juce::Graphics &g, juce::Rectangle<float> area) {
+        g.setColour(juce::Colours::lightgreen);
+        juce::Path path;
+        auto curvefunc =
+            GranulatorModConfig::getCurveOperator(GranulatorModConfig::CurveIdentifier{(int)id});
+        for (int i = 0; i < (int)area.getWidth(); ++i)
+        {
+            float norm = juce::jmap<float>(i, 0, area.getWidth() - 1, -1.0f, 1.0f);
+            float ycor = curvefunc(norm);
+            ycor = juce::jmap<float>(ycor, -1.0f, 1.0f, area.getBottom(), area.getY());
+            float xcor = area.getX() + i;
+            if (i == 0)
+                path.startNewSubPath({xcor, ycor});
+            else
+                path.lineTo({xcor, ycor});
+        }
+        g.strokePath(path, juce::PathStrokeType(1.5f));
+    };
+    curvePicker.OnSelected = [this, updatfunc](int64_t id) {
+        auto txt = curvePicker.get_text_from_id(id);
+        if (txt)
+            showCurvePicker.setButtonText(*txt);
+        updatfunc();
+    };
+    juce::MessageManager::getInstance()->callAsync(
+        [this]() { getParentComponent()->addChildComponent(curvePicker); });
+
+    addAndMakeVisible(showDestButton);
+    showDestButton.setButtonText("None");
+    showDestButton.onClick = [this]() {
+        destPicker.setBounds(1, 1, getParentWidth() - 2, getParentHeight() - 2);
+        destPicker.setVisible(!destPicker.isVisible());
+        destPicker.toFront(true);
+    };
+    juce::MessageManager::getInstance()->callAsync(
+        [this]() { getParentComponent()->addChildComponent(destPicker); });
+    initDestinationPicker();
+    // destDrop.setSelectedId(1);
+    destPicker.OnSelected = [updatfunc, this](int64_t id) {
+        if (id > 0)
+        {
+            if (id > 1)
+            {
+                auto pmd = gr->idtoparmetadata[id];
+                auto d = gr->modRanges[id];
+                depthSlider.setModulationDisplayDepth(d, pmd->unit);
+                showDestButton.setButtonText(pmd->name);
+            }
+            updatfunc();
+        }
+    };
+    addAndMakeVisible(slotLabel);
+    slotLabel.setJustificationType(juce::Justification::centred);
+}

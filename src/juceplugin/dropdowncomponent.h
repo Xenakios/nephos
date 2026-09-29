@@ -138,53 +138,19 @@ class GalleryPicker : public juce::Component
     std::function<void(int64_t)> OnSelected;
     int64_t selectedID = -1;
     float cellw = 145.0f;
-    GalleryPicker() { setWantsKeyboardFocus(true); }
-    std::optional<std::string> get_text_from_id(int64_t id)
-    {
-        for (auto &c : categories)
-        {
-            for (auto &it : c.items)
-            {
-                if (it.id == id)
-                {
-                    return it.text;
-                }
-            }
-        }
-        return {};
+    float itemh = 20.0f;
+    bool has_thumbs = false;
+    int paintcount = 0;
+    std::function<void(int64_t, juce::Graphics &, juce::Rectangle<float>)> DrawThumb;
+    GalleryPicker() 
+    { 
+        setWantsKeyboardFocus(true); 
+        setOpaque(true);
     }
-    bool keyPressed(const juce::KeyPress &ev) override
-    {
-        if (ev.getKeyCode() == juce::KeyPress::escapeKey)
-        {
-            setVisible(false);
-            return true;
-        }
-        return false;
-    }
+    void update_layout();
+    std::optional<std::string> get_text_from_id(int64_t id);
+    bool keyPressed(const juce::KeyPress &ev) override;
     void resized() override;
-    void mouseDown(const juce::MouseEvent &ev) override
-    {
-        int64_t id = -1;
-        for (auto &cate : categories)
-        {
-            for (auto &it : cate.items)
-            {
-                if (it.rect.contains(ev.position))
-                {
-                    id = it.id;
-                    break;
-                }
-            }
-            if (id != -1)
-                break;
-        }
-        if (id != -1 && OnSelected)
-        {
-            selectedID = id;
-            OnSelected(id);
-            repaint();
-        }
-    }
+    void mouseDown(const juce::MouseEvent &ev) override;
     void paint(juce::Graphics &g) override;
 };

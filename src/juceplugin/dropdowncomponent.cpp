@@ -1,11 +1,43 @@
 #include "dropdowncomponent.h"
 #include "juce_graphics/juce_graphics.h"
 
-void GalleryPicker::resized()
+void GalleryPicker::resized() { update_layout(); }
+bool GalleryPicker::keyPressed(const juce::KeyPress &ev)
 {
-    float itemh = 20.0f;
-    float yoffs = 1.0f;
+    if (ev.getKeyCode() == juce::KeyPress::escapeKey)
+    {
+        setVisible(false);
+        return true;
+    }
+    return false;
+}
+void GalleryPicker::mouseDown(const juce::MouseEvent &ev)
+{
+    int64_t id = -1;
+    for (auto &cate : categories)
+    {
+        for (auto &it : cate.items)
+        {
+            if (it.rect.contains(ev.position))
+            {
+                id = it.id;
+                break;
+            }
+        }
+        if (id != -1)
+            break;
+    }
+    if (id != -1 && OnSelected)
+    {
+        selectedID = id;
+        OnSelected(id);
+        repaint();
+    }
+}
 
+void GalleryPicker::update_layout()
+{
+    float yoffs = 1.0f;
     for (size_t i = 0; i < categories.size(); ++i)
     {
         if (!categories[i].text.empty())
@@ -31,9 +63,24 @@ void GalleryPicker::resized()
         yoffs += itemh + 1.0f;
     }
 }
+std::optional<std::string> GalleryPicker::get_text_from_id(int64_t id)
+{
+    for (auto &c : categories)
+    {
+        for (auto &it : c.items)
+        {
+            if (it.id == id)
+            {
+                return it.text;
+            }
+        }
+    }
+    return {};
+}
 
 void GalleryPicker::paint(juce::Graphics &g)
 {
+    ++paintcount;
     g.fillAll(juce::Colours::black);
     for (size_t i = 0; i < categories.size(); ++i)
     {
@@ -63,8 +110,25 @@ void GalleryPicker::paint(juce::Graphics &g)
                     g.drawRoundedRectangle(r, 4.0f, 1.0f);
                     g.setColour(juce::Colours::white.darker());
                 }
-                g.drawText(it.text, r, juce::Justification::centred);
+                if (!has_thumbs)
+                {
+                    g.drawText(it.text, r, juce::Justification::centred);
+                }
+                else
+                {
+                    g.drawText(it.text, r, juce::Justification::centredBottom);
+                    juce::Rectangle<float> thumbarea{r.getX(), r.getY(), r.getWidth(),
+                                                     r.getHeight() - 20.0f};
+                    if (DrawThumb)
+                    {
+                        g.saveState();
+                        DrawThumb(it.id, g, thumbarea);
+                        g.restoreState();
+                    }
+                }
             }
         }
     }
+    g.setColour(juce::Colours::white);
+    g.drawText(juce::String(paintcount), getLocalBounds(), juce::Justification::topRight);
 }
