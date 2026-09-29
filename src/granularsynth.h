@@ -207,6 +207,7 @@ struct GranulatorModConfig
         CURVE_ABS,
         CURVE_POPCORN,
         CURVE_BUTTERFLY,
+        CURVE_SIGMOID1,
         NUM_CURVES
     };
     static float peaking_curve(float x, float y)
@@ -279,6 +280,7 @@ struct GranulatorModConfig
         result.emplace_back(CURVE_SQUARE, "POWER", "x^2");
         result.emplace_back(CURVE_CUBE, "POWER", "x^3");
         result.emplace_back(CURVE_TOPOWER16, "POWER", "x^16");
+        result.emplace_back(CURVE_SIGMOID1, "POWER", "Sigmoid");
         for (int i = 0; i < 16; ++i)
         {
             int actnumsteps = i + 2;

@@ -1,4 +1,5 @@
 #include "granularsynth.h"
+#include "xen_modulationsources.h"
 
 ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
 {
@@ -1000,7 +1001,7 @@ void GranulatorVoice::start(GrainEvent &evpars)
     assert(ele0 >= -180.0f && ele0 <= 180.0f);
     assert(ele1 >= -180.0f && ele1 <= 180.0f);
     current_coordinates = {azi0, azi1, ele0, ele1};
-    
+
     azi0 = degreesToRadians(azi0);
     azi1 = degreesToRadians(azi1);
     ele0 = degreesToRadians(ele0);
@@ -1191,6 +1192,8 @@ std::function<float(float)> GranulatorModConfig::getCurveOperator(CurveIdentifie
         return [](auto x) { return peaking_curve(x, 4.0f); };
     case CURVE_POPCORN:
         return [](auto x) { return std::floor(std::tanh(x * 5.0) * 10.0) / 10.0; };
+    case CURVE_SIGMOID1:
+        return [](auto x) { return smoothstep(-1.0f, 1.0f, (x + 1.0f) * 0.5f); };
     case CURVE_BUTTERFLY:
         return [](auto x) {
             if (x != 0.0f)
