@@ -231,7 +231,7 @@ void AudioPluginAudioProcessorEditor::timerCallback()
             msg.modslot < modulationPage.modRowComps.size())
         {
             modulationPage.modRowComps[msg.modslot]->update_source(msg.modsource);
-            
+
             modulationPage.modRowComps[msg.modslot]->update_via(msg.modvia);
 
             modulationPage.modRowComps[msg.modslot]->update_destination(msg.moddest);
@@ -433,6 +433,18 @@ MacrosPresetsComponent::MacrosPresetsComponent(AudioPluginAudioProcessor &p) : p
             try
             {
                 insertPreset(processorRef.presetsDataBase, "quick save", "Quick saves", state);
+            }
+            catch (std::exception &ex)
+            {
+                DBG(ex.what());
+            }
+        });
+        menu.addItem("Copy state to clipboard as JSON", [this]() {
+            try
+            {
+                auto state = processorRef.getState();
+                auto json = choc::json::toString(state, true);
+                juce::SystemClipboard::copyTextToClipboard(json);
             }
             catch (std::exception &ex)
             {

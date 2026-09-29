@@ -882,7 +882,6 @@ choc::value::Value AudioPluginAudioProcessor::getState()
                 routingstate.setMember("source", (int)(mm.rt.routes[i].source->src));
             if (mm.rt.routes[i].sourceVia)
                 routingstate.setMember("via", (int)(mm.rt.routes[i].sourceVia->src));
-            routingstate.setMember("depth", mm.rt.routes[i].depth);
             if (mm.rt.routes[i].target)
                 routingstate.setMember("dest", (int)(mm.rt.routes[i].target->target));
             if (mm.rt.routes[i].curve)
@@ -1120,7 +1119,7 @@ void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
                 uint32_t src = rstate["source"].getWithDefault(0);
                 uint32_t srcvia = rstate["via"].getWithDefault(0);
                 int curve = rstate["curve"].getWithDefault(1);
-                float d = rstate["depth"].get<float>();
+                float d = 0.0f;
                 int dest = rstate["dest"].getWithDefault(1);
                 mm.rt.updateRoutingAt(slot, GranulatorModConfig::SourceIdentifier{src},
                                       GranulatorModConfig::SourceIdentifier{srcvia},

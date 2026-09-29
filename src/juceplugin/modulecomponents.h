@@ -348,7 +348,7 @@ class OscillatorModuleComponent : public juce::GroupComponent
     XapSlider oscFMFeedbackKnob;
     XapSlider oscNoiseCorrelationKnob;
     XapSlider oscNoiseModeDrop;
-    XapSlider quantizePitchToggle;
+    XapSlider quantizePitchKnob;
     GalleryPicker scalaPicker;
     juce::TextButton showScalaPicker;
     GrainEnvelopeEditorComponent pitchEnvelopeComponent;
@@ -562,7 +562,7 @@ class InsertModuleComponent : public juce::GroupComponent
           processorRef(p), insertsIndex(insertIndex)
     {
         addAndMakeVisible(showPickerButton);
-        showPickerButton.setButtonText("Show");
+        showPickerButton.setButtonText("-None-");
         showPickerButton.onClick = [this]() {
             fxPicker.setVisible(!fxPicker.isVisible());
             fxPicker.toFront(true);

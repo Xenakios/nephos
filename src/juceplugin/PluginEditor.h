@@ -114,9 +114,9 @@ struct ModulationRowComponent : public juce::Component
         addAndMakeVisible(showSourcePicker);
         showSourcePicker.setButtonText("None");
         showSourcePicker.onClick = [this]() {
-            sourcePicker.toFront(true);
             sourcePicker.setBounds(1, 1, getParentWidth() - 2, getParentHeight() - 2);
             sourcePicker.setVisible(!sourcePicker.isVisible());
+            sourcePicker.toFront(true);
         };
         juce::MessageManager::getInstance()->callAsync(
             [this]() { getParentComponent()->addChildComponent(sourcePicker); });
@@ -124,9 +124,9 @@ struct ModulationRowComponent : public juce::Component
         addAndMakeVisible(showViaPicker);
         showViaPicker.setButtonText("None");
         showViaPicker.onClick = [this]() {
-            viaPicker.toFront(true);
             viaPicker.setBounds(1, 1, getParentWidth() - 2, getParentHeight() - 2);
             viaPicker.setVisible(!viaPicker.isVisible());
+            viaPicker.toFront(true);
         };
         juce::MessageManager::getInstance()->callAsync(
             [this]() { getParentComponent()->addChildComponent(viaPicker); });
@@ -173,9 +173,9 @@ struct ModulationRowComponent : public juce::Component
         addAndMakeVisible(showDestButton);
         showDestButton.setButtonText("None");
         showDestButton.onClick = [this]() {
-            destPicker.toFront(true);
             destPicker.setBounds(1, 1, getParentWidth() - 2, getParentHeight() - 2);
             destPicker.setVisible(!destPicker.isVisible());
+            destPicker.toFront(true);
         };
         juce::MessageManager::getInstance()->callAsync(
             [this]() { getParentComponent()->addChildComponent(destPicker); });
