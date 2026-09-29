@@ -262,80 +262,7 @@ struct GranulatorModConfig
         x = 1.0 + (numpartials - 1) * x;
         return std::log2(std::floor(x)) / octaves;
     }
-    static std::function<float(float)> getCurveOperator(CurveIdentifier id)
-    {
-        if (id.id >= CURVE_STEPS1 && id.id < CURVE_STEPS1 + 16)
-        {
-            return [id](auto x) {
-                const int numsteps = id.id - CURVE_STEPS1 + 1;
-                x = (x + 1.0f) * 0.5;
-                x = std::round(x * numsteps) / numsteps;
-                return -1.0f + 2.0f * x;
-            };
-        }
-        switch (id.id)
-        {
-        case CURVE_LINEAR:
-            return [](auto x) { return x; };
-        case CURVE_SQUARE:
-            return [](auto x) { return std::abs(x) * x; };
-        case CURVE_CUBE:
-            return [](auto x) { return x * x * x; };
-        case CURVE_ABS:
-            return [](auto x) { return std::abs(x); };
-        case CURVE_TOPOWER16:
-            return [](auto x) {
-                x = std::clamp(x, -1.0f, 1.0f);
-                return std::pow(x, 16) * sgn(x);
-            };
-        case CURVE_EXPSIN1:
-            return [](auto x) { return expsin(x, 1, 8.0f); };
-        case CURVE_EXPSIN2:
-            return [](auto x) { return expsin(x, 2, 12.0f); };
-        case CURVE_XOR1:
-            return [](auto x) { return xor_curve(x, 13107); };
-        case CURVE_XOR2:
-            return [](auto x) { return xor_curve(x, 43690); };
-        case CURVE_XOR3:
-            return [](auto x) { return xor_curve(x, 25027); };
-        case CURVE_XOR4:
-            return [](auto x) { return xor_curve(x, 10001); };
-        case CURVE_BITMIRROR:
-            return [](auto x) { return bit_reversal_curve(x); };
-        case CURVE_UNIPOLARTOBIPOLAR:
-            return [](auto x) { return std::clamp(-1.0f + 2.0f * x, -1.0f, 1.0f); };
-        case CURVE_BIPOLARTOUNIPOLAR:
-            return [](auto x) { return std::clamp((x + 1.0f) * 0.5f, 0.0f, 1.0f); };
-        case CURVE_HARMONICSERIES3OCTAVES:
-            return [](auto x) { return harmseries(x, 3); };
-        case CURVE_HARMONICSERIES4OCTAVES:
-            return [](auto x) { return harmseries(x, 4); };
-        case CURVE_HARMONICSERIES5OCTAVES:
-            return [](auto x) { return harmseries(x, 5); };
-        case CURVE_PEAKING1:
-            return [](auto x) { return peaking_curve(x, 0.2f); };
-        case CURVE_PEAKING2:
-            return [](auto x) { return peaking_curve(x, 0.5f); };
-        case CURVE_PEAKING3:
-            return [](auto x) { return peaking_curve(x, 1.0f); };
-        case CURVE_PEAKING4:
-            return [](auto x) { return peaking_curve(x, 2.0f); };
-        case CURVE_PEAKING5:
-            return [](auto x) { return peaking_curve(x, 3.0f); };
-        case CURVE_PEAKING6:
-            return [](auto x) { return peaking_curve(x, 4.0f); };
-        case CURVE_POPCORN:
-            return [](auto x) { return std::floor(std::tanh(x * 5.0) * 10.0) / 10.0; };
-        case CURVE_BUTTERFLY:
-            return [](auto x) {
-                if (x != 0.0f)
-                    return std::sin(x * 10.0f) * std::cos(1.0f / x + 0.001f);
-                return 0.0f;
-            };
-        };
-
-        return [](auto x) { return x; };
-    }
+    static std::function<float(float)> getCurveOperator(CurveIdentifier id);
     struct CurveMetadata
     {
         int id = 0;
@@ -358,7 +285,7 @@ struct GranulatorModConfig
             result.emplace_back(CURVE_STEPS1 + i, "STEPS",
                                 fmt::format("{:02d} Steps", actnumsteps));
         }
-        for (int i = 0; i < 4; ++i)
+        for (int i = 0; i < 8; ++i)
         {
             result.emplace_back(CURVE_XOR1 + i, "XOR", fmt::format("XOR {}", i + 1));
         }

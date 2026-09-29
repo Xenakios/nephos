@@ -245,15 +245,8 @@ void GrainEnvelopeEditorComponent::mouseDown(const juce::MouseEvent &ev)
             menu.addItem("Random Uniform", [this]() { generate_steps(GM_RANDOM); });
             menu.addItem("Paste from JSON array in clipboard",
                          [this]() { generate_steps(GM_CLIPBOARD); });
-            auto presetsmenu = generate_presets_menu();
-            menu.addSubMenu("Presets", presetsmenu);
-
-            /*
-            menu.addItem("Help", []() {
-    juce::URL("file:///C:/develop/nephos/src/nephos_help.html")
-       .launchInDefaultBrowser();
-    });
-    */
+            // auto presetsmenu = generate_presets_menu();
+            // menu.addSubMenu("Presets", presetsmenu);
         }
         menu.showMenuAsync(juce::PopupMenu::Options{});
     }
@@ -590,7 +583,7 @@ OscillatorModuleComponent::OscillatorModuleComponent(AudioPluginAudioProcessor &
       oscNoiseCorrelationKnob(XapSlider::SS_Knob,
                               *p.granulator.idtoparmetadata[ToneGranulator::PAR_NOISECORRELATION]),
       quantizePitchKnob(XapSlider::SS_Knob,
-                          *p.granulator.idtoparmetadata[ToneGranulator::PAR_QUANTIZEPITCH]),
+                        *p.granulator.idtoparmetadata[ToneGranulator::PAR_QUANTIZEPITCH]),
       pitchEnvelopeComponent(p), grainModComponent(&p.granulator)
 {
     addAndMakeVisible(grainModComponent);
