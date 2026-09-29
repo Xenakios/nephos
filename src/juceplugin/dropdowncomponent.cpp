@@ -100,31 +100,34 @@ void GalleryPicker::paint(juce::Graphics &g)
             {
                 auto r = it.rect;
                 g.setColour(juce::Colours::grey);
+                juce::Colour textcol;
                 if (it.id == selectedID)
                 {
                     g.fillRoundedRectangle(r, 4.0f);
-                    g.setColour(juce::Colours::white);
+                    textcol = juce::Colours::white;
                 }
                 else
                 {
                     g.drawRoundedRectangle(r, 4.0f, 1.0f);
-                    g.setColour(juce::Colours::white.darker());
+                    textcol = juce::Colours::white.darker();
                 }
                 if (!has_thumbs)
                 {
+                    g.setColour(textcol);
                     g.drawText(it.text, r, juce::Justification::centred);
                 }
                 else
                 {
-                    g.drawText(it.text, r, juce::Justification::centredBottom);
                     juce::Rectangle<float> thumbarea{r.getX(), r.getY(), r.getWidth(),
-                                                     r.getHeight() - 20.0f};
+                                                     r.getHeight() - 0.0f};
                     if (DrawThumb)
                     {
                         g.saveState();
                         DrawThumb(it.id, g, thumbarea);
                         g.restoreState();
                     }
+                    g.setColour(textcol);
+                    g.drawText(it.text, r, juce::Justification::centredBottom);
                 }
             }
         }
