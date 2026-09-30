@@ -334,15 +334,19 @@ void DashBoardComponent::paint(juce::Graphics &g)
     juce::Rectangle<float> cpuArea{cloudArea.getX(), scopeArea.getBottom() + 1.0f,
                                    cloudArea.getWidth(), 60.0f};
     double enginetime = gr->playposframes / gr->m_sr;
-    g.setColour(juce::Colours::darkgrey);
+
     auto &tuning = processorRef.granulator.tuning;
     for (int i = 0; i < 128; ++i)
     {
-        float y = tuning.logScaledFrequencyForMidiNote(i) * 12.0f;
+        float y = tuning.logScaledFrequencyForMidiNote(i) * 12.0f - 60.0f;
         if (y >= -48.0f && y <= 64.0f)
         {
             y = juce::jmap(y, -48.0f, 64.0f, cloudArea.getHeight() - 5.0f, 0.0f);
             y += 2.5f;
+            if (i != 60)
+                g.setColour(juce::Colours::darkgrey);
+            else
+                g.setColour(juce::Colours::green);
             g.drawLine(cloudArea.getX(), y, cloudArea.getRight(), y, 1.5f);
         }
     }
