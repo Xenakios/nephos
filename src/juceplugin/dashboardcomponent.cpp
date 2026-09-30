@@ -337,7 +337,7 @@ void DashBoardComponent::paint(juce::Graphics &g)
 
     auto &tuning = processorRef.granulator.tuning;
     float prev_y = -1000.0f;
-    for (int i = 0; i < 128; ++i)
+    for (int i = -256; i < 255; ++i)
     {
         float y = tuning.logScaledFrequencyForMidiNote(i) * 12.0f - 60.0f;
         if (y >= -48.0f && y <= 64.0f)

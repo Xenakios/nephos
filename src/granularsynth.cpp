@@ -609,6 +609,9 @@ std::string ToneGranulator::load_scala_file(std::string path, bool called_from_a
             throw std::runtime_error("tuning is not monotonic");
         if (!called_from_audio_thread)
             spinLock.lock();
+        // std::cout << fmt::format("lowest scale degree is {} Hz, highest is {} Hz\n",
+        //                          temp.frequencyForMidiNote(-128),
+        //                          temp.frequencyForMidiNote(128));
         tuning = temp;
         currentScalaFile = path;
         if (!called_from_audio_thread)

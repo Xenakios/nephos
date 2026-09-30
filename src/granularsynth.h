@@ -469,8 +469,8 @@ constexpr size_t numPitchBandAttens = 7;
 
 inline bool is_monotonic_tuning(Tunings::Tuning &tuning)
 {
-    double prev = tuning.logScaledFrequencyForMidiNote(0) * 12.0;
-    for (int i = 1; i < 128; ++i)
+    double prev = tuning.logScaledFrequencyForMidiNote(-256) * 12.0;
+    for (int i = -255; i < 256; ++i)
     {
         double cur = tuning.logScaledFrequencyForMidiNote(i) * 12.0;
         if (cur < prev)
@@ -484,7 +484,7 @@ inline double quantize_pitch_binary(Tunings::Tuning &tuning, double sourcepitch)
 {
     auto pitchAt = [&](int i) { return tuning.logScaledFrequencyForMidiNote(i) * 12.0; };
 
-    int lo = 0, hi = 128;
+    int lo = -256, hi = 256;
     while (lo < hi)
     {
         int mid = lo + (hi - lo) / 2;
@@ -496,8 +496,8 @@ inline double quantize_pitch_binary(Tunings::Tuning &tuning, double sourcepitch)
 
     if (lo == 0)
         return pitchAt(0);
-    if (lo == 128)
-        return pitchAt(127);
+    if (lo == 256)
+        return pitchAt(255);
 
     double higher = pitchAt(lo);
     double lower = pitchAt(lo - 1);
