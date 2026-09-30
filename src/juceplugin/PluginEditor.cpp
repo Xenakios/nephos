@@ -503,16 +503,9 @@ ModulationRowComponent::ModulationRowComponent(AudioPluginAudioProcessor &proc, 
                       .withLinearScaleFormatting("")
                       .withID(ToneGranulator::PAR_MAINMODDEPTHSTART + modindex))
 {
-    addAndMakeVisible(showSourcePicker);
-    showSourcePicker.setButtonText("None");
-    showSourcePicker.onClick = [this]() {
-        sourcePicker.setBounds(1, 1, getParentWidth() - 2, getParentHeight() - 2);
-        sourcePicker.setVisible(!sourcePicker.isVisible());
-        sourcePicker.toFront(true);
-    };
-    juce::MessageManager::getInstance()->callAsync(
-        [this]() { getParentComponent()->addChildComponent(sourcePicker); });
-
+    addAndMakeVisible(sourcePicker.showButton);
+    sourcePicker.showButton.setButtonText("None");
+    
     addAndMakeVisible(showViaPicker);
     showViaPicker.setButtonText("None");
     showViaPicker.onClick = [this]() {
@@ -539,7 +532,7 @@ ModulationRowComponent::ModulationRowComponent(AudioPluginAudioProcessor &proc, 
     sourcePicker.OnSelected = [this, updatfunc](int64_t id) {
         auto txt = sourcePicker.get_text_from_id(id);
         if (txt)
-            showSourcePicker.setButtonText(*txt);
+            sourcePicker.showButton.setButtonText(*txt);
         updatfunc();
     };
     fillPickerWithSources(sourcePicker);

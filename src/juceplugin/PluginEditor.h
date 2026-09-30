@@ -102,7 +102,7 @@ struct ModulationRowComponent : public juce::Component
         sourcePicker.selectedID = id;
         auto txt = sourcePicker.get_text_from_id(id);
         if (txt)
-            showSourcePicker.setButtonText(*txt);
+            sourcePicker.showButton.setButtonText(*txt);
     }
     void update_via(int64_t id)
     {
@@ -178,7 +178,7 @@ struct ModulationRowComponent : public juce::Component
                                     juce::FlexBox::AlignItems::stretch,
                                     juce::FlexBox::JustifyContent::flexStart);
         layout.items.add(juce::FlexItem(slotLabel).withFlex(0.15));
-        layout.items.add(juce::FlexItem(showSourcePicker).withFlex(0.5));
+        layout.items.add(juce::FlexItem(sourcePicker.showButton).withFlex(0.5));
         layout.items.add(juce::FlexItem(showViaPicker).withFlex(0.5));
         layout.items.add(juce::FlexItem(depthSlider).withFlex(2.0));
         layout.items.add(juce::FlexItem(showCurvePicker).withFlex(0.5));
@@ -200,8 +200,6 @@ struct ModulationRowComponent : public juce::Component
     int modslotindex = -1;
     juce::Label slotLabel;
     GalleryPicker sourcePicker;
-    juce::TextButton showSourcePicker;
-
     GalleryPicker viaPicker;
     juce::TextButton showViaPicker;
 

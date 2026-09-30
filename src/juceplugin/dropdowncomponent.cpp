@@ -101,16 +101,18 @@ void GalleryPicker::paint(juce::Graphics &g)
 {
     ++paintcount;
     g.fillAll(juce::Colours::black);
+    // g.setColour(juce::Colours::magenta);
+    // g.drawRect(g.getClipBounds());
     for (size_t i = 0; i < categories.size(); ++i)
     {
         if (!categories[i].text.empty() && !categories[i].rect.isEmpty())
         {
             auto r = categories[i].rect;
-            r.reduce(2.0f, 0.0f);
-            // g.setColour(juce::Colours::darkgrey);
-            // g.fillRect(r);
-            g.setColour(juce::Colours::yellow);
-            g.drawText(categories[i].text, r, juce::Justification::centredRight);
+            r.reduce(2.0f, 2.0f);
+            g.setColour(juce::Colours::orange.darker());
+            g.fillRoundedRectangle(r, 4.0f);
+            g.setColour(juce::Colours::black);
+            g.drawText(categories[i].text, r, juce::Justification::centred);
         }
         for (int j = 0; j < categories[i].items.size(); ++j)
         {

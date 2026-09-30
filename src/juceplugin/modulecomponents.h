@@ -561,15 +561,8 @@ class InsertModuleComponent : public juce::GroupComponent
         : juce::GroupComponent("", fmt::format("Insert FX {}", char('A' + insertIndex))),
           processorRef(p), insertsIndex(insertIndex)
     {
-        addAndMakeVisible(showPickerButton);
-        showPickerButton.setButtonText("-None-");
-        showPickerButton.onClick = [this]() {
-            fxPicker.setVisible(!fxPicker.isVisible());
-            fxPicker.toFront(true);
-        };
-        juce::MessageManager::getInstance()->callAsync(
-            [this]() { getParentComponent()->addChildComponent(fxPicker); });
-
+        addAndMakeVisible(fxPicker.showButton);
+        fxPicker.showButton.setButtonText("-None-");
         auto fxmodes = GrainInsertFX::getAvailableModes();
         std::map<std::string, GalleryPicker::Category *> categories;
         fxPicker.categories.reserve(64);
@@ -594,7 +587,7 @@ class InsertModuleComponent : public juce::GroupComponent
             auto it = filterInfoMapForPicker.find(id);
             if (it != filterInfoMapForPicker.end())
             {
-                showPickerButton.setButtonText(it->second.displayname);
+                fxPicker.showButton.setButtonText(it->second.displayname);
                 DBG(it->second.displayname);
                 ThreadMessage msg;
                 msg.opcode = ThreadMessage::OP_FILTERTYPE;
@@ -641,9 +634,7 @@ class InsertModuleComponent : public juce::GroupComponent
     }
     void resized() override
     {
-        showPickerButton.setBounds(7, 17, 275, 20);
-        fxPicker.setBounds(1, 1, getParentComponent()->getWidth() - 2,
-                           getParentComponent()->getHeight() - 2);
+        fxPicker.showButton.setBounds(7, 17, 275, 20);
         juce::FlexBox flex;
         flex.flexDirection = juce::FlexBox::Direction::row;
         for (auto &c : knobs)
@@ -659,7 +650,7 @@ class InsertModuleComponent : public juce::GroupComponent
             if (e.second == info)
             {
                 fxPicker.selectedID = e.first;
-                showPickerButton.setButtonText(e.second.displayname);
+                fxPicker.showButton.setButtonText(e.second.displayname);
                 break;
             }
         }
@@ -672,7 +663,6 @@ class InsertModuleComponent : public juce::GroupComponent
 
     std::vector<std::unique_ptr<XapSlider>> knobs;
     GalleryPicker fxPicker;
-    juce::TextButton showPickerButton;
 };
 
 class VolumeModuleComponent : public juce::GroupComponent
