@@ -484,23 +484,31 @@ inline double quantize_pitch_binary(Tunings::Tuning &tuning, double sourcepitch)
 {
     auto pitchAt = [&](int i) { return tuning.logScaledFrequencyForMidiNote(i) * 12.0; };
 
-    int lo = -256, hi = 256;
+    constexpr int firstNote = -256;
+    constexpr int lastNote = 255;
+
+    int lo = firstNote;
+    int hi = lastNote + 1; // exclusive
+
     while (lo < hi)
     {
-        int mid = lo + (hi - lo) / 2;
+        const int mid = lo + (hi - lo) / 2;
+
         if (pitchAt(mid) < sourcepitch)
             lo = mid + 1;
         else
             hi = mid;
     }
 
-    if (lo == 0)
-        return pitchAt(0);
-    if (lo == 256)
-        return pitchAt(255);
+    if (lo <= firstNote)
+        return pitchAt(firstNote);
 
-    double higher = pitchAt(lo);
-    double lower = pitchAt(lo - 1);
+    if (lo > lastNote)
+        return pitchAt(lastNote);
+
+    const double higher = pitchAt(lo);
+    const double lower = pitchAt(lo - 1);
+
     return (higher - sourcepitch < sourcepitch - lower) ? higher : lower;
 }
 
