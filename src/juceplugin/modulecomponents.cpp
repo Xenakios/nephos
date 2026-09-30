@@ -588,13 +588,8 @@ OscillatorModuleComponent::OscillatorModuleComponent(AudioPluginAudioProcessor &
 {
     addAndMakeVisible(grainModComponent);
     addAndMakeVisible(oscTypeComponent);
-    addAndMakeVisible(showScalaPicker);
-    showScalaPicker.setButtonText("12-edo");
-    showScalaPicker.onClick = [this]() {
-        scalaPicker.setVisible(!scalaPicker.isVisible());
-        scalaPicker.setBounds(1, 1, getParentWidth(), getParentHeight());
-        scalaPicker.toFront(true);
-    };
+    addAndMakeVisible(scalaPicker.showButton);
+    scalaPicker.showButton.setButtonText("12-edo");
     scalaPicker.cellw = 290.0f;
     scalaPicker.OnSelected = [this](int64_t id) {
         auto strpath = scalaIdToPath[id];
@@ -607,12 +602,9 @@ OscillatorModuleComponent::OscillatorModuleComponent(AudioPluginAudioProcessor &
         {
             auto txt = scalaPicker.get_text_from_id(id);
             if (txt)
-                showScalaPicker.setButtonText(*txt);
+                scalaPicker.showButton.setButtonText(*txt);
         }
     };
-    juce::MessageManager::getInstance()->callAsync(
-        [this]() { getParentComponent()->addChildComponent(scalaPicker); });
-
     populateScalaDrop();
 
     initSlider(p, *this, oscPitchKnob);
@@ -689,7 +681,7 @@ void OscillatorModuleComponent::updateScalaDropFromPath(std::string path)
             scalaPicker.selectedID = e.first;
             auto txt = scalaPicker.get_text_from_id(e.first);
             if (txt)
-                showScalaPicker.setButtonText(*txt);
+                scalaPicker.showButton.setButtonText(*txt);
             break;
         }
     }
@@ -740,13 +732,11 @@ void OscillatorModuleComponent::resized()
                                     oscTypeComponent.getBottom() + 1 + i * 51, 80, 50);
     }
 
-    // pitchEnvWarpKnob.setBounds(oscPitchKnob.getRight() + 2, pitchEnvKnob.getBottom() + 1, 80,
-    //                            50);
     pitchEnvelopeComponent.setBounds(modDepthKnobs[0]->getRight() + 2, oscTypeComponent.getBottom(),
                                      200, 200);
     grainModComponent.setBounds(pitchEnvelopeComponent.getRight() + 2, oscTypeComponent.getBottom(),
                                 200, 200);
-    showScalaPicker.setBounds(grainModComponent.getRight() + 2, getHeight() - 40, 250, 25);
+    scalaPicker.showButton.setBounds(grainModComponent.getRight() + 2, getHeight() - 40, 250, 25);
     oscSyncKnob.setBounds(grainModComponent.getRight() + 2, oscTypeComponent.getBottom() + 1, 80,
                           50);
     oscPWKnob.setBounds(grainModComponent.getRight() + 2, oscSyncKnob.getBottom() + 1, 80, 50);

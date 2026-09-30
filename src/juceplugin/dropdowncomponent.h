@@ -141,12 +141,11 @@ class GalleryPicker : public juce::Component
     float itemh = 20.0f;
     bool has_thumbs = false;
     int paintcount = 0;
+    juce::TextButton showButton;
+    bool first_show = true;
+    Component *parentToCover = nullptr;
     std::function<void(int64_t, juce::Graphics &, juce::Rectangle<float>)> DrawThumb;
-    GalleryPicker() 
-    { 
-        setWantsKeyboardFocus(true); 
-        setOpaque(true);
-    }
+    GalleryPicker();
     void update_layout();
     std::optional<std::string> get_text_from_id(int64_t id);
     bool keyPressed(const juce::KeyPress &ev) override;

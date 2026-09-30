@@ -35,6 +35,25 @@ void GalleryPicker::mouseDown(const juce::MouseEvent &ev)
     }
 }
 
+GalleryPicker::GalleryPicker()
+{
+    setWantsKeyboardFocus(true);
+    setOpaque(true);
+    showButton.onClick = [this]() {
+        // nasty but will have to do for now
+        jassert(showButton.getParentComponent());
+        parentToCover = showButton.getParentComponent()->getParentComponent();
+        jassert(parentToCover);
+        if (first_show)
+        {
+            first_show = false;
+            parentToCover->addChildComponent(this);
+        }
+        setBounds(0, 0, parentToCover->getWidth(), parentToCover->getHeight());
+        setVisible(!isVisible());
+        toFront(true);
+    };
+}
 void GalleryPicker::update_layout()
 {
     float yoffs = 1.0f;
