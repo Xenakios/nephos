@@ -690,16 +690,20 @@ void OscillatorModuleComponent::updateScalaDropFromPath(std::string path)
 void OscillatorModuleComponent::populateScalaDrop()
 {
     scalaPicker.categories.clear();
-    GalleryPicker::Category c;
-    c.text = "Scala Scales/Tunings";
-    scalaPicker.categories.push_back(c);
+    scalaPicker.categories.reserve(64);
+    std::map<std::string, GalleryPicker::Category *> catmap;
+    GalleryPicker::Category cat;
+    cat.text = "scala_scales";
+    scalaPicker.categories.push_back(cat);
+    catmap["scala_scales"] = &scalaPicker.categories.back();
     scalaIdToPath.clear();
     juce::File scalaFilesPath =
         juce::File::getSpecialLocation(juce::File::SpecialLocationType::userDocumentsDirectory)
             .getChildFile("nephos_data")
             .getChildFile("scala_scales");
     std::vector<juce::File> files;
-    for (auto &e : juce::RangedDirectoryIterator(scalaFilesPath, false))
+    for (auto &e : juce::RangedDirectoryIterator(scalaFilesPath, true, "*",
+                                                 juce::File::findFilesAndDirectories))
     {
         files.push_back(e.getFile());
     }
@@ -708,16 +712,31 @@ void OscillatorModuleComponent::populateScalaDrop()
               [](const juce::File &lhs, const juce::File &rhs) { return lhs < rhs; });
     for (auto &e : files)
     {
-        auto strpath = e.getFileNameWithoutExtension().toStdString();
-        GalleryPicker::Item item;
-        item.text = strpath;
-        item.id = id;
-        scalaPicker.categories.front().items.push_back(item);
-        strpath = e.getFullPathName().toStdString();
-        scalaIdToPath[id] = strpath;
-        ++id;
+        if (e.isDirectory())
+        {
+            auto strpath = e.getFileNameWithoutExtension().toStdString();
+            GalleryPicker::Category cat;
+            cat.text = strpath;
+            scalaPicker.categories.push_back(cat);
+            catmap[strpath] = &scalaPicker.categories.back();
+        }
+        else
+        {
+            auto direc = e.getParentDirectory();
+            auto dirpath = direc.getFileNameWithoutExtension().toStdString();
+            auto strpath = e.getFileNameWithoutExtension().toStdString();
+            GalleryPicker::Item item;
+            item.text = strpath;
+            item.id = id;
+            jassert(catmap.count(dirpath));
+            catmap[dirpath]->items.push_back(item);
+            strpath = e.getFullPathName().toStdString();
+            scalaIdToPath[id] = strpath;
+            ++id;
+        }
+        
     }
-    scalaPicker.selectedID = 0;
+    // scalaPicker.selectedID = 0;
 }
 
 void OscillatorModuleComponent::resized()
