@@ -109,21 +109,21 @@ struct ModulationRowComponent : public juce::Component
         viaPicker.selectedID = id;
         auto txt = viaPicker.get_text_from_id(id);
         if (txt)
-            showViaPicker.setButtonText(*txt);
+            viaPicker.showButton.setButtonText(*txt);
     }
     void update_curve(int64_t id)
     {
         curvePicker.selectedID = id;
         auto txt = curvePicker.get_text_from_id(id);
         if (txt)
-            showCurvePicker.setButtonText(*txt);
+            curvePicker.showButton.setButtonText(*txt);
     }
     void update_destination(int64_t id)
     {
         destPicker.selectedID = id;
         auto txt = destPicker.get_text_from_id(id);
         if (txt)
-            showDestButton.setButtonText(*txt);
+            destPicker.showButton.setButtonText(*txt);
     }
     void initDestinationPicker()
     {
@@ -179,10 +179,10 @@ struct ModulationRowComponent : public juce::Component
                                     juce::FlexBox::JustifyContent::flexStart);
         layout.items.add(juce::FlexItem(slotLabel).withFlex(0.15));
         layout.items.add(juce::FlexItem(sourcePicker.showButton).withFlex(0.5));
-        layout.items.add(juce::FlexItem(showViaPicker).withFlex(0.5));
+        layout.items.add(juce::FlexItem(viaPicker.showButton).withFlex(0.5));
         layout.items.add(juce::FlexItem(depthSlider).withFlex(2.0));
-        layout.items.add(juce::FlexItem(showCurvePicker).withFlex(0.5));
-        layout.items.add(juce::FlexItem(showDestButton).withFlex(0.5));
+        layout.items.add(juce::FlexItem(curvePicker.showButton).withFlex(0.5));
+        layout.items.add(juce::FlexItem(destPicker.showButton).withFlex(0.5));
         layout.performLayout(juce::Rectangle<int>{0, 0, getWidth(), getHeight()});
     }
     ToneGranulator *gr = nullptr;
@@ -201,13 +201,8 @@ struct ModulationRowComponent : public juce::Component
     juce::Label slotLabel;
     GalleryPicker sourcePicker;
     GalleryPicker viaPicker;
-    juce::TextButton showViaPicker;
-
     GalleryPicker curvePicker;
-    juce::TextButton showCurvePicker;
-
     GalleryPicker destPicker;
-    juce::TextButton showDestButton;
 
   private:
     XapSlider depthSlider;

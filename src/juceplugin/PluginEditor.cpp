@@ -505,16 +505,9 @@ ModulationRowComponent::ModulationRowComponent(AudioPluginAudioProcessor &proc, 
 {
     addAndMakeVisible(sourcePicker.showButton);
     sourcePicker.showButton.setButtonText("None");
-    
-    addAndMakeVisible(showViaPicker);
-    showViaPicker.setButtonText("None");
-    showViaPicker.onClick = [this]() {
-        viaPicker.setBounds(1, 1, getParentWidth() - 2, getParentHeight() - 2);
-        viaPicker.setVisible(!viaPicker.isVisible());
-        viaPicker.toFront(true);
-    };
-    juce::MessageManager::getInstance()->callAsync(
-        [this]() { getParentComponent()->addChildComponent(viaPicker); });
+
+    addAndMakeVisible(viaPicker.showButton);
+    viaPicker.showButton.setButtonText("None");
 
     addAndMakeVisible(depthSlider);
 
@@ -540,7 +533,7 @@ ModulationRowComponent::ModulationRowComponent(AudioPluginAudioProcessor &proc, 
     viaPicker.OnSelected = [this, updatfunc](int64_t id) {
         auto txt = viaPicker.get_text_from_id(id);
         if (txt)
-            showViaPicker.setButtonText(*txt);
+            viaPicker.showButton.setButtonText(*txt);
         updatfunc();
     };
     depthSlider.OnValueChanged = [this]() {
@@ -550,14 +543,8 @@ ModulationRowComponent::ModulationRowComponent(AudioPluginAudioProcessor &proc, 
         processorRef.params_from_gui_fifo.push(msg);
     };
 
-    addAndMakeVisible(showCurvePicker);
-    showCurvePicker.setButtonText("-Linear-");
-    showCurvePicker.onClick = [this]() {
-        curvePicker.setBounds(1, 1, getParentWidth() - 2, getParentHeight() - 2);
-        curvePicker.setVisible(!curvePicker.isVisible());
-        curvePicker.toFront(true);
-    };
-
+    addAndMakeVisible(curvePicker.showButton);
+    curvePicker.showButton.setButtonText("-Linear-");
     using mcf = GranulatorModConfig;
     fillPickerWithCurves(curvePicker);
     curvePicker.has_thumbs = true;
@@ -583,21 +570,12 @@ ModulationRowComponent::ModulationRowComponent(AudioPluginAudioProcessor &proc, 
     curvePicker.OnSelected = [this, updatfunc](int64_t id) {
         auto txt = curvePicker.get_text_from_id(id);
         if (txt)
-            showCurvePicker.setButtonText(*txt);
+            curvePicker.showButton.setButtonText(*txt);
         updatfunc();
     };
-    juce::MessageManager::getInstance()->callAsync(
-        [this]() { getParentComponent()->addChildComponent(curvePicker); });
+    addAndMakeVisible(destPicker.showButton);
+    destPicker.showButton.setButtonText("None");
 
-    addAndMakeVisible(showDestButton);
-    showDestButton.setButtonText("None");
-    showDestButton.onClick = [this]() {
-        destPicker.setBounds(1, 1, getParentWidth() - 2, getParentHeight() - 2);
-        destPicker.setVisible(!destPicker.isVisible());
-        destPicker.toFront(true);
-    };
-    juce::MessageManager::getInstance()->callAsync(
-        [this]() { getParentComponent()->addChildComponent(destPicker); });
     initDestinationPicker();
     // destDrop.setSelectedId(1);
     destPicker.OnSelected = [updatfunc, this](int64_t id) {
@@ -608,7 +586,7 @@ ModulationRowComponent::ModulationRowComponent(AudioPluginAudioProcessor &proc, 
                 auto pmd = gr->idtoparmetadata[id];
                 auto d = gr->modRanges[id];
                 depthSlider.setModulationDisplayDepth(d, pmd->unit);
-                showDestButton.setButtonText(pmd->name);
+                destPicker.showButton.setButtonText(pmd->name);
             }
             updatfunc();
         }
