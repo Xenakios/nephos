@@ -336,6 +336,7 @@ void DashBoardComponent::paint(juce::Graphics &g)
     double enginetime = gr->playposframes / gr->m_sr;
 
     auto &tuning = processorRef.granulator.tuning;
+    float prev_y = -1000.0f;
     for (int i = 0; i < 128; ++i)
     {
         float y = tuning.logScaledFrequencyForMidiNote(i) * 12.0f - 60.0f;
@@ -343,11 +344,16 @@ void DashBoardComponent::paint(juce::Graphics &g)
         {
             y = juce::jmap(y, -48.0f, 64.0f, cloudArea.getHeight() - 5.0f, 0.0f);
             y += 2.5f;
-            if (i != 60)
-                g.setColour(juce::Colours::darkgrey);
-            else
-                g.setColour(juce::Colours::green);
-            g.drawLine(cloudArea.getX(), y, cloudArea.getRight(), y, 1.5f);
+            float diff = std::abs(prev_y - y);
+            if (diff >= 2.0f || i == 60)
+            {
+                if (i != 60)
+                    g.setColour(juce::Colours::darkgrey);
+                else
+                    g.setColour(juce::Colours::green);
+                g.drawLine(cloudArea.getX(), y, cloudArea.getRight(), y, 1.5f);
+                prev_y = y;
+            }
         }
     }
     g.saveState();
