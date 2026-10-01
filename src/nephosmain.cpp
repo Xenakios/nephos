@@ -1,12 +1,14 @@
 
 #include "audio/choc_SampleBuffers.h"
 #include "containers/choc_NonAllocatingStableSort.h"
+#include "containers/choc_Value.h"
 #include "grainfx.h"
 #include "granularsynth.h"
 #include "audio/choc_AudioFileFormat_WAV.h"
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <exception>
 #include <random>
 #include "audio/choc_AudioFileFormat.h"
 #include "../Common/xap_breakpoint_envelope.h"
@@ -17,6 +19,8 @@
 #include "sst/filters/FastTiltNoiseFilter.h"
 #include "sst/filters/FilterConfiguration.h"
 #include "Tunings.h"
+#include "text/choc_Files.h"
+#include "text/choc_JSON.h"
 
 inline void init_clouds(ToneGranulator &g)
 {
@@ -99,65 +103,23 @@ struct CloudPlayerEvent
     bool operator<(CloudPlayerEvent &other) { return timepos < other.timepos; }
 };
 
-inline int test_nephos_render()
+inline int render_nephos(std::string statefilepath)
 {
+    choc::value::Value state;
+    try
+    {
+        auto jsontxt = choc::file::loadFileAsString(statefilepath);
+        state = choc::json::parse(jsontxt);
+        std::cout << "parsed state OK\n";
+    }
+    catch (std::exception &ex)
+    {
+        std::cout << ex.what() << "\n";
+        return 1;
+    }
     auto g = std::make_unique<ToneGranulator>();
     double sr = 44100.0;
     g->prepare(sr, 0, 0.002, 0.002);
-    init_clouds(*g);
-    std::vector<CloudPlayerEvent> player_events;
-    player_events.emplace_back(0, 0, 0.0, &g->clouds[0]);
-    player_events.emplace_back(1, 0, 9.0, &g->clouds[0]);
-    player_events.emplace_back(0, 4, 3.4, &g->clouds[0]);
-    player_events.emplace_back(1, 4, 7.5, &g->clouds[0]);
-    player_events.emplace_back(0, 1, 2.0, &g->clouds[1]);
-    player_events.emplace_back(1, 1, 3.0, &g->clouds[1]);
-    player_events.emplace_back(0, 2, 6.0, &g->clouds[1]);
-    player_events.emplace_back(1, 2, 6.4, &g->clouds[1]);
-    player_events.emplace_back(0, 3, 9.2, &g->clouds[1]);
-    player_events.emplace_back(1, 3, 9.9, &g->clouds[1]);
-    player_events.emplace_back(0, 5, 5.1, &g->clouds[2]);
-    player_events.emplace_back(1, 5, 6.4, &g->clouds[2]);
-    player_events.emplace_back(0, 6, 8.2, &g->clouds[2]);
-    player_events.emplace_back(1, 6, 9.5, &g->clouds[2]);
-    choc::sorting::stable_sort(player_events.begin(), player_events.end());
-    int player_event_index = 0;
-    events_t events;
-    events.reserve(500);
-    xenakios::Xoroshiro128Plus rng;
-    // g->set_aux_envelope_interpolation_mode(0);
-    for (int i = 0; i < 500; ++i)
-    {
-        GrainEvent e;
-        e.time_position = rng.nextFloatInRange(0.0f, 29.5);
-        e.pitch_semitones = rng.nextFloatInRange(-24.0f, 24.0f);
-        e.duration = 0.5;
-        e.generator_type = 0;
-        e.azimuth = rng.nextFloatInRange(-180.0f, 180.0f);
-        // e.modamounts[GrainEvent::MD_PITCH] = 0.0;
-        if (rng.nextFloat() < 0.1)
-        {
-            e.duration = 0.95;
-            e.elevation = 90.0;
-            e.generator_type = 4;
-            // assert(e.modamounts[GrainEvent::MD_PITCH] == 0.0f);
-            // e.modamounts[GrainEvent::MD_PITCH] = 12.0;
-            // if (rng.nextFloat() < 0.5)
-            //     e.modamounts[GrainEvent::MD_PITCH] = -12.0;
-        }
-        else
-        {
-            // assert(e.modamounts[GrainEvent::MD_PITCH] == 0.0f);
-        }
-
-        // assert(e.modamounts[GrainEvent::MD_AZI] == 0.0f);
-        // assert(e.modamounts[GrainEvent::MD_ELE] == 0.0f);
-        // assert(e.modamounts[GrainEvent::MD_FIL0FREQ] == 0.0f);
-        // assert(e.modamounts[GrainEvent::MD_FIL0RESO] == 0.0f);
-        e.volume = 1.0;
-        events.push_back(e);
-    }
-    g->set_event_list(events);
     const unsigned int amborder = 3;
     unsigned int numambchans = ambisonicOrderNumChannels(amborder);
     g->set_ambisonics_order(amborder);
@@ -166,7 +128,8 @@ inline int test_nephos_render()
     props.sampleRate = sr;
     props.numChannels = numambchans;
     choc::audio::WAVAudioFileFormat<true> wavformat;
-    auto writer = wavformat.createWriter(R"(nephos_poly_clouds_01.wav)", props);
+    auto writer = wavformat.createWriter(
+        R"(E:\MusicAudio\sourcesamples\test_signals\nanobind\nephos_cli_01.wav)", props);
     if (!writer)
         return 1;
     alignas(32) float outbuffer[64 * granul_block_size];
@@ -177,50 +140,13 @@ inline int test_nephos_render()
     pitchenv.addPoint({0.0, 0.0});
     pitchenv.addPoint({5.0, 12.0});
     pitchenv.sortPoints();
-    *g->idtoparvalptr[ToneGranulator::PAR_DENSITY] = 6.0;
+    *g->idtoparvalptr[ToneGranulator::PAR_DENSITY] = 5.0;
     *g->idtoparvalptr[ToneGranulator::PAR_DURATION] = 0.6;
+    *g->idtoparvalptr[ToneGranulator::PAR_OSCTYPE] = 2;
     auto start = std::chrono::high_resolution_clock::now();
     while (outcount < outlen)
     {
         double tpos = outcount / sr;
-        CloudPlayerEvent *ev = nullptr;
-        if (player_event_index < player_events.size())
-            ev = &player_events[player_event_index];
-        while (ev && std::floor(ev->timepos * sr) < outcount + granul_block_size)
-        {
-            if (ev->opcode == 0)
-            {
-                for (auto &player : g->cloudPlayers)
-                {
-                    if (!player.active)
-                    {
-                        std::cout << tpos << " starting cloud with " << ev->cloud->events.size()
-                                  << " evemts\n";
-                        player.start(ev->timepos, ev->id, ev->cloud);
-                        // std::cout << "started cloud with "
-                        break;
-                    }
-                }
-            }
-            if (ev->opcode == 1)
-            {
-                for (auto &player : g->cloudPlayers)
-                {
-                    if (player.id == ev->id)
-                    {
-                        player.active = false;
-                        player.event_index = -1;
-                        player.id = -1;
-                    }
-                }
-            }
-            ++player_event_index;
-            if (player_event_index >= player_events.size())
-                ev = nullptr;
-            else
-                ev = &player_events[player_event_index];
-        }
-
         auto pitch = pitchenv.getValueAtPosition(tpos);
         *g->idtoparvalptr[ToneGranulator::PAR_PITCH] = pitch;
         g->process_block(std::span<float>{outbuffer, granul_block_size * 64});
@@ -453,7 +379,7 @@ inline void test_routing(std::vector<std::tuple<int, int, int>> routings)
 
             for (int j = 0; j < chain.count; ++j)
             {
-                fx[chain.fxIndices[j]].processStereo(l, r);
+                // fx[chain.fxIndices[j]].processStereo(l, r);
             }
 
             outputsignal_left += l;
@@ -629,9 +555,9 @@ inline void test_quantize_tuning()
 int main(int argc, char **argv)
 {
     // test_degrade();
-    // test_nephos_render();
+    render_nephos(R"(C:\develop\nephos\Assets\cli_test_state01.json)");
     // test_colored_noise();
-    test_quantize_tuning();
+    // test_quantize_tuning();
     return 0;
     if (argc > 1)
     {
