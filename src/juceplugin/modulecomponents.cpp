@@ -762,11 +762,10 @@ void OscillatorModuleComponent::resized()
     oscFMPitchKnob.setBounds(oscSyncKnob.getRight() + 2, oscTypeComponent.getBottom() + 1, 80, 50);
     oscFMDepthKnob.setBounds(oscFMPitchKnob.getRight() + 2, oscTypeComponent.getBottom() + 1, 80,
                              50);
-    oscFMFeedbackKnob.setBounds(oscFMDepthKnob.getRight() + 2, oscTypeComponent.getBottom() + 1, 80,
-                                50);
-    oscNoiseModeDrop.setBounds(oscSyncKnob.getRight() + 2, oscFMPitchKnob.getBottom() + 1, 250, 25);
-    oscNoiseCorrelationKnob.setBounds(oscSyncKnob.getRight() + 2, oscNoiseModeDrop.getBottom() + 1,
-                                      80, 50);
+    oscFMFeedbackKnob.setBounds(oscFMPitchKnob.getX(), oscFMPitchKnob.getBottom() + 1, 80, 50);
+    oscNoiseCorrelationKnob.setBounds(oscPWKnob.getX(), oscPWKnob.getBottom() + 1, 80, 50);
+    oscNoiseModeDrop.setBounds(oscNoiseCorrelationKnob.getX(),
+                               oscNoiseCorrelationKnob.getBottom() + 1, 250, 25);
 }
 
 void StackingModuleComponent::resized()

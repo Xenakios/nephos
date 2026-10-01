@@ -313,7 +313,7 @@ void MainPageComponent::paint(juce::Graphics &g) { g.fillAll(juce::Colours::dark
 
 void MainPageComponent::resized()
 {
-    oscModuleComponent.setBounds(0, 0, 920, 280);
+    oscModuleComponent.setBounds(0, 0, 1000, 280);
     volumeModuleComponent.setBounds(0, oscModuleComponent.getBottom() + 1, 700, 150);
 
     timeModuleComponent.setBounds(oscModuleComponent.getRight() + 2, 0, 300, 125);
@@ -577,7 +577,6 @@ ModulationRowComponent::ModulationRowComponent(AudioPluginAudioProcessor &proc, 
     destPicker.showButton.setButtonText("None");
 
     initDestinationPicker();
-    // destDrop.setSelectedId(1);
     destPicker.OnSelected = [updatfunc, this](int64_t id) {
         if (id > 0)
         {
