@@ -734,7 +734,6 @@ void OscillatorModuleComponent::populateScalaDrop()
             scalaIdToPath[id] = strpath;
             ++id;
         }
-        
     }
     // scalaPicker.selectedID = 0;
 }
@@ -742,12 +741,13 @@ void OscillatorModuleComponent::populateScalaDrop()
 void OscillatorModuleComponent::resized()
 {
     oscTypeComponent.setBounds(7, 17, 370, 50);
-    oscPitchKnob.setBounds(7, oscTypeComponent.getBottom() + 1, 80, 100);
-    quantizePitchKnob.setBounds(7, oscPitchKnob.getBottom() + 2, 80, 100);
-
+    oscPitchKnob.setBounds(7, oscTypeComponent.getBottom() + 1, 100, 120);
+    quantizePitchKnob.setBounds(oscPitchKnob.getRight() + 2, oscTypeComponent.getBottom() + 1, 100,
+                                120);
+    scalaPicker.showButton.setBounds(oscPitchKnob.getX(), oscPitchKnob.getBottom() + 2, 250, 25);
     for (int i = 0; i < modDepthKnobs.size(); ++i)
     {
-        modDepthKnobs[i]->setBounds(oscPitchKnob.getRight() + 2,
+        modDepthKnobs[i]->setBounds(scalaPicker.showButton.getRight() + 1,
                                     oscTypeComponent.getBottom() + 1 + i * 51, 80, 50);
     }
 
@@ -755,7 +755,7 @@ void OscillatorModuleComponent::resized()
                                      200, 200);
     grainModComponent.setBounds(pitchEnvelopeComponent.getRight() + 2, oscTypeComponent.getBottom(),
                                 200, 200);
-    scalaPicker.showButton.setBounds(grainModComponent.getRight() + 2, getHeight() - 40, 250, 25);
+
     oscSyncKnob.setBounds(grainModComponent.getRight() + 2, oscTypeComponent.getBottom() + 1, 80,
                           50);
     oscPWKnob.setBounds(grainModComponent.getRight() + 2, oscSyncKnob.getBottom() + 1, 80, 50);
