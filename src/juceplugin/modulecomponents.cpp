@@ -745,6 +745,7 @@ void OscillatorModuleComponent::resized()
     quantizePitchKnob.setBounds(oscPitchKnob.getRight() + 2, oscTypeComponent.getBottom() + 1, 100,
                                 120);
     scalaPicker.showButton.setBounds(oscPitchKnob.getX(), oscPitchKnob.getBottom() + 2, 250, 25);
+    
     for (int i = 0; i < modDepthKnobs.size(); ++i)
     {
         modDepthKnobs[i]->setBounds(scalaPicker.showButton.getRight() + 1,

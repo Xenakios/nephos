@@ -585,8 +585,10 @@ ModulationRowComponent::ModulationRowComponent(AudioPluginAudioProcessor &proc, 
                 auto pmd = gr->idtoparmetadata[id];
                 auto d = gr->modRanges[id];
                 depthSlider.setModulationDisplayDepth(d, pmd->unit);
-                destPicker.showButton.setButtonText(pmd->name);
             }
+            auto txt = destPicker.get_text_from_id(id);
+            if (txt)
+                destPicker.showButton.setButtonText(*txt);
             updatfunc();
         }
     };

@@ -62,6 +62,7 @@ struct ModulationRowComponent : public juce::Component
 
             catmap[md.groupname]->items.push_back({md.id, md.name});
         }
+        picker.selectedID = 1;
     }
     void fillPickerWithSources(GalleryPicker &gal)
     {
@@ -93,6 +94,7 @@ struct ModulationRowComponent : public juce::Component
                 catmap[ms.groupname]->items.push_back(it);
             }
         }
+        gal.selectedID = 0;
     }
     using Node = DropDownComponent::Node;
     AudioPluginAudioProcessor &processorRef;
@@ -158,6 +160,7 @@ struct ModulationRowComponent : public juce::Component
                 }
             }
         }
+        destPicker.selectedID = 1;
     }
     void setTarget(uint32_t parid)
     {
