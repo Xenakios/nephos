@@ -143,6 +143,7 @@ class GalleryPicker : public juce::Component
     int paintcount = 0;
     juce::TextButton showButton;
     bool first_show = true;
+    bool close_on_select = false;
     Component *parentToCover = nullptr;
     juce::Rectangle<float> closeButtonRect;
     std::function<void(int64_t, juce::Graphics &, juce::Rectangle<float>)> DrawThumb;
