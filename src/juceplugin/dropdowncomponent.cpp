@@ -37,8 +37,8 @@ void GalleryPicker::mouseDown(const juce::MouseEvent &ev)
         selectedID = id;
         OnSelected(id);
         repaint();
-        if (close_on_select)
-            setVisible(false);
+        auto mods = juce::ModifierKeys::getCurrentModifiers();
+        setVisible(!mods.isCommandDown());
     }
 }
 
@@ -59,8 +59,6 @@ GalleryPicker::GalleryPicker()
         setBounds(0, 0, parentToCover->getWidth(), parentToCover->getHeight());
         setVisible(!isVisible());
         toFront(true);
-        auto mods = juce::ModifierKeys::getCurrentModifiers();
-        close_on_select = mods.isCommandDown();
     };
 }
 void GalleryPicker::update_layout()
