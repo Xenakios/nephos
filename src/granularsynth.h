@@ -480,7 +480,7 @@ inline bool is_monotonic_tuning(Tunings::Tuning &tuning)
     return true;
 }
 
-inline double quantize_pitch_binary(Tunings::Tuning &tuning, double sourcepitch)
+inline double quantize_pitch_binary(Tunings::Tuning &tuning, double sourcepitch, double threshold)
 {
     auto pitchAt = [&](int i) { return tuning.logScaledFrequencyForMidiNote(i) * 12.0; };
 
@@ -508,8 +508,21 @@ inline double quantize_pitch_binary(Tunings::Tuning &tuning, double sourcepitch)
 
     const double higher = pitchAt(lo);
     const double lower = pitchAt(lo - 1);
+    const double interval = higher - lower;
 
-    return (higher - sourcepitch < sourcepitch - lower) ? higher : lower;
+    // Normalized position within the interval: [0, 1].
+    const double position = (sourcepitch - lower) / interval;
+
+    // Quantize only near either grid point.
+    const double halfThreshold = threshold * 0.5;
+
+    if (position < halfThreshold)
+        return lower;
+
+    if (position > 1.0 - halfThreshold)
+        return higher;
+
+    return sourcepitch;
 }
 
 class GranulatorVoice
