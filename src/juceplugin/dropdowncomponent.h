@@ -148,6 +148,30 @@ class GalleryPicker : public juce::Component
     GalleryPicker();
     void update_layout();
     std::optional<std::string> get_text_from_id(int64_t id);
+    Item *add_entry(std::string categorytext, int64_t id, std::string text)
+    {
+        Category *cat = nullptr;
+        for (auto &e : categories)
+        {
+            if (e.text == categorytext)
+            {
+                cat = &e;
+                break;
+            }
+        }
+        if (!cat)
+        {
+            Category c;
+            c.text = categorytext;
+            categories.push_back(c);
+            cat = &categories.back();
+        }
+        Item it;
+        it.id = id;
+        it.text = text;
+        cat->items.push_back(it);
+        return &cat->items.back();
+    }
     bool keyPressed(const juce::KeyPress &ev) override;
     void resized() override;
     void mouseDown(const juce::MouseEvent &ev) override;

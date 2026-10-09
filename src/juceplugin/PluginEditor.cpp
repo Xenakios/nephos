@@ -494,6 +494,17 @@ void MacrosPresetsComponent::updateButtonColors()
             buttons[i]->setColour(juce::TextButton::ColourIds::buttonColourId, juce::Colours::red);
     }
 }
+
+void ModulationRowComponent::fillPickerWithCurves(GalleryPicker &picker)
+{
+    auto curves = GranulatorModConfig::get_curve_metadata();
+    for (auto &md : curves)
+    {
+        picker.add_entry(md.groupname, md.id, md.name);
+    }
+    picker.selectedID = 1;
+}
+
 ModulationRowComponent::ModulationRowComponent(AudioPluginAudioProcessor &proc, int modindex)
     : processorRef(proc), gr(&proc.granulator), modslotindex(modindex),
       depthSlider(XapSlider::SS_HorizontalSlider,

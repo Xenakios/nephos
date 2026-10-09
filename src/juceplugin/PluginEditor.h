@@ -37,33 +37,7 @@ struct MacrosPresetsComponent : public juce::Component
 
 struct ModulationRowComponent : public juce::Component
 {
-    void fillPickerWithCurves(GalleryPicker &picker)
-    {
-        auto curves = GranulatorModConfig::get_curve_metadata();
-        std::map<std::string, GalleryPicker::Category *> catmap;
-        picker.categories.reserve(32);
-        for (int i = 0; i < curves.size(); ++i)
-        {
-            auto &md = curves[i];
-            // if (!md.groupname.empty())
-            {
-                if (catmap.count(md.groupname) == 0)
-                {
-                    GalleryPicker::Category cat;
-                    cat.text = md.groupname;
-                    picker.categories.push_back(cat);
-                    catmap[md.groupname] = &picker.categories.back();
-                }
-            }
-        }
-        for (int i = 0; i < curves.size(); ++i)
-        {
-            auto &md = curves[i];
-
-            catmap[md.groupname]->items.push_back({md.id, md.name});
-        }
-        picker.selectedID = 1;
-    }
+    void fillPickerWithCurves(GalleryPicker &picker);
     void fillPickerWithSources(GalleryPicker &gal)
     {
         std::map<std::string, GalleryPicker::Category *> catmap;
