@@ -13,6 +13,11 @@ bool GalleryPicker::keyPressed(const juce::KeyPress &ev)
 }
 void GalleryPicker::mouseDown(const juce::MouseEvent &ev)
 {
+    if (closeButtonRect.contains(ev.position))
+    {
+        setVisible(false);
+        return;
+    }
     int64_t id = -1;
     for (auto &cate : categories)
     {
@@ -81,6 +86,7 @@ void GalleryPicker::update_layout()
         }
         yoffs += itemh + 1.0f;
     }
+    closeButtonRect = juce::Rectangle<float>{(float)getWidth() - 27.0f, 1.0f, 25.0f, 25.0f};
 }
 std::optional<std::string> GalleryPicker::get_text_from_id(int64_t id)
 {
@@ -154,5 +160,9 @@ void GalleryPicker::paint(juce::Graphics &g)
         }
     }
     g.setColour(juce::Colours::white);
-    g.drawText(juce::String(paintcount), getLocalBounds(), juce::Justification::topRight);
+    g.drawText(juce::String(paintcount), getLocalBounds(), juce::Justification::bottomRight);
+    // g.drawRect(closeButtonRect);
+    getLookAndFeel().drawTickBox(g, *this, closeButtonRect.getX(), closeButtonRect.getY(),
+                                 closeButtonRect.getWidth(), closeButtonRect.getHeight(), true,
+                                 true, true, false);
 }
