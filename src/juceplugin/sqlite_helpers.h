@@ -165,12 +165,14 @@ struct PresetRecord
 inline bool presetsDeletePreset(SqliteDb &db, int64_t presetID)
 {
     SqliteStmt stmt(db.get(), "DELETE FROM presets WHERE id = ?");
-    sqlite3_bind_int64(stmt.get(), 1, presetID);
-    if (sqlite3_step(stmt.get()) != SQLITE_ROW)
-    {
-        return true;
-    }
-    return false;
+
+    if (sqlite3_bind_int64(stmt.get(), 1, presetID) != SQLITE_OK)
+        return false;
+
+    if (sqlite3_step(stmt.get()) != SQLITE_DONE)
+        return false;
+
+    return sqlite3_changes(db.get()) > 0;
 }
 
 inline std::optional<PresetRecord> presetsLoadPreset(SqliteDb &db, int64_t presetID)
