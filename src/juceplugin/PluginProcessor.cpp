@@ -244,6 +244,7 @@ void AudioPluginAudioProcessor::loadSnapShot(int index)
         {
             loadPreset(it->second);
             granulator.currentSnapShot = index;
+            granulator.current_preset_id = it->second;
         }
     }
 }

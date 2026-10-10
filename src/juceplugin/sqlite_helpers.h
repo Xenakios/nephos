@@ -162,6 +162,17 @@ struct PresetRecord
     std::vector<uint8_t> data;
 };
 
+inline bool presetsDeletePreset(SqliteDb &db, int64_t presetID)
+{
+    SqliteStmt stmt(db.get(), "DELETE FROM presets WHERE id = ?");
+    sqlite3_bind_int64(stmt.get(), 1, presetID);
+    if (sqlite3_step(stmt.get()) != SQLITE_ROW)
+    {
+        return true;
+    }
+    return false;
+}
+
 inline std::optional<PresetRecord> presetsLoadPreset(SqliteDb &db, int64_t presetID)
 {
     SqliteStmt stmt(db.get(), "SELECT id, name, category, data FROM presets WHERE id = ?");

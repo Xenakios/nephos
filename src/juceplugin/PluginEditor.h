@@ -23,7 +23,7 @@ struct MacrosPresetsComponent : public juce::Component
 {
     AudioPluginAudioProcessor &processorRef;
     MacrosPresetsComponent(AudioPluginAudioProcessor &p);
-
+    void populatePresetsPicker();
     void resized() override;
     void updateButtonColors();
 
@@ -32,6 +32,7 @@ struct MacrosPresetsComponent : public juce::Component
     juce::Colour defaultButtonColor;
     std::vector<std::unique_ptr<juce::TextButton>> buttons;
     juce::TextButton menuButton;
+    GalleryPicker presetsPicker;
     std::vector<std::unique_ptr<XapSlider>> perfSliders;
 };
 
@@ -68,35 +69,35 @@ struct ModulationRowComponent : public juce::Component
                 catmap[ms.groupname]->items.push_back(it);
             }
         }
-        gal.selectedID = 0;
+        gal.set_selected_ID(0);
     }
     using Node = DropDownComponent::Node;
     AudioPluginAudioProcessor &processorRef;
     ModulationRowComponent(AudioPluginAudioProcessor &proc, int modindex);
     void update_source(int64_t id)
     {
-        sourcePicker.selectedID = id;
+        sourcePicker.set_selected_ID(id);
         auto txt = sourcePicker.get_text_from_id(id);
         if (txt)
             sourcePicker.showButton.setButtonText(*txt);
     }
     void update_via(int64_t id)
     {
-        viaPicker.selectedID = id;
+        viaPicker.set_selected_ID(id);
         auto txt = viaPicker.get_text_from_id(id);
         if (txt)
             viaPicker.showButton.setButtonText(*txt);
     }
     void update_curve(int64_t id)
     {
-        curvePicker.selectedID = id;
+        curvePicker.set_selected_ID(id);
         auto txt = curvePicker.get_text_from_id(id);
         if (txt)
             curvePicker.showButton.setButtonText(*txt);
     }
     void update_destination(int64_t id)
     {
-        destPicker.selectedID = id;
+        destPicker.set_selected_ID(id);
         auto txt = destPicker.get_text_from_id(id);
         if (txt)
             destPicker.showButton.setButtonText(*txt);
@@ -134,11 +135,11 @@ struct ModulationRowComponent : public juce::Component
                 }
             }
         }
-        destPicker.selectedID = 1;
+        destPicker.set_selected_ID(1);
     }
     void setTarget(uint32_t parid)
     {
-        destPicker.selectedID = parid;
+        destPicker.set_selected_ID(parid);
         if (parid > 1)
         {
             auto pmd = gr->idtoparmetadata[parid];

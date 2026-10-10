@@ -136,7 +136,13 @@ class GalleryPicker : public juce::Component
     };
     std::vector<Category> categories;
     std::function<void(int64_t)> OnSelected;
+    int64_t get_selected_ID() const { return selectedID; }
+    void set_selected_ID(int64_t id) { selectedID = id; }
+
+  private:
     int64_t selectedID = -1;
+
+  public:
     float cellw = 145.0f;
     float itemh = 20.0f;
     bool has_thumbs = false;

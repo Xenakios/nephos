@@ -649,7 +649,7 @@ class InsertModuleComponent : public juce::GroupComponent
         {
             if (e.second == info)
             {
-                fxPicker.selectedID = e.first;
+                fxPicker.set_selected_ID(e.first);
                 fxPicker.showButton.setButtonText(e.second.displayname);
                 break;
             }

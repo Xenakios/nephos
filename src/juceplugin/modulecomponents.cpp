@@ -678,7 +678,7 @@ void OscillatorModuleComponent::updateScalaDropFromPath(std::string path)
     {
         if (e.second == path)
         {
-            scalaPicker.selectedID = e.first;
+            scalaPicker.set_selected_ID(e.first);
             auto txt = scalaPicker.get_text_from_id(e.first);
             if (txt)
                 scalaPicker.showButton.setButtonText(*txt);

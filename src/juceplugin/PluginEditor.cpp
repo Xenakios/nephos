@@ -367,11 +367,17 @@ MacrosPresetsComponent::MacrosPresetsComponent(AudioPluginAudioProcessor &p) : p
                 lastSaved = i;
                 auto state = processorRef.getState();
                 processorRef.saveSnapShot(i, state);
+                populatePresetsPicker();
             }
             else
             {
                 lastLoaded = i;
                 processorRef.loadSnapShot(i);
+                presetsPicker.set_selected_ID(processorRef.granulator.current_preset_id);
+                auto txt =
+                    presetsPicker.get_text_from_id(processorRef.granulator.current_preset_id);
+                if (txt)
+                    presetsPicker.showButton.setButtonText(*txt);
             }
             updateButtonColors();
         };
@@ -379,6 +385,7 @@ MacrosPresetsComponent::MacrosPresetsComponent(AudioPluginAudioProcessor &p) : p
         buttons.push_back(std::move(but));
     }
     defaultButtonColor = buttons.front()->findColour(juce::TextButton::ColourIds::buttonColourId);
+    addAndMakeVisible(presetsPicker.showButton);
     addAndMakeVisible(menuButton);
     menuButton.setButtonText("...");
     menuButton.onClick = [this]() {
@@ -428,11 +435,26 @@ MacrosPresetsComponent::MacrosPresetsComponent(AudioPluginAudioProcessor &p) : p
         });
         menu.addItem("Reset to default state",
                      [this]() { processorRef.loadPreset(processorRef.factoryResetID); });
+        menu.addItem("Delete current preset", [this]() {
+            auto success =
+                presetsDeletePreset(processorRef.presetsDataBase, presetsPicker.get_selected_ID());
+            if (!success)
+            {
+                DBG("coult not delete preset with id " << presetsPicker.get_selected_ID());
+            }
+            else
+            {
+                presetsPicker.set_selected_ID(-1);
+                presetsPicker.showButton.setButtonText("No preset selected");
+            }
+            populatePresetsPicker();
+        });
         menu.addItem("Quick save preset", [this]() {
             auto state = processorRef.getState();
             try
             {
                 insertPreset(processorRef.presetsDataBase, "quick save", "Quick saves", state);
+                populatePresetsPicker();
             }
             catch (std::exception &ex)
             {
@@ -455,11 +477,35 @@ MacrosPresetsComponent::MacrosPresetsComponent(AudioPluginAudioProcessor &p) : p
         auto presets = listPresets(processorRef.presetsDataBase);
         for (auto &e : presets)
         {
-            menu.addItem(e.category + "/" + e.name, [this, e]() { processorRef.loadPreset(e.id); });
+            menu.addItem(e.category + "/" + e.name, [this, e]() {
+                processorRef.loadPreset(e.id);
+                auto txt = presetsPicker.get_text_from_id(e.id);
+                if (txt)
+                    presetsPicker.showButton.setButtonText(*txt);
+            });
         }
         menu.showMenuAsync({});
     };
+    populatePresetsPicker();
+    presetsPicker.OnSelected = [this](int64_t id) {
+        processorRef.loadPreset(id);
+        auto txt = presetsPicker.get_text_from_id(id);
+        if (txt)
+            presetsPicker.showButton.setButtonText(*txt);
+    };
 }
+
+void MacrosPresetsComponent::populatePresetsPicker()
+{
+    presetsPicker.categories.clear();
+    auto presets = listPresets(processorRef.presetsDataBase);
+    for (auto &e : presets)
+    {
+        presetsPicker.add_entry(e.category, e.id, e.name);
+    }
+    presetsPicker.update_layout();
+}
+
 void MacrosPresetsComponent::resized()
 {
 
@@ -472,6 +518,10 @@ void MacrosPresetsComponent::resized()
     }
     flex.items.add(
         juce::FlexItem(menuButton).withFlex(1.0).withMinWidth(40.0f).withMaxWidth(40.0f));
+    flex.items.add(juce::FlexItem(presetsPicker.showButton)
+                       .withFlex(8.0)
+                       .withMinWidth(150.0f)
+                       .withMaxWidth(250.0f));
     flex.performLayout(juce::Rectangle<int>(0, 0, getWidth(), 50));
 
     juce::FlexBox knobsflex;
@@ -502,7 +552,7 @@ void ModulationRowComponent::fillPickerWithCurves(GalleryPicker &picker)
     {
         picker.add_entry(md.groupname, md.id, md.name);
     }
-    picker.selectedID = 1;
+    picker.set_selected_ID(1);
 }
 
 ModulationRowComponent::ModulationRowComponent(AudioPluginAudioProcessor &proc, int modindex)
@@ -526,10 +576,10 @@ ModulationRowComponent::ModulationRowComponent(AudioPluginAudioProcessor &proc, 
         ThreadMessage msg;
         msg.modslot = modslotindex;
         msg.depth = depthSlider.getValue();
-        msg.modsource = sourcePicker.selectedID;
-        msg.modvia = viaPicker.selectedID;
-        msg.moddest = destPicker.selectedID;
-        msg.modcurve = curvePicker.selectedID;
+        msg.modsource = sourcePicker.get_selected_ID();
+        msg.modvia = viaPicker.get_selected_ID();
+        msg.moddest = destPicker.get_selected_ID();
+        msg.modcurve = curvePicker.get_selected_ID();
         msg.opcode = ThreadMessage::OP_MODROUTING;
         processorRef.from_gui_fifo.push(msg);
     };
