@@ -1,4 +1,5 @@
 #include "granularsynth.h"
+#include "Tunings.h"
 #include "xen_modulationsources.h"
 
 ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
@@ -599,6 +600,29 @@ void ToneGranulator::set_oscillator_type_mapping(std::span<int> mapping)
             osctypemapping[i] = mapping[i];
     }
 }
+
+std::string ToneGranulator::load_scala_string(std::string scalatext, bool called_from_audio_thread)
+{
+    try
+    {
+        auto scale = Tunings::parseSCLData(scalatext);
+        auto temp = Tunings::Tuning(scale);
+        if (!is_monotonic_tuning(temp))
+            throw std::runtime_error("tuning is not monotonic");
+        if (!called_from_audio_thread)
+            spinLock.lock();
+        tuning = temp;
+        currentScalaFile = "";
+        if (!called_from_audio_thread)
+            spinLock.unlock();
+    }
+    catch (std::exception &excep)
+    {
+        return excep.what();
+    }
+    return {};
+}
+
 std::string ToneGranulator::load_scala_file(std::string path, bool called_from_audio_thread)
 {
     try
@@ -609,9 +633,6 @@ std::string ToneGranulator::load_scala_file(std::string path, bool called_from_a
             throw std::runtime_error("tuning is not monotonic");
         if (!called_from_audio_thread)
             spinLock.lock();
-        // std::cout << fmt::format("lowest scale degree is {} Hz, highest is {} Hz\n",
-        //                          temp.frequencyForMidiNote(-128),
-        //                          temp.frequencyForMidiNote(128));
         tuning = temp;
         currentScalaFile = path;
         if (!called_from_audio_thread)
