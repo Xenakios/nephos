@@ -1642,7 +1642,7 @@ class ToneGranulator
     }
 
     std::atomic<int> currentSnapShot{-1};
-    int64_t current_preset_id = -1;
+    std::atomic<int64_t> current_preset_id = -1;
     struct RampDownUp
     {
         int pos = -1;

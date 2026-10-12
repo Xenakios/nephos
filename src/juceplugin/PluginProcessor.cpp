@@ -223,6 +223,7 @@ void AudioPluginAudioProcessor::loadPreset(int64_t presetID)
             state.setMember("state_ignore_flags", (int64_t)SIF_AMBISONICORDER | SIF_MASTERVOLUME |
                                                       SIF_DASHBOARDSETTING | SIF_MIDIBINDINGS);
             setState(state.getView());
+            granulator.current_preset_id = presetID;
         }
         else
         {
@@ -244,7 +245,6 @@ void AudioPluginAudioProcessor::loadSnapShot(int index)
         {
             loadPreset(it->second);
             granulator.currentSnapShot = index;
-            granulator.current_preset_id = it->second;
         }
     }
 }
