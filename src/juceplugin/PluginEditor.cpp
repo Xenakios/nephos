@@ -473,6 +473,19 @@ MacrosPresetsComponent::MacrosPresetsComponent(AudioPluginAudioProcessor &p) : p
                 DBG(ex.what());
             }
         });
+        menu.addItem("Paste JSON state from clipboard", [this]() {
+            try
+            {
+                auto json = juce::SystemClipboard::getTextFromClipboard().toStdString();
+                auto state = choc::json::parse(json);
+                if (state.isObject())
+                    processorRef.setState(state);
+            }
+            catch (std::exception &ex)
+            {
+                DBG(ex.what());
+            }
+        });
         menu.addSectionHeader("Presets");
         auto presets = listPresets(processorRef.presetsDataBase);
         for (auto &e : presets)

@@ -801,7 +801,7 @@ choc::value::Value AudioPluginAudioProcessor::getState()
     rootstate.setMember("gvs_timespan", granulator.gvsettings.timespantoshow);
 
     auto tuningstate = choc::value::createObject("tuning");
-    tuningstate.setMember("scala_file", granulator.currentScalaFile);
+    tuningstate.setMember("scala_string", granulator.tuning.scale.rawText);
     rootstate.setMember("tuning", tuningstate);
 
     auto filterstates = choc::value::createEmptyArray();
@@ -963,8 +963,8 @@ void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
     if (state.hasObjectMember("tuning"))
     {
         auto tunstate = state["tuning"];
-        auto scalapath = tunstate["scala_file"].getWithDefault(std::string(""));
-        auto err = granulator.load_scala_file(scalapath, true);
+        auto scalastring = tunstate["scala_string"].getWithDefault(std::string(""));
+        auto err = granulator.load_scala_string(scalastring, true);
         if (!err.empty())
         {
             DBG(err);
