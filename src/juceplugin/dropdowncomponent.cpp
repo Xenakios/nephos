@@ -1,4 +1,5 @@
 #include "dropdowncomponent.h"
+#include "juce_audio_processors/juce_audio_processors.h"
 #include "juce_graphics/juce_graphics.h"
 
 void GalleryPicker::resized() { update_layout(); }
@@ -50,6 +51,7 @@ GalleryPicker::GalleryPicker()
         // nasty but will have to do for now
         jassert(showButton.getParentComponent());
         parentToCover = showButton.getParentComponent()->getParentComponent();
+        parentToCover = showButton.findParentComponentOfClass<juce::AudioProcessorEditor>();
         jassert(parentToCover);
         if (first_show)
         {
