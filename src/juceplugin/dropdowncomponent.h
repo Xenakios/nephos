@@ -143,6 +143,7 @@ class GalleryPicker : public juce::Component
     int64_t selectedID = -1;
 
   public:
+    juce::Font font{juce::FontOptions(15.0f)};
     float cellw = 145.0f;
     float itemh = 20.0f;
     bool has_thumbs = false;

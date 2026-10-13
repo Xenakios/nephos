@@ -48,9 +48,8 @@ GalleryPicker::GalleryPicker()
     setWantsKeyboardFocus(true);
     setOpaque(true);
     showButton.onClick = [this]() {
-        // nasty but will have to do for now
-        jassert(showButton.getParentComponent());
-        parentToCover = showButton.getParentComponent()->getParentComponent();
+        // obviously this could be done better, but this gives a somewhat reasonable
+        // behavior for Juce plugins
         parentToCover = showButton.findParentComponentOfClass<juce::AudioProcessorEditor>();
         jassert(parentToCover);
         if (first_show)
@@ -77,16 +76,23 @@ void GalleryPicker::update_layout()
         float xoffs = cellw;
         for (int j = 0; j < categories[i].items.size(); ++j)
         {
-            if (xoffs + cellw >= getWidth())
+            auto &it = categories[i].items[j];
+            juce::GlyphArrangement ga;
+            ga.addLineOfText(font, it.text, 0.0f, 0.0f);
+            float txtw = ga.getBoundingBox(0, -1, true).getWidth();
+            float actw = cellw;
+            if (txtw > actw + 50.0f)
+                actw = cellw * 2;
+            if (xoffs + actw >= getWidth())
             {
                 xoffs = 1.0f;
                 yoffs += itemh;
             }
-            auto &it = categories[i].items[j];
-            juce::Rectangle<float> r{xoffs, yoffs, cellw, itemh};
+
+            juce::Rectangle<float> r{xoffs, yoffs, actw, itemh};
             r = r.reduced(2.0f);
             it.rect = r;
-            xoffs += cellw;
+            xoffs += actw;
         }
         yoffs += itemh + 1.0f;
     }
@@ -111,6 +117,7 @@ void GalleryPicker::paint(juce::Graphics &g)
 {
     ++paintcount;
     g.fillAll(juce::Colours::black);
+    g.setFont(font);
     // g.setColour(juce::Colours::magenta);
     // g.drawRect(g.getClipBounds());
     for (size_t i = 0; i < categories.size(); ++i)
