@@ -10,6 +10,7 @@
 #include <span>
 // #include "sst/basic-blocks/dsp/CorrelatedNoise.h"
 #include "clap/id.h"
+#include "containers/choc_Value.h"
 #include "fmt/format.h"
 #include "sst/basic-blocks/dsp/EllipticBlepOscillators.h"
 #include <variant>
@@ -954,11 +955,21 @@ struct CloudPlayer
     }
 };
 
+enum StateIgnoreFlags
+{
+    SIF_MASTERVOLUME = 1 << 0,
+    SIF_AMBISONICORDER = 1 << 1,
+    SIF_MODULATIONROUTINGS = 1 << 2,
+    SIF_DASHBOARDSETTING = 1 << 3,
+    SIF_MIDIBINDINGS = 1 << 4
+};
+
 class ToneGranulator
 {
   public:
     ToneGranulator();
     void create_voices();
+    void set_state(choc::value::ValueView state);
     void set_filter(int which, uint8_t mainmode, uint8_t awtype, sfpp::FilterModel mo,
                     sfpp::ModelConfig conf);
     void prepare(float samplerate, int filter_routing, float tail_len, float tail_fade_len);

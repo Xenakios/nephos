@@ -105,15 +105,6 @@ struct MIDIBinding
     NonParamAction npa = NPA_NONE;
 };
 
-enum StateIgnoreFlags
-{
-    SIF_MASTERVOLUME = 1 << 0,
-    SIF_AMBISONICORDER = 1 << 1,
-    SIF_MODULATIONROUTINGS = 1 << 2,
-    SIF_DASHBOARDSETTING = 1 << 3,
-    SIF_MIDIBINDINGS = 1 << 4
-};
-
 class AudioPluginAudioProcessor final : public juce::AudioProcessor
 {
   public:

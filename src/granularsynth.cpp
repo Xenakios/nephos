@@ -601,6 +601,175 @@ void ToneGranulator::set_oscillator_type_mapping(std::span<int> mapping)
     }
 }
 
+void ToneGranulator::set_state(choc::value::ValueView state)
+{
+    int64_t state_ignore_flags = state["state_ignore_flags"].getWithDefault(0);
+    if (state_ignore_flags & SIF_DASHBOARDSETTING)
+    {
+        gvsettings.timespantoshow = state["gvs_timespan"].getWithDefault(8.0);
+    }
+    
+    if (state.hasObjectMember("tuning"))
+    {
+        auto tunstate = state["tuning"];
+        auto scalastring = tunstate["scala_string"].getWithDefault(std::string(""));
+        auto err = load_scala_string(scalastring, true);
+        if (!err.empty())
+        {
+            std::cout << err << std::endl;
+        }
+    }
+    if (state.hasObjectMember("trigrandstates"))
+    {
+        auto randstates = state["trigrandstates"];
+        for (int i = 0; i < randstates.size(); ++i)
+        {
+            randomModSources[i].set_state(randstates[i]);
+        }
+    }
+    if (state.hasObjectMember("osctypemapping"))
+    {
+        auto osctypemap = state["osctypemapping"];
+        if (osctypemap.isArray())
+        {
+            for (int i = 0; i < osctypemap.size(); ++i)
+            {
+                if (i < osctypemapping.size())
+                {
+                    osctypemapping[i] = osctypemap[i].getWithDefault(i);
+                }
+            }
+        }
+    }
+    if (state.hasObjectMember("grainmodroutings"))
+    {
+        auto grainmodroutings = state["grainmodroutings"];
+        for (int i = 0; i < grainmodroutings.size(); ++i)
+        {
+            auto routing = grainmodroutings[i];
+            uint32_t src = routing["source"].getWithDefault(CLAP_INVALID_ID);
+            uint32_t dest = routing["destination"].getWithDefault(CLAP_INVALID_ID);
+            set_grain_modulation_routing(i, src, dest, true);
+        }
+    }
+    if (state.hasObjectMember("auxenvstates"))
+    {
+        auto auxenvstates = state["auxenvstates"];
+        for (int i = 0; i < auxenvstates.size(); ++i)
+        {
+            if (i >= voiceaux_envelopes.size())
+                break;
+            auto auxenvstate = auxenvstates[i];
+            voiceaux_envelopes[i].set_state(auxenvstate);
+        }
+    }
+    if (state.hasObjectMember("stepseqstates"))
+    {
+        auto stepseqstate = state["stepseqstates"];
+        for (size_t i = 0; i < stepseqstate.size(); ++i)
+        {
+            if (i >= stepModSources.size())
+                break;
+            auto &ss = stepModSources[i];
+            auto seqstate = stepseqstate[(int)i];
+            auto steps = seqstate["steps"];
+            for (size_t j = 0; j < steps.size(); ++j)
+            {
+                if (j < 128)
+                {
+                    StepModSource::Message msg;
+                    msg.opcode = StepModSource::Message::OP_SETSTEP;
+                    msg.dest = i;
+                    msg.ival0 = j;
+                    msg.fval0 = steps[(int)j].getWithDefault(0.0f);
+                    fifo.push(msg);
+                }
+            }
+            StepModSource::Message msg;
+            msg.opcode = StepModSource::Message::OP_LOOPSTART;
+            msg.dest = i;
+            msg.ival0 = seqstate["startstep"].getWithDefault(0);
+            fifo.push(msg);
+            msg.opcode = StepModSource::Message::OP_LOOPLEN;
+            msg.ival0 = seqstate["looplen"].getWithDefault(1);
+            fifo.push(msg);
+            msg.opcode = StepModSource::Message::OP_PLAYMODE;
+            msg.ival0 = seqstate["playmode"].getWithDefault(0);
+            fifo.push(msg);
+        }
+    }
+    if (state.hasObjectMember("filterstates"))
+    {
+        auto filterstates = state["filterstates"];
+        for (int i = 0; i < filterstates.size(); ++i)
+        {
+            auto filterstate = filterstates[i];
+            if (i < 2)
+            {
+                sfpp::FilterModel m = (sfpp::FilterModel)filterstate["model"].getWithDefault(0);
+                sfpp::ModelConfig conf;
+                conf.dt = (decltype(conf.dt))filterstate["dt"].getWithDefault(0);
+                conf.st = (decltype(conf.st))filterstate["st"].getWithDefault(0);
+                conf.mt = (decltype(conf.mt))filterstate["mt"].getWithDefault(0);
+                conf.pt = (decltype(conf.pt))filterstate["pt"].getWithDefault(0);
+                int mainmode = filterstate["mainmode"].getWithDefault(0);
+                int awtype = filterstate["awtype"].getWithDefault(0);
+                set_filter(i, mainmode, awtype, m, conf);
+            }
+        }
+    }
+    if (state.hasObjectMember("params"))
+    {
+        auto params = state["params"];
+        auto &pars = parmetadatas;
+        bool ignoreMasterVolume = state_ignore_flags & SIF_MASTERVOLUME;
+        bool ignoreAmbisonicOrder = state_ignore_flags & SIF_AMBISONICORDER;
+        for (int i = 0; i < pars.size(); ++i)
+        {
+            if (ignoreMasterVolume && pars[i].id == ToneGranulator::PAR_MAINVOLUME)
+                continue;
+            if (ignoreAmbisonicOrder && pars[i].id == ToneGranulator::PAR_AMBORDER)
+                continue;
+            std::string id = std::to_string(pars[i].id);
+            if (params.hasObjectMember(id))
+            {
+                float v = params[id].getWithDefault(pars[i].defaultVal);
+                *idtoparvalptr[pars[i].id] = v;
+            }
+        }
+    }
+    if (state.hasObjectMember("modroutings"))
+    {
+        auto routings = state["modroutings"];
+        auto &mm = modmatrix;
+        for (int i = 0; i < GranulatorModConfig::FixedMatrixSize; ++i)
+        {
+            mm.rt.updateActiveAt(i, false);
+        }
+        for (int i = 0; i < routings.size(); ++i)
+        {
+            auto rstate = routings[i];
+            int slot = rstate["slot"].get<int>();
+            if (slot >= 0 && slot < GranulatorModConfig::FixedMatrixSize)
+            {
+                mm.rt.updateActiveAt(slot, true);
+                uint32_t src = rstate["source"].getWithDefault(0);
+                uint32_t srcvia = rstate["via"].getWithDefault(0);
+                int curve = rstate["curve"].getWithDefault(1);
+                float d = 0.0f;
+                int dest = rstate["dest"].getWithDefault(1);
+                mm.rt.updateRoutingAt(slot, GranulatorModConfig::SourceIdentifier{src},
+                                      GranulatorModConfig::SourceIdentifier{srcvia},
+                                      GranulatorModConfig::MyCurve{curve},
+                                      GranulatorModConfig::TargetIdentifier{dest}, d);
+                if (srcvia == 0)
+                    mm.rt.routes[slot].sourceVia = std::nullopt;
+            }
+        }
+        mm.m.prepare(mm.rt, m_sr, granul_block_size);
+    }
+}
+
 std::string ToneGranulator::load_scala_string(std::string scalatext, bool called_from_audio_thread)
 {
     try
