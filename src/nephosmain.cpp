@@ -103,23 +103,25 @@ struct CloudPlayerEvent
     bool operator<(CloudPlayerEvent &other) { return timepos < other.timepos; }
 };
 
-inline int render_nephos(std::string statefilepath)
+inline int render_nephos(std::string statefilepath, double outlenseconds)
 {
+    auto g = std::make_unique<ToneGranulator>();
+    double sr = 44100.0;
+    g->prepare(sr, GranulatorVoice::FR_ALLSERIAL, 0.002, 0.002);
     choc::value::Value state;
     try
     {
         auto jsontxt = choc::file::loadFileAsString(statefilepath);
         state = choc::json::parse(jsontxt);
         std::cout << "parsed state OK\n";
+        g->set_state(state);
     }
     catch (std::exception &ex)
     {
         std::cout << ex.what() << "\n";
         return 1;
     }
-    auto g = std::make_unique<ToneGranulator>();
-    double sr = 44100.0;
-    g->prepare(sr, 0, 0.002, 0.002);
+
     const unsigned int amborder = 3;
     unsigned int numambchans = ambisonicOrderNumChannels(amborder);
     g->set_ambisonics_order(amborder);
@@ -134,21 +136,21 @@ inline int render_nephos(std::string statefilepath)
         return 1;
     alignas(32) float outbuffer[64 * granul_block_size];
     choc::buffer::ChannelArrayBuffer<float> diskbuffer{numambchans, granul_block_size};
-    int outlen = sr * 10.0;
+    int outlen = sr * outlenseconds;
     int outcount = 0;
     xenakios::Envelope pitchenv;
     pitchenv.addPoint({0.0, 0.0});
     pitchenv.addPoint({5.0, 12.0});
     pitchenv.sortPoints();
-    *g->idtoparvalptr[ToneGranulator::PAR_DENSITY] = 5.0;
-    *g->idtoparvalptr[ToneGranulator::PAR_DURATION] = 0.6;
-    *g->idtoparvalptr[ToneGranulator::PAR_OSCTYPE] = 2;
+    //*g->idtoparvalptr[ToneGranulator::PAR_DENSITY] = 5.0;
+    //*g->idtoparvalptr[ToneGranulator::PAR_DURATION] = 0.6;
+    //*g->idtoparvalptr[ToneGranulator::PAR_OSCTYPE] = 2;
     auto start = std::chrono::high_resolution_clock::now();
     while (outcount < outlen)
     {
         double tpos = outcount / sr;
-        auto pitch = pitchenv.getValueAtPosition(tpos);
-        *g->idtoparvalptr[ToneGranulator::PAR_PITCH] = pitch;
+        // auto pitch = pitchenv.getValueAtPosition(tpos);
+        //*g->idtoparvalptr[ToneGranulator::PAR_PITCH] = pitch;
         g->process_block(std::span<float>{outbuffer, granul_block_size * 64});
         int nchs = g->num_out_chans;
         for (int i = 0; i < nchs; ++i)
@@ -541,7 +543,7 @@ inline void test_quantize_tuning()
     auto start_time = std::chrono::high_resolution_clock::now();
     for (auto &e : testdata)
     {
-        e = quantize_pitch_binary(tuning, e);
+        e = quantize_pitch_binary(tuning, e, 1.0);
         // auto quantized = quantize_pitch_binary(tuning, x);
         // std::cout << fmt::format("{:4} {:.2f}\n", x, quantized);
     }
@@ -555,7 +557,7 @@ inline void test_quantize_tuning()
 int main(int argc, char **argv)
 {
     // test_degrade();
-    render_nephos(R"(C:\develop\nephos\Assets\cli_test_state01.json)");
+    render_nephos(R"(C:\develop\nephos\Assets\cli_test_state01.json)", 10.0);
     // test_colored_noise();
     // test_quantize_tuning();
     return 0;
