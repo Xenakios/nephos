@@ -221,46 +221,38 @@ void GrainEnvelopeEditorComponent::mouseDown(const juce::MouseEvent &ev)
     if (ev.mods.isRightButtonDown())
     {
         juce::PopupMenu menu;
-        if (ev.y >= 15 && ev.y < top_margin)
+        menu.addSectionHeader("Smoothing mode");
+        juce::StringArray modes{"None", "Linear", "Sigmoid", "Spline", "Cubic"};
+        for (int i = 0; i < modes.size(); ++i)
         {
-            // target_param = get_param_from_x_coord(ev.x);
-            // if (target_param != CLAP_INVALID_ID)
-            //     addMidiLearnToMenu(menu, processorRef, target_param);
+            menu.addItem(modes[i], true,
+                         granul->get_aux_envelope_interpolation_mode(target_envelope) == i,
+                         [i, this]() { set_interpolation_mode(i); });
         }
-        else
-        {
-            menu.addSectionHeader("Smoothing mode");
-            juce::StringArray modes{"None", "Linear", "Sigmoid", "Spline", "Cubic"};
-            for (int i = 0; i < modes.size(); ++i)
-            {
-                menu.addItem(modes[i], true,
-                             granul->get_aux_envelope_interpolation_mode(target_envelope) == i,
-                             [i, this]() { set_interpolation_mode(i); });
-            }
-            menu.addSectionHeader("Transform");
-            menu.addItem("Reverse", [this]() { transform_steps(TM_Reverse); });
-            menu.addItem("Mutate", [this]() { transform_steps(TM_Mutate); });
-            menu.addItem("Sort", [this]() { transform_steps(TM_Sort); });
-            menu.addItem("Envelope", [this]() { transform_steps(TM_ApplyEnvelope); });
+        menu.addSectionHeader("Transform");
+        menu.addItem("Reverse", [this]() { transform_steps(TM_Reverse); });
+        menu.addItem("Mutate", [this]() { transform_steps(TM_Mutate); });
+        menu.addItem("Sort", [this]() { transform_steps(TM_Sort); });
+        menu.addItem("Envelope", [this]() { transform_steps(TM_ApplyEnvelope); });
 
-            menu.addSectionHeader("Generate");
-            menu.addItem("Reset to zero", [this]() { generate_steps(GM_RESET); });
-            menu.addItem("Reset to max", [this]() { generate_steps(GM_MAX); });
-            menu.addItem("Alt min/max", [this]() { generate_steps(GM_ALTERNATEMINMAX); });
-            menu.addItem("Ramp up", [this]() { generate_steps(GM_RAMPUP); });
-            menu.addItem("Ramp up/down", [this]() { generate_steps(GM_RAMPUPDOWN); });
-            menu.addItem("Random Uniform", [this]() { generate_steps(GM_RANDOM); });
-            menu.addItem("Paste from JSON array in clipboard",
-                         [this]() { generate_steps(GM_CLIPBOARD); });
-            // auto presetsmenu = generate_presets_menu();
-            // menu.addSubMenu("Presets", presetsmenu);
-        }
+        menu.addSectionHeader("Generate");
+        menu.addItem("Reset to zero", [this]() { generate_steps(GM_RESET); });
+        menu.addItem("Reset to max", [this]() { generate_steps(GM_MAX); });
+        menu.addItem("Alt min/max", [this]() { generate_steps(GM_ALTERNATEMINMAX); });
+        menu.addItem("Ramp up", [this]() { generate_steps(GM_RAMPUP); });
+        menu.addItem("Ramp up/down", [this]() { generate_steps(GM_RAMPUPDOWN); });
+        menu.addItem("Random Uniform", [this]() { generate_steps(GM_RANDOM); });
+        menu.addItem("Paste from JSON array in clipboard",
+                     [this]() { generate_steps(GM_CLIPBOARD); });
+        // auto presetsmenu = generate_presets_menu();
+        // menu.addSubMenu("Presets", presetsmenu);
+
         menu.showMenuAsync(juce::PopupMenu::Options{});
     }
     else
     {
         int stepindex = numsteps / (float)getWidth() * ev.x;
-        if (stepindex >= 0 && stepindex < numsteps)
+        if (stepindex >= 0 && stepindex < numsteps && ev.y >= top_margin)
         {
             float val = juce::jmap<float>(ev.y, top_margin, getHeight(), 1.1, -1.1);
             StepModSource::Message msg;
@@ -278,7 +270,8 @@ void GrainEnvelopeEditorComponent::mouseDrag(const juce::MouseEvent &ev)
 {
     for (auto &e : envParamButtons)
     {
-        e.OnDrag(ev);
+        if (e.bounds.contains(ev.mouseDownPosition))
+            e.OnDrag(ev);
     }
 }
 void GrainEnvelopeEditorComponent::mouseDoubleClick(const juce::MouseEvent &ev)
@@ -290,6 +283,15 @@ void GrainEnvelopeEditorComponent::mouseDoubleClick(const juce::MouseEvent &ev)
             e.OnDoubleClick(ev);
             return;
         }
+    }
+}
+void GrainEnvelopeEditorComponent::mouseUp(const juce::MouseEvent &ev)
+{
+    target_param = CLAP_INVALID_ID;
+    for (auto &e : envParamButtons)
+    {
+        if (e.bounds.contains(ev.position))
+            e.OnRelease();
     }
 }
 
@@ -390,6 +392,13 @@ GrainEnvelopeEditorComponent::GrainEnvelopeEditorComponent(AudioPluginAudioProce
             {
                 envParamButtons[i].param_value =
                     *processorRef.granulator.idtoparvalptr[target_param];
+                if (ev.mods.isRightButtonDown())
+                {
+                    juce::PopupMenu menu;
+                    if (target_param != CLAP_INVALID_ID)
+                        addMidiLearnToMenu(menu, processorRef, target_param);
+                    menu.showMenuAsync({});
+                }
             }
         };
         b.OnDoubleClick = [this, i](const juce::MouseEvent &ev) {

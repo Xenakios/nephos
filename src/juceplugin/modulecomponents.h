@@ -268,14 +268,7 @@ class GrainEnvelopeEditorComponent : public juce::Component
     void mouseDown(const juce::MouseEvent &ev) override;
     void mouseDrag(const juce::MouseEvent &ev) override;
     void mouseDoubleClick(const juce::MouseEvent &ev) override;
-    void mouseUp(const juce::MouseEvent &ev) override
-    {
-        for (auto &e : envParamButtons)
-        {
-            if (e.bounds.contains(ev.position))
-                e.OnRelease();
-        }
-    }
+    void mouseUp(const juce::MouseEvent &ev) override;
     juce::PopupMenu generate_presets_menu();
     void mouseWheelMove(const juce::MouseEvent &event,
                         const juce::MouseWheelDetails &wheel) override;
