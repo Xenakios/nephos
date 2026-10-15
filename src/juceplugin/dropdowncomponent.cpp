@@ -137,15 +137,17 @@ void GalleryPicker::paint(juce::Graphics &g)
             if (!it.rect.isEmpty())
             {
                 auto r = it.rect;
-                g.setColour(juce::Colours::grey);
+                
                 juce::Colour textcol;
                 if (it.id == selectedID)
                 {
+                    g.setColour(juce::Colours::white);
                     g.fillRoundedRectangle(r, 4.0f);
-                    textcol = juce::Colours::white;
+                    textcol = juce::Colours::black;
                 }
                 else
                 {
+                    g.setColour(juce::Colours::grey);
                     g.drawRoundedRectangle(r, 4.0f, 1.0f);
                     textcol = juce::Colours::white.darker();
                 }

@@ -608,12 +608,13 @@ void ToneGranulator::set_state(choc::value::ValueView state)
     {
         gvsettings.timespantoshow = state["gvs_timespan"].getWithDefault(8.0);
     }
-    
+
     if (state.hasObjectMember("tuning"))
     {
         auto tunstate = state["tuning"];
         auto scalastring = tunstate["scala_string"].getWithDefault(std::string(""));
-        auto err = load_scala_string(scalastring, true);
+        auto scalafile = tunstate["scala_file"].getWithDefault(std::string(""));
+        auto err = load_scala_string(scalastring, scalafile, true);
         if (!err.empty())
         {
             std::cout << err << std::endl;
@@ -770,7 +771,8 @@ void ToneGranulator::set_state(choc::value::ValueView state)
     }
 }
 
-std::string ToneGranulator::load_scala_string(std::string scalatext, bool called_from_audio_thread)
+std::string ToneGranulator::load_scala_string(std::string scalatext, std::string scalapath,
+                                              bool called_from_audio_thread)
 {
     try
     {
@@ -781,7 +783,7 @@ std::string ToneGranulator::load_scala_string(std::string scalatext, bool called
         if (!called_from_audio_thread)
             spinLock.lock();
         tuning = temp;
-        currentScalaFile = "";
+        currentScalaFile = scalapath;
         if (!called_from_audio_thread)
             spinLock.unlock();
     }

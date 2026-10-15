@@ -205,7 +205,7 @@ void GrainEnvelopeEditorComponent::mouseDown(const juce::MouseEvent &ev)
     {
         if (e.bounds.contains(ev.position))
         {
-            e.OnClick();
+            e.OnClick(ev);
             return;
         }
     }
@@ -213,7 +213,7 @@ void GrainEnvelopeEditorComponent::mouseDown(const juce::MouseEvent &ev)
     {
         if (e.bounds.contains(ev.position))
         {
-            e.OnClick();
+            e.OnClick(ev);
             return;
         }
     }
@@ -223,9 +223,9 @@ void GrainEnvelopeEditorComponent::mouseDown(const juce::MouseEvent &ev)
         juce::PopupMenu menu;
         if (ev.y >= 15 && ev.y < top_margin)
         {
-            target_param = get_param_from_x_coord(ev.x);
-            if (target_param != CLAP_INVALID_ID)
-                addMidiLearnToMenu(menu, processorRef, target_param);
+            // target_param = get_param_from_x_coord(ev.x);
+            // if (target_param != CLAP_INVALID_ID)
+            //     addMidiLearnToMenu(menu, processorRef, target_param);
         }
         else
         {
@@ -283,14 +283,13 @@ void GrainEnvelopeEditorComponent::mouseDrag(const juce::MouseEvent &ev)
 }
 void GrainEnvelopeEditorComponent::mouseDoubleClick(const juce::MouseEvent &ev)
 {
-    auto pid = get_param_from_x_coord(ev.x);
-    if (pid != CLAP_INVALID_ID)
+    for (auto &e : envParamButtons)
     {
-        ParameterMessage msg;
-        msg.id = pid;
-        msg.value = 0.0f;
-        processorRef.params_from_gui_fifo.push(msg);
-        repaint();
+        if (e.OnDoubleClick && e.bounds.contains(ev.position))
+        {
+            e.OnDoubleClick(ev);
+            return;
+        }
     }
 }
 
@@ -364,7 +363,7 @@ GrainEnvelopeEditorComponent::GrainEnvelopeEditorComponent(AudioPluginAudioProce
         b.text = juce::String(i + 1);
         b.bounds = juce::Rectangle<float>(i * 15.0f, 0.0f, 13.0f, 13.0f);
         b.toggled = i == 0;
-        b.OnClick = [this, i]() {
+        b.OnClick = [this, i](const juce::MouseEvent &) {
             target_envelope = i;
             for (size_t j = 0; j < envSelectButtons.size(); ++j)
             {
@@ -381,7 +380,7 @@ GrainEnvelopeEditorComponent::GrainEnvelopeEditorComponent(AudioPluginAudioProce
         LiteButton b;
         b.text = names[i];
         b.bounds = juce::Rectangle<float>(i * 45, 15, 44, 13);
-        b.OnClick = [this, i]() {
+        b.OnClick = [this, i](const juce::MouseEvent &ev) {
             target_param = CLAP_INVALID_ID;
             if (i == 0)
                 target_param = ToneGranulator::PAR_AUXENVTIMEWARP + target_envelope;
@@ -391,6 +390,21 @@ GrainEnvelopeEditorComponent::GrainEnvelopeEditorComponent(AudioPluginAudioProce
             {
                 envParamButtons[i].param_value =
                     *processorRef.granulator.idtoparvalptr[target_param];
+            }
+        };
+        b.OnDoubleClick = [this, i](const juce::MouseEvent &ev) {
+            target_param = CLAP_INVALID_ID;
+            if (i == 0)
+                target_param = ToneGranulator::PAR_AUXENVTIMEWARP + target_envelope;
+            if (i == 1)
+                target_param = ToneGranulator::PAR_AUXENVTIMESHIFT + target_envelope;
+            if (target_param != CLAP_INVALID_ID)
+            {
+                ParameterMessage msg;
+                msg.id = target_param;
+                msg.value = 0.0f;
+                processorRef.params_from_gui_fifo.push(msg);
+                repaint();
             }
         };
         b.OnDrag = [this, i](const juce::MouseEvent &ev) {

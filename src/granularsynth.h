@@ -1694,7 +1694,8 @@ class ToneGranulator
 
     void set_oscillator_type_mapping(std::span<int> mapping);
     std::string currentScalaFile;
-    std::string load_scala_string(std::string scalatext, bool called_from_audio_thread);
+    std::string load_scala_string(std::string scalatext, std::string scalapath,
+                                  bool called_from_audio_thread);
     std::string load_scala_file(std::string path, bool called_from_audio_thread);
 
     void set_grain_modulation_routing(int slot, std::optional<uint32_t> source,

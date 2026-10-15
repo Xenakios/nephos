@@ -206,7 +206,8 @@ struct LiteButton
     bool allow_drag = false;
     double param_value = 0.0;
     int64_t id = 0;
-    std::function<void(void)> OnClick;
+    std::function<void(const juce::MouseEvent &)> OnClick;
+    std::function<void(const juce::MouseEvent &)> OnDoubleClick;
     std::function<void(const juce::MouseEvent &)> OnDrag;
     std::function<void(void)> OnRelease;
 
@@ -263,19 +264,7 @@ class GrainEnvelopeEditorComponent : public juce::Component
         granul->set_aux_envelope_interpolation_mode(target_envelope, m);
         juce::Timer::callAfterDelay(100, [this]() { repaint(); });
     }
-    uint32_t get_param_from_x_coord(float x)
-    {
-        int pindex = x / 45.0;
-        uint32_t result = CLAP_INVALID_ID;
-        if (pindex >= 0 && pindex < 3)
-        {
-            if (pindex == 0)
-                result = ToneGranulator::PAR_AUXENVTIMEWARP + target_envelope;
-            if (pindex == 1)
-                result = ToneGranulator::PAR_AUXENVTIMESHIFT + target_envelope;
-        }
-        return result;
-    }
+
     void mouseDown(const juce::MouseEvent &ev) override;
     void mouseDrag(const juce::MouseEvent &ev) override;
     void mouseDoubleClick(const juce::MouseEvent &ev) override;
