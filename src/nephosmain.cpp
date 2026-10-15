@@ -554,9 +554,58 @@ inline void test_quantize_tuning()
                              numiters / (duration.count() / 1000.0));
 }
 
+inline void test_tiltfilter()
+{
+    std::minstd_rand rng;
+    std::uniform_real_distribution<float> bpdist{-0.5f, 0.5f};
+    struct TiltFilterHost
+    {
+        double sr = 44100.0;
+        static float dbToLinear(float gaindb) { return xenakios::decibelsToGain(gaindb); }
+        float getSampleRateInv() const
+        {
+            assert(sr > 0.0);
+            return 1.0f / sr;
+        }
+    };
+    TiltFilterHost host;
+    const size_t blocksize = 16;
+    sst::filters::FastTiltNoiseFilter<TiltFilterHost> tiltfilter{host};
+    float startnoise[16];
+    for (int i = 0; i < 16; ++i)
+        startnoise[i] = bpdist(rng);
+    tiltfilter.init(startnoise, 1.0f);
+    tiltfilter.setCoeffForBlock<blocksize>(1.0f);
+    int numcorruptsamples = 0;
+
+    for (int i = 0; i < 1000000; i += 1)
+    {
+        float x = bpdist(rng);
+        tiltfilter.processBlockStep(x);
+        if (!std::isfinite(x))
+            ++numcorruptsamples;
+        /*
+        float inbuf[blocksize];
+        float outbuf[blocksize] = {};
+        for (int j = 0; j < blocksize; ++j)
+            inbuf[j] = bpdist(rng);
+        tiltfilter.setCoeffForBlock<blocksize>(1.0f);
+        tiltfilter.processBlock<blocksize>(inbuf, outbuf);
+        for (int j = 0; j < blocksize; ++j)
+        {
+            if (!std::isfinite(outbuf[j]))
+                ++numcorruptsamples;
+        }
+        */
+    }
+    std::cout << numcorruptsamples << " samples were corrupt\n";
+}
+
 int main(int argc, char **argv)
 {
-    // test_degrade();
+    test_tiltfilter();
+    return 0;
+    // // test_degrade();
     render_nephos(R"(C:\develop\nephos\Assets\cli_test_state01.json)", 10.0);
     // test_colored_noise();
     // test_quantize_tuning();

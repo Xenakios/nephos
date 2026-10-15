@@ -307,7 +307,8 @@ ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
                                          {2, "Corr noise Corrupted output"},
                                          {3, "Corr noise BounceIn interpolation"},
                                          {4, "Logistic Chaos Linear interpolation"},
-                                         {5, "Sinc/Pulse"}},
+                                         {5, "Sinc/Pulse"},
+                                         {6, "Tilt filtered noise"}},
                                         true)
             .withDefault(1)
             .withName("Noise Mode")
