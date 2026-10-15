@@ -198,20 +198,44 @@ class GrainModulationVisualizationComponent : public juce::Component
     double paint_elapsed_sum = 0.0;
 };
 
+struct LiteButton
+{
+    juce::Rectangle<float> bounds;
+    juce::String text;
+    bool toggled = false;
+    bool allow_drag = false;
+    double param_value = 0.0;
+    int64_t id = 0;
+    std::function<void(void)> OnClick;
+    std::function<void(const juce::MouseEvent &)> OnDrag;
+    std::function<void(void)> OnRelease;
+
+    void paint(juce::Graphics &g)
+    {
+        g.saveState();
+        if (toggled)
+            g.setColour(juce::Colours::lightgrey);
+        else
+            g.setColour(juce::Colours::darkgrey);
+        g.fillRect(bounds);
+        g.setColour(juce::Colours::white);
+        g.drawText(text, bounds, juce::Justification::centred);
+        g.restoreState();
+    }
+};
+
 class GrainEnvelopeEditorComponent : public juce::Component
 {
   public:
     AudioPluginAudioProcessor &processorRef;
-    GrainEnvelopeEditorComponent(AudioPluginAudioProcessor &p)
-        : processorRef(p), granul(&p.granulator)
-    {
-        rng.seed(65537, 90004);
-    }
+    GrainEnvelopeEditorComponent(AudioPluginAudioProcessor &p);
+    std::vector<LiteButton> envSelectButtons;
+    std::vector<LiteButton> envParamButtons;
     xenakios::Xoroshiro128Plus rng;
     std::string lastError;
     int target_envelope = 0;
     uint32_t target_param = CLAP_INVALID_ID;
-    float param_start_value = 0.0f;
+
     int top_margin = 30;
 
     enum GenMode
@@ -257,8 +281,11 @@ class GrainEnvelopeEditorComponent : public juce::Component
     void mouseDoubleClick(const juce::MouseEvent &ev) override;
     void mouseUp(const juce::MouseEvent &ev) override
     {
-        target_param = CLAP_INVALID_ID;
-        repaint();
+        for (auto &e : envParamButtons)
+        {
+            if (e.bounds.contains(ev.position))
+                e.OnRelease();
+        }
     }
     juce::PopupMenu generate_presets_menu();
     void mouseWheelMove(const juce::MouseEvent &event,
@@ -350,7 +377,7 @@ class OscillatorModuleComponent : public juce::GroupComponent
     XapSlider oscNoiseModeDrop;
     XapSlider quantizePitchKnob;
     GalleryPicker scalaPicker;
-    
+
     GrainEnvelopeEditorComponent pitchEnvelopeComponent;
     GrainModulationVisualizationComponent grainModComponent;
     juce::TextEditor oscTypeEditor;

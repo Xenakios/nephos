@@ -115,27 +115,18 @@ void GrainModulationVisualizationComponent::paint(juce::Graphics &g)
 void GrainEnvelopeEditorComponent::paint(juce::Graphics &g)
 {
     g.fillAll(juce::Colours::black);
-    for (int i = 0; i < GranulatorVoice::num_aux_envelopes; ++i)
+    for (auto &e : envSelectButtons)
     {
-        if (i == target_envelope)
-            g.setColour(juce::Colours::lightgrey);
-        else
-            g.setColour(juce::Colours::darkgrey);
-        g.fillRect(i * 15, 0, 13, 13);
-        g.setColour(juce::Colours::white);
-        g.drawText(juce::String(i + 1), i * 15, 0, 13, 13, juce::Justification::centred);
+        e.paint(g);
     }
-    juce::StringArray params{"TWARP", "TSHIFT", "VWARP"};
-    for (int i = 0; i < params.size(); ++i)
+    for (auto &e : envParamButtons)
     {
-        g.setColour(juce::Colours::darkgrey);
-        g.fillRect(i * 45, 15, 44, 13);
-        g.setColour(juce::Colours::white);
-        g.drawText(params[i], i * 45, 15, 44, 10, juce::Justification::centred);
+        e.paint(g);
     }
     if (target_param != CLAP_INVALID_ID)
     {
         float parval = *granul->idtoparvalptr[target_param];
+        g.setColour(juce::Colours::white);
         g.drawText(juce::String(parval, 3), 0, top_margin, 100, 15, juce::Justification::centred);
     }
 
@@ -210,6 +201,22 @@ void GrainEnvelopeEditorComponent::transform_steps(TransformMode mode)
 
 void GrainEnvelopeEditorComponent::mouseDown(const juce::MouseEvent &ev)
 {
+    for (auto &e : envSelectButtons)
+    {
+        if (e.bounds.contains(ev.position))
+        {
+            e.OnClick();
+            return;
+        }
+    }
+    for (auto &e : envParamButtons)
+    {
+        if (e.bounds.contains(ev.position))
+        {
+            e.OnClick();
+            return;
+        }
+    }
     auto numsteps = SimpleEnvelope::maxnumsteps;
     if (ev.mods.isRightButtonDown())
     {
@@ -252,22 +259,6 @@ void GrainEnvelopeEditorComponent::mouseDown(const juce::MouseEvent &ev)
     }
     else
     {
-        if (ev.y < 14)
-        {
-            target_envelope = ev.x / 15.0f;
-            target_envelope =
-                std::clamp<int>(target_envelope, 0, GranulatorVoice::num_aux_envelopes - 1);
-            repaint();
-            return;
-        }
-        if (ev.y >= 15 && ev.y < top_margin)
-        {
-            target_param = get_param_from_x_coord(ev.x);
-            if (target_param != CLAP_INVALID_ID)
-                param_start_value = *granul->idtoparvalptr[target_param];
-            repaint();
-            return;
-        }
         int stepindex = numsteps / (float)getWidth() * ev.x;
         if (stepindex >= 0 && stepindex < numsteps)
         {
@@ -285,20 +276,9 @@ void GrainEnvelopeEditorComponent::mouseDown(const juce::MouseEvent &ev)
 
 void GrainEnvelopeEditorComponent::mouseDrag(const juce::MouseEvent &ev)
 {
-    if (target_param != CLAP_INVALID_ID)
+    for (auto &e : envParamButtons)
     {
-        float delta = ev.getDistanceFromDragStartY() * 0.01;
-        float newval = std::clamp(param_start_value - delta, -1.0f, 1.0f);
-        if (target_param >= ToneGranulator::PAR_AUXENVTIMEWARP &&
-            target_param < ToneGranulator::PAR_AUXENVTIMESHIFT + 4)
-        {
-            ParameterMessage msg;
-            msg.id = target_param;
-            msg.value = newval;
-            processorRef.params_from_gui_fifo.push(msg);
-        }
-        // DBG(newval);
-        // param_start_value = newval;
+        e.OnDrag(ev);
     }
 }
 void GrainEnvelopeEditorComponent::mouseDoubleClick(const juce::MouseEvent &ev)
@@ -374,6 +354,70 @@ void GrainEnvelopeEditorComponent::mouseWheelMove(const juce::MouseEvent &event,
     repaint();
 }
 
+GrainEnvelopeEditorComponent::GrainEnvelopeEditorComponent(AudioPluginAudioProcessor &p)
+    : processorRef(p), granul(&p.granulator)
+{
+    rng.seed(65537, 90004);
+    for (int i = 0; i < 4; ++i)
+    {
+        LiteButton b;
+        b.text = juce::String(i + 1);
+        b.bounds = juce::Rectangle<float>(i * 15.0f, 0.0f, 13.0f, 13.0f);
+        b.toggled = i == 0;
+        b.OnClick = [this, i]() {
+            target_envelope = i;
+            for (size_t j = 0; j < envSelectButtons.size(); ++j)
+            {
+                envSelectButtons[j].toggled = j == target_envelope;
+            }
+            repaint();
+        };
+        envSelectButtons.push_back(b);
+    }
+    std::vector<juce::String> names{"TWARP", "TSHiFT", "VWARP"};
+    envParamButtons.resize(names.size());
+    for (size_t i = 0; i < names.size(); ++i)
+    {
+        LiteButton b;
+        b.text = names[i];
+        b.bounds = juce::Rectangle<float>(i * 45, 15, 44, 13);
+        b.OnClick = [this, i]() {
+            target_param = CLAP_INVALID_ID;
+            if (i == 0)
+                target_param = ToneGranulator::PAR_AUXENVTIMEWARP + target_envelope;
+            if (i == 1)
+                target_param = ToneGranulator::PAR_AUXENVTIMESHIFT + target_envelope;
+            if (target_param != CLAP_INVALID_ID)
+            {
+                envParamButtons[i].param_value =
+                    *processorRef.granulator.idtoparvalptr[target_param];
+            }
+        };
+        b.OnDrag = [this, i](const juce::MouseEvent &ev) {
+            if (target_param != CLAP_INVALID_ID)
+            {
+                float delta = ev.getDistanceFromDragStartY() * 0.01;
+                float newval =
+                    std::clamp((float)envParamButtons[i].param_value - delta, -1.0f, 1.0f);
+                if (target_param >= ToneGranulator::PAR_AUXENVTIMEWARP &&
+                    target_param < ToneGranulator::PAR_AUXENVTIMESHIFT + 4)
+                {
+                    ParameterMessage msg;
+                    msg.id = target_param;
+                    msg.value = newval;
+                    processorRef.params_from_gui_fifo.push(msg);
+                }
+                // DBG(newval);
+                // param_start_value = newval;
+            }
+        };
+        b.OnRelease = [this]() {
+            target_param = CLAP_INVALID_ID;
+            repaint();
+        };
+        envParamButtons[i] = b;
+    }
+}
 void GrainEnvelopeEditorComponent::generate_steps(GenMode mode)
 {
     auto numsteps = SimpleEnvelope::maxnumsteps;
@@ -745,7 +789,7 @@ void OscillatorModuleComponent::resized()
     quantizePitchKnob.setBounds(oscPitchKnob.getRight() + 2, oscTypeComponent.getBottom() + 1, 100,
                                 120);
     scalaPicker.showButton.setBounds(oscPitchKnob.getX(), oscPitchKnob.getBottom() + 2, 250, 25);
-    
+
     for (int i = 0; i < modDepthKnobs.size(); ++i)
     {
         modDepthKnobs[i]->setBounds(scalaPicker.showButton.getRight() + 1,
