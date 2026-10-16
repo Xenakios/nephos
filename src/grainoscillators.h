@@ -143,11 +143,11 @@ class NoiseGen
         {
             assert(tilt_filter);
             if (tiltprocesscount == 0)
-                tilt_filter->setCoeffForBlock<8>(tiltfiltercoeff);
+                tilt_filter->setCoeffForBlock<8>(tiltfiltercoeff * 0.5f);
             ++tiltprocesscount;
             if (tiltprocesscount == 8)
                 tiltprocesscount = 0;
-            alignas(16) float x = bpdist(rng);
+            alignas(16) float x = bpdist(rng) * tilt_compen_gain;
             tilt_filter->processBlockStep(x);
             // if (!std::isfinite(x))
             //     x = 0.0f;
@@ -217,7 +217,7 @@ class NoiseGen
         alignas(16) float sunoise[16];
         for (int i = 0; i < 16; ++i)
             sunoise[i] = bpdist(rng);
-        tilt_filter->init(sunoise, 0.0f);
+        tilt_filter->init(sunoise, tiltfiltercoeff * 0.5f);
         tiltprocesscount = 0;
     }
     void reset()
@@ -235,11 +235,16 @@ class NoiseGen
         frequency = freq;
         phaseinc.setTarget(1.0 / sr * freq);
     }
+    float tilt_compen_gain = 1.0f;
     void setCorrelation(double c)
     {
         correlation.setTarget(c);
         c = xenakios::mapvalue(c, -1.0, 1.0, -6.0, 6.0);
         tiltfiltercoeff = c;
+        tilt_compen_gain = c;
+        if (tilt_compen_gain > 0.0f)
+            tilt_compen_gain *= -4.0f;
+        tilt_compen_gain = xenakios::decibelsToGain(tilt_compen_gain);
     }
 
     void setSampleRate(double hz)
