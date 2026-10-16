@@ -149,11 +149,8 @@ class NoiseGen
                 tiltprocesscount = 0;
             alignas(16) float x = bpdist(rng) * tilt_compen_gain;
             tilt_filter->processBlockStep(x);
-            // if (!std::isfinite(x))
-            //     x = 0.0f;
             assert(std::isfinite(x));
-            // return std::tanh(x);
-            return std::clamp(x, -1.0f, 1.0f);
+            return x;
         }
         // sinc pulse
         if (imode == 5)
