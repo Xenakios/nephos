@@ -19,6 +19,7 @@
 #include "sst/filters++/api.h"
 #include "sst/filters++/enums.h"
 #include "sst/filters++/model_config.h"
+#include "sst/filters/FastTiltNoiseFilter.h"
 #include "xen_modulationsources.h"
 #include "grainoscillators.h"
 #include "grainfx.h"
@@ -529,7 +530,7 @@ inline double quantize_pitch_binary(Tunings::Tuning &tuning, double sourcepitch,
 class GranulatorVoice
 {
   public:
-    GranulatorVoice()
+    GranulatorVoice() : tiltfilter(tfhost)
     {
         std::fill(ambcoeffs.begin(), ambcoeffs.end(), 0.0f);
         for (int i = 0; i < GrainEvent::max_grain_mod_slots; ++i)
@@ -720,6 +721,8 @@ class GranulatorVoice
                  sst::basic_blocks::dsp::EBSaw<>, sst::basic_blocks::dsp::EBPulse<>>
         theoscillator;
 
+    TiltFilterHost tfhost;
+    alignas(16) sst::filters::FastTiltNoiseFilter<TiltFilterHost> tiltfilter;
     static constexpr size_t numInsertSlots = 4;
     static constexpr size_t maxParamsPerInsert = 10;
     alignas(32) std::array<GrainInsertFX, numInsertSlots> insert_fx;
@@ -773,6 +776,7 @@ class GranulatorVoice
     void set_samplerate(double hz)
     {
         sr = hz;
+        tfhost.sr = sr;
         for (auto &fx : insert_fx)
             fx.prepareInstance(sr, granul_block_size);
         samplerate_was_changed = true;

@@ -1166,7 +1166,10 @@ void GranulatorVoice::start(GrainEvent &evpars)
             {
                 q.setRandSeed(grainid);
                 q.setCorrelation(noisecorr);
+                q.tilt_filter = &tiltfilter;
                 q.imode = noisemode;
+                if (noisemode == 6)
+                    q.init_tilt_filter();
                 q.logisticr = 3.4 + logisticr * 0.6;
                 q.logisticx0 = 0.01 + 0.98 * (1.0 / 1024 * (grainid % 1024));
             }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <random>
 #include "sst/basic-blocks/dsp/SmoothingStrategies.h"
@@ -111,26 +112,26 @@ struct FMOsc
     double calculatePhaseIncrement(double freq) const { return (PI_2 * freq) / sampleRate; }
 };
 
+struct TiltFilterHost
+{
+    double sr = 44100.0;
+    static float dbToLinear(float gaindb) { return xenakios::decibelsToGain(gaindb); }
+    float getSampleRateInv() const
+    {
+        assert(sr > 0.0);
+        return 1.0f / sr;
+    }
+};
+
 class NoiseGen
 {
   public:
     using SmoothingStrategy = sst::basic_blocks::dsp::LagSmoothingStrategy;
-    struct TiltFilterHost
-    {
-        double sr = 44100.0;
-        static float dbToLinear(float gaindb) { return xenakios::decibelsToGain(gaindb); }
-        float getSampleRateInv() const
-        {
-            assert(sr > 0.0);
-            return 1.0f / sr;
-        }
-    };
-    TiltFilterHost tfh;
+
     NoiseGen()
     {
         SmoothingStrategy::setValueInstant(phaseinc, 0.0);
         SmoothingStrategy::setValueInstant(correlation, 0.0);
-        tilt_filter = std::make_unique<sst::filters::FastTiltNoiseFilter<TiltFilterHost>>(tfh);
     }
     void setFrequencySmoothingRateMS(float ms) { phaseinc.setRateInMilliseconds(ms, sr, 1.0); }
     int tiltprocesscount = 0;
@@ -140,7 +141,7 @@ class NoiseGen
         // tilt noise with no interpolation
         if (imode == 6)
         {
-            assert(tfh.sr > 0.0);
+            assert(tilt_filter);
             if (tiltprocesscount == 0)
                 tilt_filter->setCoeffForBlock<8>(tiltfiltercoeff);
             ++tiltprocesscount;
@@ -151,8 +152,8 @@ class NoiseGen
             // if (!std::isfinite(x))
             //     x = 0.0f;
             assert(std::isfinite(x));
-            return std::tanh(x);
-            // return std::clamp(x, -1.0f, 1.0f);
+            // return std::tanh(x);
+            return std::clamp(x, -1.0f, 1.0f);
         }
         // sinc pulse
         if (imode == 5)
@@ -210,6 +211,15 @@ class NoiseGen
         SmoothingStrategy::process(correlation);
         return outvalue;
     }
+    void init_tilt_filter()
+    {
+        assert(tilt_filter);
+        alignas(16) float sunoise[16];
+        for (int i = 0; i < 16; ++i)
+            sunoise[i] = bpdist(rng);
+        tilt_filter->init(sunoise, 0.0f);
+        tiltprocesscount = 0;
+    }
     void reset()
     {
         history[0] = 0.0f;
@@ -219,11 +229,6 @@ class NoiseGen
         nextvalue = 0.0;
         SmoothingStrategy::resetFirstRun(phaseinc);
         SmoothingStrategy::resetFirstRun(correlation);
-        alignas(16) float sunoise[16];
-        for (int i = 0; i < 16; ++i)
-            sunoise[i] = bpdist(rng);
-        tilt_filter->init(sunoise, 0.0f);
-        tiltprocesscount = 0;
     }
     void setFrequency(double freq)
     {
@@ -233,14 +238,13 @@ class NoiseGen
     void setCorrelation(double c)
     {
         correlation.setTarget(c);
-        c = xenakios::mapvalue(c, -1.0, 1.0, -3.0, 3.0);
+        c = xenakios::mapvalue(c, -1.0, 1.0, -6.0, 6.0);
         tiltfiltercoeff = c;
     }
 
     void setSampleRate(double hz)
     {
         assert(hz > 0.0);
-        tfh.sr = hz;
         sr = hz;
     }
     void setRandSeed(unsigned int s) { rng.seed(s); }
@@ -255,7 +259,7 @@ class NoiseGen
     int imode = 0;
     double sr = 0.0;
     double frequency = 1.0;
-    std::unique_ptr<sst::filters::FastTiltNoiseFilter<TiltFilterHost>> tilt_filter;
+    sst::filters::FastTiltNoiseFilter<TiltFilterHost> *tilt_filter = nullptr;
     alignas(16) double phase = 0.0;
     alignas(16) sst::basic_blocks::dsp::LagSmoothingStrategy::smoothValue_t phaseinc;
     alignas(16) sst::basic_blocks::dsp::LagSmoothingStrategy::smoothValue_t correlation;
