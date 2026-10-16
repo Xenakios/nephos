@@ -721,7 +721,7 @@ class GranulatorVoice
                  sst::basic_blocks::dsp::EBSaw<>, sst::basic_blocks::dsp::EBPulse<>>
         theoscillator;
 
-    TiltFilterHost tfhost;
+    alignas(16) TiltFilterHost tfhost;
     alignas(16) sst::filters::FastTiltNoiseFilter<TiltFilterHost> tiltfilter;
     static constexpr size_t numInsertSlots = 4;
     static constexpr size_t maxParamsPerInsert = 10;

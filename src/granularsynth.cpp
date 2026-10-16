@@ -1,5 +1,6 @@
 #include "granularsynth.h"
 #include "Tunings.h"
+#include "easing.h"
 #include "xen_modulationsources.h"
 
 ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
@@ -1319,8 +1320,8 @@ void GranulatorVoice::start(GrainEvent &evpars)
 
     auxsend1 = std::clamp(evpars.auxsend, 0.0f, 1.0f);
 
-    envstarttype = std::clamp<uint8_t>(evpars.envelope_start_type, 0, 30);
-    envendtype = std::clamp<uint8_t>(evpars.envelope_end_type, 0, 30);
+    envstarttype = std::clamp<uint8_t>(evpars.envelope_start_type, 0, EasingLUTS::numFunctions);
+    envendtype = std::clamp<uint8_t>(evpars.envelope_end_type, 0, EasingLUTS::numFunctions);
     envshape = std::clamp(evpars.envelope_shape, 0.0f, 1.0f);
 }
 std::function<float(float)> GranulatorModConfig::getCurveOperator(CurveIdentifier id)
