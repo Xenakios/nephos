@@ -2,6 +2,7 @@
 #include "Tunings.h"
 #include "easing.h"
 #include "xen_modulationsources.h"
+#include <unordered_map>
 
 ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
 {
@@ -213,6 +214,7 @@ ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
                                    .withID(PAR_GRAINMODSLOTAMOUNT0 + i)
                                    .withFlags(CLAP_PARAM_IS_MODULATABLE));
     }
+    std::unordered_map<int, std::string> valuewarpmap;
     for (int i = 0; i < GranulatorVoice::num_aux_envelopes; ++i)
     {
         parmetadatas.push_back(pmd()
@@ -223,6 +225,25 @@ ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
                                    .withGroupName("Oscillator")
                                    .withID(PAR_AUXENVTIMEWARP + i)
                                    .withFlags(CLAP_PARAM_IS_MODULATABLE));
+        parmetadatas.push_back(pmd()
+                                   .withRange(-1.0, 1.0)
+                                   .withDefault(0.0)
+                                   .withLinearScaleFormatting("")
+                                   .withName(fmt::format("Aux Env {} Time Shift", i + 1))
+                                   .withGroupName("Oscillator")
+                                   .withID(PAR_AUXENVTIMESHIFT + i)
+                                   .withFlags(CLAP_PARAM_IS_MODULATABLE));
+
+        parmetadatas.push_back(pmd()
+                                   .withRange(-1.0, 1.0)
+                                   .deformable()
+                                   .withDeformationCount(2)
+                                   .withDefault(0.0)
+                                   .withLinearScaleFormatting("")
+                                   .withName(fmt::format("Aux Env {} Value Curve", i + 1))
+                                   .withGroupName("Oscillator")
+                                   .withFlags(CLAP_PARAM_IS_MODULATABLE)
+                                   .withID(PAR_AUXENVVALUEWARP + i));
     }
     for (int i = 0; i < GranulatorModConfig::FixedMatrixSize; ++i)
     {
@@ -235,17 +256,7 @@ ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
                                    .withID(PAR_MAINMODDEPTHSTART + i)
                                    .withFlags(CLAP_PARAM_IS_MODULATABLE));
     }
-    for (int i = 0; i < GranulatorVoice::num_aux_envelopes; ++i)
-    {
-        parmetadatas.push_back(pmd()
-                                   .withRange(-1.0, 1.0)
-                                   .withDefault(0.0)
-                                   .withLinearScaleFormatting("")
-                                   .withName(fmt::format("Aux Env {} Time Shift", i + 1))
-                                   .withGroupName("Oscillator")
-                                   .withID(PAR_AUXENVTIMESHIFT + i)
-                                   .withFlags(CLAP_PARAM_IS_MODULATABLE));
-    }
+
     parmetadatas.push_back(pmd()
                                .withRange(0.0, 4.0)
                                .withDefault(0.0)

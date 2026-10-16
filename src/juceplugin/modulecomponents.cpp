@@ -388,6 +388,8 @@ GrainEnvelopeEditorComponent::GrainEnvelopeEditorComponent(AudioPluginAudioProce
                 target_param = ToneGranulator::PAR_AUXENVTIMEWARP + target_envelope;
             if (i == 1)
                 target_param = ToneGranulator::PAR_AUXENVTIMESHIFT + target_envelope;
+            if (i == 2)
+                target_param = ToneGranulator::PAR_AUXENVVALUEWARP + target_envelope;
             if (target_param != CLAP_INVALID_ID)
             {
                 envParamButtons[i].param_value =
@@ -407,6 +409,8 @@ GrainEnvelopeEditorComponent::GrainEnvelopeEditorComponent(AudioPluginAudioProce
                 target_param = ToneGranulator::PAR_AUXENVTIMEWARP + target_envelope;
             if (i == 1)
                 target_param = ToneGranulator::PAR_AUXENVTIMESHIFT + target_envelope;
+            if (i == 2)
+                target_param = ToneGranulator::PAR_AUXENVVALUEWARP + target_envelope;
             if (target_param != CLAP_INVALID_ID)
             {
                 ParameterMessage msg;
@@ -423,7 +427,7 @@ GrainEnvelopeEditorComponent::GrainEnvelopeEditorComponent(AudioPluginAudioProce
                 float newval =
                     std::clamp((float)envParamButtons[i].param_value - delta, -1.0f, 1.0f);
                 if (target_param >= ToneGranulator::PAR_AUXENVTIMEWARP &&
-                    target_param < ToneGranulator::PAR_AUXENVTIMESHIFT + 4)
+                    target_param < ToneGranulator::PAR_AUXENVVALUEWARP + 4)
                 {
                     ParameterMessage msg;
                     msg.id = target_param;
