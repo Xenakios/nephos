@@ -879,15 +879,23 @@ class GranulatorVoice
         {
             float shiftedphase = wrap_value(0.0, normphase + auxenvparams[i + 4], 1.0);
             float val = aux_envelopes[i].get_value(shiftedphase, auxenvparams[i]);
+            val = std::clamp(val, -1.0f, 1.0f);
             float valueshape = auxenvparams[i + 8];
             if (valueshape >= 0.0f)
             {
                 valueshape = 1.0f + 3.0f * valueshape;
-                val = std::clamp(aux_env_values[i], -1.0f, 1.0f);
                 if (val >= 0.0f)
                     val = std::pow(val, valueshape);
                 else
                     val = -std::pow(-val, valueshape);
+            }
+            else
+            {
+                valueshape = 1.0f + 3.0f * -valueshape;
+                if (val >= 0.0f)
+                    val = 1.0f - std::pow(1.0f - val, valueshape);
+                else
+                    val = -1.0f + std::pow(val + 1.0f, valueshape);
             }
             aux_env_values[i] = val;
         }
