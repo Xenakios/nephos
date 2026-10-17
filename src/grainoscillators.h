@@ -235,6 +235,8 @@ class NoiseGen
     float tilt_compen_gain = 1.0f;
     void setCorrelation(double c)
     {
+        logisticr = xenakios::mapvalue(c, -1.0, 1.0, 3.4, 4.0);
+        assert(logisticr >= 3.4 && logisticr <= 4.0);
         correlation.setTarget(c);
         c = xenakios::mapvalue(c, -1.0, 1.0, -6.0, 6.0);
         tiltfiltercoeff = c;
@@ -257,7 +259,11 @@ class NoiseGen
     float lastvalue = 0.0;
     float nextvalue = 0.0;
     double logisticx0 = 0.4;
+
+  private:
     double logisticr = 3.0;
+
+  public:
     int imode = 0;
     double sr = 0.0;
     double frequency = 1.0;

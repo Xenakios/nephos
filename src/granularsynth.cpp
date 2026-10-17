@@ -308,7 +308,7 @@ ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
                                .withRange(-1.0, 1.0)
                                .withDefault(0.0)
                                .withLinearScaleFormatting("%", 100.0f)
-                               .withName("Noise Correlation")
+                               .withName("Noise P1")
                                .withGroupName("Oscillator")
                                .withID(PAR_NOISECORRELATION)
                                .withFlags(CLAP_PARAM_IS_MODULATABLE));
@@ -1182,7 +1182,6 @@ void GranulatorVoice::start(GrainEvent &evpars)
                 q.imode = noisemode;
                 if (noisemode == 6)
                     q.init_tilt_filter();
-                q.logisticr = 3.4 + logisticr * 0.6;
                 q.logisticx0 = 0.01 + 0.98 * (1.0 / 1024 * (grainid % 1024));
             }
         },
