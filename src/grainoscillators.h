@@ -192,7 +192,7 @@ class NoiseGen
         else if (imode == 2)
         {
             uint8_t phaseinteger = 255 * phase;
-            uint8_t oscinteger = (nextvalue + 1.0 * 0.5) * 255;
+            uint8_t oscinteger = ((nextvalue + 1.0) * 0.5) * 255;
             // oscinteger = oscinteger ^ phaseinteger;
             oscinteger = phaseinteger ^ oscinteger;
             outvalue = -1.0f + (oscinteger / 255.0) * 2.0f;
