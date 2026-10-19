@@ -504,6 +504,7 @@ ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
     }
     // std::cout << parmetadatas.size() << " parameters inited\n";
     paramvalues.resize(parmetadatas.size());
+    lagged_params.reserve(parmetadatas.size());
     for (int i = 0; i < parmetadatas.size(); ++i)
     {
         idtoparmetadata[parmetadatas[i].id] = &parmetadatas[i];
