@@ -1335,13 +1335,10 @@ class ToneGranulator
         taillen = 0.002 + 0.998 * std::pow(taillen, 3.0);
         for (auto &lagp : lagged_params)
         {
+            assert(lagp.valptr);
+            *lagp.valptr = lagp.lagger.getValue();
             lagp.lagger.process();
-            if (lagp.lagger.isActive())
-            {
-                assert(lagp.valptr);
-                *lagp.valptr = lagp.lagger.getValue();
-            }
-            else
+            if (!lagp.lagger.isActive())
             {
                 lagp.id = CLAP_INVALID_ID;
                 lagp.valptr = nullptr;
@@ -1521,7 +1518,7 @@ class ToneGranulator
     {
         uint32_t id = CLAP_INVALID_ID;
         float *valptr = nullptr;
-        sst::basic_blocks::dsp::LinearLag<float, true> lagger;
+        sst::basic_blocks::dsp::LinearLag<float, false> lagger;
     };
     std::vector<LaggedParameter> lagged_params;
 
@@ -1530,40 +1527,47 @@ class ToneGranulator
 
   public:
     float get_parameter_value(uint32_t id) { return *idtoparvalptr[id]; }
+    static constexpr bool lag_parameters = true;
     void set_parameter_value(uint32_t id, float value)
     {
         float *destval = idtoparvalptr[id];
         assert(destval);
-        *destval = value;
-        return;
-        assert(m_sr > 0.0);
-        if (id == PAR_OSCTYPE)
+        if constexpr (!lag_parameters)
         {
             *destval = value;
             return;
         }
-        bool found = false;
-        for (auto &e : lagged_params)
+        else
         {
-            if (e.id == id)
+            assert(m_sr > 0.0);
+            if (id == PAR_OSCTYPE)
             {
-                // e.lagger.setRateInMilliseconds(500.0, m_sr, 1.0 / granul_block_size);
-                e.lagger.setTarget(value);
-                found = true;
-                // std::cout << "param " << id << " was alreagy lagged " << value << "\n";
-                break;
+                *destval = value;
+                return;
+            }
+            bool found = false;
+            for (auto &e : lagged_params)
+            {
+                if (e.id == id)
+                {
+                    // e.lagger.setRateInMilliseconds(500.0, m_sr, 1.0 / granul_block_size);
+                    e.lagger.setTarget(value);
+                    found = true;
+                    // std::cout << "param " << id << " was alreagy lagged " << value << "\n";
+                    break;
+                }
+            }
+            if (!found)
+            {
+                LaggedParameter p;
+                p.id = id;
+                p.valptr = destval;
+                p.lagger.setRateInMilliseconds(500.0, m_sr, 1.0 / granul_block_size);
+                p.lagger.v = *destval;
+                p.lagger.setTarget(value);
+                lagged_params.push_back(p);
             }
         }
-        if (!found)
-        {
-            LaggedParameter p;
-            p.id = id;
-            p.valptr = destval;
-            p.lagger.setRateInMilliseconds(500.0, m_sr, 1.0 / granul_block_size);
-            p.lagger.setTarget(value);
-            lagged_params.push_back(p);
-        }
-        
     }
     std::unordered_map<uint32_t, pmd *> idtoparmetadata;
     std::unordered_map<uint32_t, float> modRanges;
