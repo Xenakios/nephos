@@ -1564,6 +1564,7 @@ class ToneGranulator
                 p.valptr = destval;
                 p.lagger.setRateInMilliseconds(500.0, m_sr, 1.0 / granul_block_size);
                 p.lagger.v = *destval;
+                p.lagger.target_v = *destval;
                 p.lagger.setTarget(value);
                 lagged_params.push_back(p);
             }
