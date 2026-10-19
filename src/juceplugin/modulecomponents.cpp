@@ -125,7 +125,7 @@ void GrainEnvelopeEditorComponent::paint(juce::Graphics &g)
     }
     if (target_param != CLAP_INVALID_ID)
     {
-        float parval = *granul->idtoparvalptr[target_param];
+        float parval = granul->get_parameter_value(target_param);
         g.setColour(juce::Colours::white);
         g.drawText(juce::String(parval, 3), 0, top_margin, 100, 15, juce::Justification::centred);
     }
@@ -393,7 +393,7 @@ GrainEnvelopeEditorComponent::GrainEnvelopeEditorComponent(AudioPluginAudioProce
             if (target_param != CLAP_INVALID_ID)
             {
                 envParamButtons[i].param_value =
-                    *processorRef.granulator.idtoparvalptr[target_param];
+                    processorRef.granulator.get_parameter_value(target_param);
                 if (ev.mods.isRightButtonDown())
                 {
                     juce::PopupMenu menu;
@@ -545,7 +545,7 @@ bool OscTypeComponent::keyPressed(const juce::KeyPress &ev)
         delta = 1;
     if (delta != 0)
     {
-        otype = *processorRef.granulator.idtoparvalptr[ToneGranulator::PAR_OSCTYPE];
+        otype = processorRef.granulator.get_parameter_value(ToneGranulator::PAR_OSCTYPE);
         otype += delta;
         if (otype < 0)
             otype = 6;
@@ -571,7 +571,7 @@ void OscTypeComponent::paint(juce::Graphics &g)
 {
     g.fillAll(juce::Colours::black);
     int otypebase =
-        std::round(0.1 + *processorRef.granulator.idtoparvalptr[ToneGranulator::PAR_OSCTYPE]);
+        std::round(0.1 + processorRef.granulator.get_parameter_value(ToneGranulator::PAR_OSCTYPE));
     float cellw = 50.0f;
     for (int i = 0; i < 7; ++i)
     {
@@ -725,12 +725,11 @@ OscillatorModuleComponent::OscillatorModuleComponent(AudioPluginAudioProcessor &
     initSlider(p, *this, oscPWKnob);
     initSlider(p, *this, oscFMPitchKnob);
     oscFMPitchKnob.addMenuItemsCallback([this](juce::PopupMenu &menu) {
-        bool follows =
-            *processorRef.granulator.idtoparvalptr[ToneGranulator::PAR_FMPITCHFOLLOWSMAINPITCH] >=
-            0.5f;
+        bool follows = processorRef.granulator.get_parameter_value(
+                           ToneGranulator::PAR_FMPITCHFOLLOWSMAINPITCH) >= 0.5f;
         menu.addItem("Follow main pitch", true, follows, [this, follows]() {
-            *processorRef.granulator.idtoparvalptr[ToneGranulator::PAR_FMPITCHFOLLOWSMAINPITCH] =
-                !follows;
+            processorRef.granulator.set_parameter_value(ToneGranulator::PAR_FMPITCHFOLLOWSMAINPITCH,
+                                                        !follows);
         });
     });
     initSlider(p, *this, oscFMDepthKnob);

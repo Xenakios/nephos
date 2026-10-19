@@ -42,7 +42,7 @@ inline void addMidiLearnToMenu(juce::PopupMenu &menu, AudioPluginAudioProcessor 
                               });
         }
         menu.addSubMenu("Curve", curvemenu);
-        float curval = *processorRef.granulator.idtoparvalptr[parid];
+        float curval = processorRef.granulator.get_parameter_value(parid);
         menu.addItem("Set current value as MIDI control range start",
                      [&processorRef, parid, curval] {
                          processorRef.setMidiAssignmentParameterRange(parid, curval, {});

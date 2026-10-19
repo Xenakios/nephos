@@ -1495,7 +1495,16 @@ class ToneGranulator
     using pmd = sst::basic_blocks::params::ParamMetaData;
     std::vector<pmd> parmetadatas;
     std::vector<float> paramvalues;
+
+  private:
     std::unordered_map<uint32_t, float *> idtoparvalptr;
+
+  public:
+    float get_parameter_value(uint32_t id) { return *idtoparvalptr[id]; }
+    void set_parameter_value(uint32_t id, float value)
+    {
+        *idtoparvalptr[id] = value;
+    }
     std::unordered_map<uint32_t, pmd *> idtoparmetadata;
     std::unordered_map<uint32_t, float> modRanges;
     std::unordered_map<int, int> shapeParToActualShape;

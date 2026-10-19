@@ -131,7 +131,7 @@ class IMTestComponent : public juce::Component
         for (int i = 0; i < ops.size(); ++i)
         {
             uint32_t parid = pars[i] + selected_envelope;
-            float curval = *processorRef.granulator.idtoparvalptr[parid];
+            float curval = 0.0f; //*processorRef.granulator.idtoparvalptr[parid];
             auto miniresult = IMMiniParam(g, {61.0f + i * 45.0f, 1.0f, 43.0f, 14.0f}, mouse, ops[i],
                                           par_start_value);
             if (miniresult.was_clicked)

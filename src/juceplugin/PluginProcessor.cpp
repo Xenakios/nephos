@@ -393,7 +393,7 @@ void AudioPluginAudioProcessor::handleMIDICCMessage(int channel, int ccnumber, f
                 if (binding.mapfunction)
                     val = binding.mapfunction(val);
                 val = juce::jmap<float>(val, -1.0f, 1.0f, minval, maxval);
-                *granulator.idtoparvalptr[binding.target_param] = val;
+                granulator.set_parameter_value(binding.target_param, val);
                 ParameterMessage msg;
                 msg.id = binding.target_param;
                 msg.value = val;
@@ -601,7 +601,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 ParameterMessage omsg;
                 int parid = ToneGranulator::PAR_INSERTAFIRST + 32 * msg.filterindex + i;
                 omsg.id = parid;
-                omsg.value = *granulator.idtoparvalptr[parid];
+                omsg.value = granulator.get_parameter_value(parid);
                 params_to_gui_fifo.push(omsg);
             }
             statechanged = true;
@@ -640,14 +640,19 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         // updateHostDisplay(juce::AudioProcessor::ChangeDetails().withNonParameterStateChanged(true));
     }
 
+    bool paramdidchange = false;
     ParameterMessage parmsg;
     while (params_from_gui_fifo.pop(parmsg))
     {
         if (parmsg.id > 0)
         {
-            *granulator.idtoparvalptr[parmsg.id] = parmsg.value;
-            setStateDirtyHack();
+            granulator.set_parameter_value(parmsg.id, parmsg.value);
+            paramdidchange = true;
         }
+    }
+    if (paramdidchange)
+    {
+        setStateDirtyHack();
     }
 
     const auto &pars = getParameters();
@@ -794,7 +799,7 @@ choc::value::Value AudioPluginAudioProcessor::getState()
     for (int i = 0; i < pmds.size(); ++i)
     {
         std::string id = std::to_string(pmds[i].id);
-        float v = *granulator.idtoparvalptr[pmds[i].id];
+        float v = granulator.get_parameter_value(pmds[i].id);
         mainparams.setMember(id, v);
     }
     rootstate.setMember("params", mainparams);
@@ -1017,7 +1022,7 @@ void AudioPluginAudioProcessor::sendExtraStatesToGUI()
     {
         ParameterMessage msg;
         msg.id = p.id;
-        msg.value = *granulator.idtoparvalptr[msg.id];
+        msg.value = granulator.get_parameter_value(msg.id);
         params_to_gui_fifo.push(msg);
     }
     auto &mm = granulator.modmatrix;
@@ -1218,7 +1223,7 @@ void AudioPluginAudioProcessor::handleMacroKnob(int knobindex, float value, bool
                 if (!is_audio_thread)
                     params_from_gui_fifo.push(msg);
                 else
-                    *granulator.idtoparvalptr[msg.id] = msg.value;
+                    granulator.set_parameter_value(msg.id, msg.value);
             }
         }
     }
