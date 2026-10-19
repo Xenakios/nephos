@@ -1520,7 +1520,7 @@ class ToneGranulator
     {
         uint32_t id = CLAP_INVALID_ID;
         float *valptr = nullptr;
-        sst::basic_blocks::dsp::LinearLag<float, false> lagger;
+        sst::basic_blocks::dsp::LinearLag<double, false> lagger;
     };
     std::vector<LaggedParameter> lagged_params;
     struct DummyLock
@@ -1577,9 +1577,15 @@ class ToneGranulator
                 p.lagger.v = *destval;
                 p.lagger.target_v = *destval;
                 p.lagger.setTarget(value);
-                lagged_params_spinlock.lock();
-                lagged_params.push_back(p);
-                lagged_params_spinlock.unlock();
+                if (p.lagger.isActive())
+                {
+                    lagged_params_spinlock.lock();
+                    lagged_params.push_back(p);
+                    lagged_params_spinlock.unlock();
+                } else
+                {
+                    *destval = value;
+                }
             }
         }
     }
