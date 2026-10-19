@@ -1323,16 +1323,8 @@ class ToneGranulator
             gevisfifo.push(msg);
         }
     }
-    void process_block(std::span<float> outputbuffer)
+    void process_parameter_lags()
     {
-        assert(outputbuffer.size() == granul_block_size * 64);
-        // this will be contended only infrequently,
-        // but we should not generally depend on being able to use this lock...
-        std::lock_guard<choc::threading::SpinLock> locker(spinLock);
-        set_ambisonics_order(1 + *idtoparvalptr[PAR_AMBORDER]);
-
-        float taillen = *idtoparvalptr[PAR_GRAINTAIL];
-        taillen = 0.002 + 0.998 * std::pow(taillen, 3.0);
         for (auto &lagp : lagged_params)
         {
             assert(lagp.valptr);
@@ -1344,12 +1336,22 @@ class ToneGranulator
                 lagp.valptr = nullptr;
             }
         }
-        for (auto &lagp : lagged_params)
-        {
-            // lagp.lagger.process();
-        }
+        lagged_params_spinlock.lock();
         std::erase_if(lagged_params,
                       [](LaggedParameter &lagp) { return lagp.id == CLAP_INVALID_ID; });
+        lagged_params_spinlock.unlock();
+    }
+    void process_block(std::span<float> outputbuffer)
+    {
+        assert(outputbuffer.size() == granul_block_size * 64);
+        // this will be contended only infrequently,
+        // but we should not generally depend on being able to use this lock...
+        std::lock_guard<choc::threading::SpinLock> locker(spinLock);
+        set_ambisonics_order(1 + *idtoparvalptr[PAR_AMBORDER]);
+
+        float taillen = *idtoparvalptr[PAR_GRAINTAIL];
+        taillen = 0.002 + 0.998 * std::pow(taillen, 3.0);
+        process_parameter_lags();
 
         handleStepSequencerMessages();
         handleRandomSourceMessages();
@@ -1521,6 +1523,12 @@ class ToneGranulator
         sst::basic_blocks::dsp::LinearLag<float, false> lagger;
     };
     std::vector<LaggedParameter> lagged_params;
+    struct DummyLock
+    {
+        void lock() {};
+        void unlock() {};
+    };
+    choc::threading::SpinLock lagged_params_spinlock;
 
   private:
     std::unordered_map<uint32_t, float *> idtoparvalptr;
@@ -1530,6 +1538,7 @@ class ToneGranulator
     static constexpr bool lag_parameters = true;
     void set_parameter_value(uint32_t id, float value)
     {
+        assert(id != CLAP_INVALID_ID);
         float *destval = idtoparvalptr[id];
         assert(destval);
         if constexpr (!lag_parameters)
@@ -1545,6 +1554,8 @@ class ToneGranulator
                 *destval = value;
                 return;
             }
+            // if (value == *destval)
+            //     return;
             bool found = false;
             for (auto &e : lagged_params)
             {
@@ -1554,7 +1565,7 @@ class ToneGranulator
                     e.lagger.setTarget(value);
                     found = true;
                     // std::cout << "param " << id << " was alreagy lagged " << value << "\n";
-                    break;
+                    // break;
                 }
             }
             if (!found)
@@ -1562,11 +1573,13 @@ class ToneGranulator
                 LaggedParameter p;
                 p.id = id;
                 p.valptr = destval;
-                p.lagger.setRateInMilliseconds(500.0, m_sr, 1.0 / granul_block_size);
+                p.lagger.setRateInMilliseconds(1000.0, m_sr, 1.0 / granul_block_size);
                 p.lagger.v = *destval;
                 p.lagger.target_v = *destval;
                 p.lagger.setTarget(value);
+                lagged_params_spinlock.lock();
                 lagged_params.push_back(p);
+                lagged_params_spinlock.unlock();
             }
         }
     }

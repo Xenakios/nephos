@@ -749,7 +749,8 @@ void ToneGranulator::set_state(choc::value::ValueView state)
             if (params.hasObjectMember(id))
             {
                 float v = params[id].getWithDefault(pars[i].defaultVal);
-                *idtoparvalptr[pars[i].id] = v;
+                set_parameter_value(pars[i].id, v);
+                //*idtoparvalptr[pars[i].id] = v;
             }
         }
     }
