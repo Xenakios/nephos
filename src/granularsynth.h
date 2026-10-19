@@ -1549,13 +1549,11 @@ class ToneGranulator
         else
         {
             assert(m_sr > 0.0);
-            if (id == PAR_OSCTYPE)
+            if (value == *destval || id == PAR_OSCTYPE)
             {
                 *destval = value;
                 return;
             }
-            // if (value == *destval)
-            //     return;
             bool found = false;
             for (auto &e : lagged_params)
             {
