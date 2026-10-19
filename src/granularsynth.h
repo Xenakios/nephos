@@ -1536,57 +1536,7 @@ class ToneGranulator
   public:
     float get_parameter_value(uint32_t id) { return *idtoparvalptr[id]; }
     static constexpr bool lag_parameters = true;
-    void set_parameter_value(uint32_t id, float value)
-    {
-        assert(id != CLAP_INVALID_ID);
-        float *destval = idtoparvalptr[id];
-        assert(destval);
-        if constexpr (!lag_parameters)
-        {
-            *destval = value;
-            return;
-        }
-        else
-        {
-            assert(m_sr > 0.0);
-            if (value == *destval || id == PAR_OSCTYPE)
-            {
-                *destval = value;
-                return;
-            }
-            bool found = false;
-            for (auto &e : lagged_params)
-            {
-                if (e.id == id)
-                {
-                    // e.lagger.setRateInMilliseconds(500.0, m_sr, 1.0 / granul_block_size);
-                    e.lagger.setTarget(value);
-                    found = true;
-                    // std::cout << "param " << id << " was alreagy lagged " << value << "\n";
-                    // break;
-                }
-            }
-            if (!found)
-            {
-                LaggedParameter p;
-                p.id = id;
-                p.valptr = destval;
-                p.lagger.setRateInMilliseconds(1000.0, m_sr, 1.0 / granul_block_size);
-                p.lagger.v = *destval;
-                p.lagger.target_v = *destval;
-                p.lagger.setTarget(value);
-                if (p.lagger.isActive())
-                {
-                    lagged_params_spinlock.lock();
-                    lagged_params.push_back(p);
-                    lagged_params_spinlock.unlock();
-                } else
-                {
-                    *destval = value;
-                }
-            }
-        }
-    }
+    void set_parameter_value(uint32_t id, float value);
     std::unordered_map<uint32_t, pmd *> idtoparmetadata;
     std::unordered_map<uint32_t, float> modRanges;
     std::unordered_map<int, int> shapeParToActualShape;
