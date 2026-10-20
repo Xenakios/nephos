@@ -124,7 +124,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     buffer_adapter.reset(1024);
     from_gui_fifo.reset(1024);
     params_from_gui_fifo.reset(2048);
-    params_to_gui_fifo.reset(2048);
+    granulator.params_to_gui_fifo.reset(2048);
     to_gui_fifo.reset(1024);
     dirtyStateParam =
         new juce::AudioParameterFloat({"dirtystateparam", 1}, "Internal parameter", 0.0, 1.0, 0.0);
@@ -397,7 +397,7 @@ void AudioPluginAudioProcessor::handleMIDICCMessage(int channel, int ccnumber, f
                 ParameterMessage msg;
                 msg.id = binding.target_param;
                 msg.value = val;
-                params_to_gui_fifo.push(msg);
+                granulator.params_to_gui_fifo.push(msg);
             }
         }
     }
@@ -602,7 +602,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 int parid = ToneGranulator::PAR_INSERTAFIRST + 32 * msg.filterindex + i;
                 omsg.id = parid;
                 omsg.value = granulator.get_parameter_value(parid);
-                params_to_gui_fifo.push(omsg);
+                granulator.params_to_gui_fifo.push(omsg);
             }
             statechanged = true;
         }
@@ -1023,7 +1023,7 @@ void AudioPluginAudioProcessor::sendExtraStatesToGUI()
         ParameterMessage msg;
         msg.id = p.id;
         msg.value = granulator.get_parameter_value(msg.id);
-        params_to_gui_fifo.push(msg);
+        granulator.params_to_gui_fifo.push(msg);
     }
     auto &mm = granulator.modmatrix;
     for (int i = 0; i < GranulatorModConfig::FixedMatrixSize; ++i)

@@ -447,7 +447,9 @@ void DashBoardComponent::paint(juce::Graphics &g)
 #if JUCE_DEBUG
     infoText += "\nDEBUG BUILD";
 #endif
-    infoText += "\n";
+    infoText += "\n" + juce::String(processorRef.granulator.lagged_params.size()) +
+                " lagging params active\n";
+    
     processorRef.granulator.lagged_params_spinlock.lock();
     for (auto &e : processorRef.granulator.lagged_params)
     {
@@ -462,6 +464,7 @@ void DashBoardComponent::paint(juce::Graphics &g)
             juce::String(pmd->groupName) + "/" + juce::String(pmd->name) + juce::String(" ");
     }
     processorRef.granulator.lagged_params_spinlock.unlock();
+    
     g.setFont(18.0f);
     g.drawMultiLineText(infoText, cloudArea.getX(), 19.0f, cloudArea.getWidth(),
                         juce::Justification::left);

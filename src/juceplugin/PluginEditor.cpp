@@ -181,7 +181,7 @@ void AudioPluginAudioProcessorEditor::timerCallback()
     }
     // mainPage.stackModuleComponent.repaint();
     ParameterMessage parmsg;
-    while (processorRef.params_to_gui_fifo.pop(parmsg))
+    while (processorRef.granulator.params_to_gui_fifo.pop(parmsg))
     {
         auto it = idToSlider.find(parmsg.id);
         if (it != idToSlider.end())

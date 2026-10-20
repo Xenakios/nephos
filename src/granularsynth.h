@@ -44,6 +44,12 @@ inline constexpr int ambisonicOrderNumChannels(int order) { return (order + 1) *
 
 template <typename T> inline int sgn(T val) { return (T(0) < val) - (val < T(0)); }
 
+struct ParameterMessage
+{
+    uint32_t id = 0;
+    float value = 0.0f;
+};
+
 struct FilterBank
 {
     static constexpr size_t maxfilters = 16;
@@ -1329,9 +1335,14 @@ class ToneGranulator
         {
             assert(lagp.valptr);
             *lagp.valptr = lagp.lagger.getValue();
+            if (audiocallbackcount % 128 == 0)
+            {
+                params_to_gui_fifo.push(ParameterMessage{lagp.id, *lagp.valptr});
+            }
             lagp.lagger.process();
             if (!lagp.lagger.isActive())
             {
+                params_to_gui_fifo.push(ParameterMessage{lagp.id, *lagp.valptr});
                 lagp.id = CLAP_INVALID_ID;
                 lagp.valptr = nullptr;
             }
@@ -1541,6 +1552,7 @@ class ToneGranulator
     std::unordered_map<uint32_t, float> modRanges;
     std::unordered_map<int, int> shapeParToActualShape;
     choc::fifo::SingleReaderSingleWriterFIFO<StepModSource::Message> fifo;
+    choc::fifo::SingleReaderSingleWriterFIFO<ParameterMessage> params_to_gui_fifo;
     alignas(16) Tunings::Tuning tuning;
     struct GrainRepeatsVisMessage
     {

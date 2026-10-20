@@ -618,7 +618,8 @@ void ToneGranulator::set_parameter_value(uint32_t id, float value)
     else
     {
         assert(m_sr > 0.0);
-        if (value == *destval || id == PAR_OSCTYPE)
+        // if (value == *destval || id == PAR_OSCTYPE)
+        if (id == PAR_OSCTYPE)
         {
             *destval = value;
             return;
@@ -644,6 +645,10 @@ void ToneGranulator::set_parameter_value(uint32_t id, float value)
             p.lagger.v = *destval;
             p.lagger.target_v = *destval;
             p.lagger.setTarget(value);
+            lagged_params_spinlock.lock();
+            lagged_params.push_back(p);
+            lagged_params_spinlock.unlock();
+            /*
             if (p.lagger.isActive())
             {
                 lagged_params_spinlock.lock();
@@ -654,6 +659,7 @@ void ToneGranulator::set_parameter_value(uint32_t id, float value)
             {
                 *destval = value;
             }
+            */
         }
     }
 }
