@@ -1274,11 +1274,27 @@ void RepeatsVisualizer::paint(juce::Graphics &g)
 
     float pitchwalk = 0.0f;
     float pitchd = -1.0f + 2.0f * state.modulatedvalues[3];
-    float startpitch = -pitchd * 12.0f;
-    float endpitch = pitchd * 12.0f;
-    ToneGranulator::RepeatsParameterProcessor proc{
-        rng,       ToneGranulator::RepeatsParameterProcessor::RPP_RAMP, count, startpitch, endpitch,
-        &pitchwalk};
+    float pitchrepeatparams[2] = {0.0f};
+    if (processorRef.granulator.pitch_repeats_mode ==
+            ToneGranulator::RepeatsParameterProcessor::RPP_RAMP ||
+        processorRef.granulator.pitch_repeats_mode ==
+            ToneGranulator::RepeatsParameterProcessor::RPP_ALTERNATE)
+    {
+        pitchrepeatparams[0] = -pitchd * 12.0f;
+        pitchrepeatparams[1] = pitchd * 12.0f;
+    }
+    else if (processorRef.granulator.pitch_repeats_mode ==
+             ToneGranulator::RepeatsParameterProcessor::RPP_RANDOM)
+    {
+        pitchrepeatparams[0] = 0.0;
+        pitchrepeatparams[1] = pitchd * 12.0f;
+    }
+    ToneGranulator::RepeatsParameterProcessor proc{rng,
+                                                   processorRef.granulator.pitch_repeats_mode,
+                                                   count,
+                                                   pitchrepeatparams[0],
+                                                   pitchrepeatparams[1],
+                                                   &pitchwalk};
     for (int i = 0; i < count; ++i)
     {
         float normpos = 0.0f;

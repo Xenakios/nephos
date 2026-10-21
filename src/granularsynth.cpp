@@ -1270,15 +1270,37 @@ void ToneGranulator::generate_grain()
                 cust_target = &genev.sync_octaves;
             else if (customrepeatwalkparam == PAR_DURATION)
                 cust_target = &genev.duration;
-            float startpitch = genev.pitch_semitones + -pitchrand * 12.0f;
-            float endpitch = genev.pitch_semitones + pitchrand * 12.0f;
-            float azialt0 = genev.azimuth - spatspread * 180.0f;
-            float azialt1 = genev.azimuth + spatspread * 180.0f;
+            float pitchrepeatparams[2] = {0.0f};
+            if (pitch_repeats_mode == RepeatsParameterProcessor::RPP_RAMP ||
+                pitch_repeats_mode == RepeatsParameterProcessor::RPP_ALTERNATE)
+            {
+                pitchrepeatparams[0] = genev.pitch_semitones - pitchrand * 12.0f;
+                pitchrepeatparams[1] = genev.pitch_semitones + pitchrand * 12.0f;
+            }
+            else if (pitch_repeats_mode == RepeatsParameterProcessor::RPP_RANDOM)
+            {
+                pitchrepeatparams[0] = genev.pitch_semitones;
+                pitchrepeatparams[1] = pitchrand * 12.0f;
+            }
+            float azirepeatparams[2] = {0.0f};
+            if (azimuth_repeats_mode == RepeatsParameterProcessor::RPP_RAMP ||
+                azimuth_repeats_mode == RepeatsParameterProcessor::RPP_ALTERNATE)
+            {
+                spatspread = -1.0f + 2.0f * spatspread;
+                azirepeatparams[0] = genev.azimuth - spatspread * 180.0f;
+                azirepeatparams[1] = genev.azimuth + spatspread * 180.0f;
+            }
+            else if (azimuth_repeats_mode == RepeatsParameterProcessor::RPP_RANDOM)
+            {
+                azirepeatparams[0] = genev.azimuth;
+                azirepeatparams[1] = spatspread * 180.0f;
+            }
             std::array<RepeatsParameterProcessor, 4> par_processors{
-                RepeatsParameterProcessor{rng, RepeatsParameterProcessor::RPP_RAMP, numToSchedule,
-                                          startpitch, endpitch, &genev.pitch_semitones},
-                RepeatsParameterProcessor{rng, RepeatsParameterProcessor::RPP_ALTERNATE,
-                                          numToSchedule, azialt0, azialt1, &genev.azimuth},
+                RepeatsParameterProcessor{rng, pitch_repeats_mode, numToSchedule,
+                                          pitchrepeatparams[0], pitchrepeatparams[1],
+                                          &genev.pitch_semitones},
+                RepeatsParameterProcessor{rng, azimuth_repeats_mode, numToSchedule,
+                                          azirepeatparams[0], azirepeatparams[1], &genev.azimuth},
                 RepeatsParameterProcessor{rng, RepeatsParameterProcessor::RPP_RANDOM, numToSchedule,
                                           spatspread, 0.0f, cust_target},
                 RepeatsParameterProcessor{rng, RepeatsParameterProcessor::RPP_RANDOM, numToSchedule,

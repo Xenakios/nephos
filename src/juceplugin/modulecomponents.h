@@ -430,7 +430,33 @@ class StackingModuleComponent : public juce::GroupComponent
                         *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKENDVOLUME]),
           repVis(p)
     {
-
+        juce::StringArray modes{"Ramp", "Random Walk", "Random", "Alternate"};
+        pitchRandomKnob.addMenuItemsCallback([modes, this](juce::PopupMenu &menu) {
+            menu.addSectionHeader("Pitch pattern");
+            for (size_t i = 0; i < modes.size(); ++i)
+            {
+                menu.addItem(modes[i], true,
+                             processorRef.granulator.pitch_repeats_mode ==
+                                 (ToneGranulator::RepeatsParameterProcessor::MODE)i,
+                             [i, this]() {
+                                 processorRef.granulator.pitch_repeats_mode =
+                                     (ToneGranulator::RepeatsParameterProcessor::MODE)i;
+                             });
+            }
+        });
+        spatRandomKnob.addMenuItemsCallback([modes, this](juce::PopupMenu &menu) {
+            menu.addSectionHeader("Azimuth pattern");
+            for (size_t i = 0; i < modes.size(); ++i)
+            {
+                menu.addItem(modes[i], true,
+                             processorRef.granulator.azimuth_repeats_mode ==
+                                 (ToneGranulator::RepeatsParameterProcessor::MODE)i,
+                             [i, this]() {
+                                 processorRef.granulator.azimuth_repeats_mode =
+                                     (ToneGranulator::RepeatsParameterProcessor::MODE)i;
+                             });
+            }
+        });
         addKnob(countKnob);
         addKnob(lengthKnob);
         addKnob(warpKnob);

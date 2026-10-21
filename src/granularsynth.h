@@ -1367,6 +1367,10 @@ class ToneGranulator
             }
         }
     };
+    std::atomic<RepeatsParameterProcessor::MODE> pitch_repeats_mode =
+        RepeatsParameterProcessor::RPP_RAMP;
+    std::atomic<RepeatsParameterProcessor::MODE> azimuth_repeats_mode =
+        RepeatsParameterProcessor::RPP_RAMP;
     const int numvoices = 64;
     double m_sr = 0.0;
     int graincount = 0;
