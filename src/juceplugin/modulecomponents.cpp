@@ -1289,6 +1289,11 @@ void RepeatsVisualizer::paint(juce::Graphics &g)
         pitchrepeatparams[0] = 0.0;
         pitchrepeatparams[1] = pitchd * 12.0f;
     }
+    else if (processorRef.granulator.pitch_repeats_mode ==
+             ToneGranulator::RepeatsParameterProcessor::RPP_RANDOMWALK)
+    {
+        pitchrepeatparams[0] = pitchd * 6.0f;
+    }
     ToneGranulator::RepeatsParameterProcessor proc{rng,
                                                    processorRef.granulator.pitch_repeats_mode,
                                                    count,

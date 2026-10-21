@@ -1282,6 +1282,10 @@ void ToneGranulator::generate_grain()
                 pitchrepeatparams[0] = genev.pitch_semitones;
                 pitchrepeatparams[1] = pitchrand * 12.0f;
             }
+            else if (pitch_repeats_mode == RepeatsParameterProcessor::RPP_RANDOMWALK)
+            {
+                pitchrepeatparams[0] = pitchrand * 6.0f;
+            }
             float azirepeatparams[2] = {0.0f};
             if (azimuth_repeats_mode == RepeatsParameterProcessor::RPP_RAMP ||
                 azimuth_repeats_mode == RepeatsParameterProcessor::RPP_ALTERNATE)
@@ -1294,6 +1298,10 @@ void ToneGranulator::generate_grain()
             {
                 azirepeatparams[0] = genev.azimuth;
                 azirepeatparams[1] = spatspread * 180.0f;
+            }
+            else if (azimuth_repeats_mode == RepeatsParameterProcessor::RPP_RANDOMWALK)
+            {
+                azirepeatparams[0] = spatspread * 90.0f;
             }
             std::array<RepeatsParameterProcessor, 4> par_processors{
                 RepeatsParameterProcessor{rng, pitch_repeats_mode, numToSchedule,
