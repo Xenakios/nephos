@@ -1254,8 +1254,10 @@ void ToneGranulator::generate_grain()
             }
 
             int numToSchedule = std::clamp(*idtoparvalptr[PAR_STACKCOUNT], 1.0f, 16.0f);
-            float pitchrand = std::clamp(*idtoparvalptr[PAR_STACKPITCHPAR1], 0.0f, 1.0f);
-            pitchrand = -1.0 + 2.0 * pitchrand;
+            float repreatpitchpar = modmatrix.m.getTargetValue(
+                GranulatorModConfig::TargetIdentifier{PAR_STACKPITCHPAR1});
+            repreatpitchpar = std::clamp(repreatpitchpar, 0.0f, 1.0f);
+            repreatpitchpar = -1.0 + 2.0 * repreatpitchpar;
             float timeSpanToSchedule = modmatrix.m.getTargetValue(
                 GranulatorModConfig::TargetIdentifier{PAR_STACKTIMESPAN});
             timeSpanToSchedule = std::clamp(timeSpanToSchedule, 0.0f, 1.0f);
@@ -1274,17 +1276,17 @@ void ToneGranulator::generate_grain()
             if (pitch_repeats_mode == RepeatsParameterProcessor::RPP_RAMP ||
                 pitch_repeats_mode == RepeatsParameterProcessor::RPP_ALTERNATE)
             {
-                pitchrepeatparams[0] = genev.pitch_semitones - pitchrand * 12.0f;
-                pitchrepeatparams[1] = genev.pitch_semitones + pitchrand * 12.0f;
+                pitchrepeatparams[0] = genev.pitch_semitones - repreatpitchpar * 12.0f;
+                pitchrepeatparams[1] = genev.pitch_semitones + repreatpitchpar * 12.0f;
             }
             else if (pitch_repeats_mode == RepeatsParameterProcessor::RPP_RANDOM)
             {
                 pitchrepeatparams[0] = genev.pitch_semitones;
-                pitchrepeatparams[1] = pitchrand * 12.0f;
+                pitchrepeatparams[1] = repreatpitchpar * 12.0f;
             }
             else if (pitch_repeats_mode == RepeatsParameterProcessor::RPP_RANDOMWALK)
             {
-                pitchrepeatparams[0] = pitchrand * 6.0f;
+                pitchrepeatparams[0] = repreatpitchpar * 6.0f;
             }
             float azirepeatparams[2] = {0.0f};
             if (azimuth_repeats_mode == RepeatsParameterProcessor::RPP_RAMP ||
