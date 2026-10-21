@@ -1136,7 +1136,7 @@ class ToneGranulator
             repmsg.modulatedvalues[2] = modmatrix.m.getTargetValue({PAR_STACKTIMECURVE});
             repmsg.modulatedvalues[3] = modmatrix.m.getTargetValue({PAR_STACKPITCHPAR1});
             repmsg.modulatedvalues[4] = modmatrix.m.getTargetValue({PAR_STACKSPATIALIZATIONPAR1});
-            repmsg.modulatedvalues[5] = modmatrix.m.getTargetValue({PAR_STACKENDVOLUME});
+            repmsg.modulatedvalues[5] = modmatrix.m.getTargetValue({PAR_STACKVOLUMEPAR1});
             repeatsVisMessages.push(repmsg);
             GrainEnvelopeVisMessage msg;
             for (int i = 0; i < GrainEvent::max_grain_mod_slots; ++i)
@@ -1291,7 +1291,7 @@ class ToneGranulator
         PAR_STACKPITCHPAR1 = 2500,
         PAR_STACKSPATIALIZATIONPAR1 = 2600,
         PAR_STACKTIMECURVE = 2700,
-        PAR_STACKENDVOLUME = 2750,
+        PAR_STACKVOLUMEPAR1 = 2750,
         PAR_VOLENVEASINGSTART = 2800,
         PAR_VOLENVEASINGEND = 2900,
         PAR_GRAINMODSLOTAMOUNT0 = 3000,
@@ -1370,6 +1370,8 @@ class ToneGranulator
     std::atomic<RepeatsParameterProcessor::MODE> pitch_repeats_mode =
         RepeatsParameterProcessor::RPP_RAMP;
     std::atomic<RepeatsParameterProcessor::MODE> azimuth_repeats_mode =
+        RepeatsParameterProcessor::RPP_RAMP;
+    std::atomic<RepeatsParameterProcessor::MODE> volume_repeats_mode =
         RepeatsParameterProcessor::RPP_RAMP;
     const int numvoices = 64;
     double m_sr = 0.0;

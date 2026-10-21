@@ -432,9 +432,9 @@ ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
                                .withRange(0.0f, 1.0f)
                                .withDefault(1.0)
                                .withLinearScaleFormatting("%", 100.0f)
-                               .withName("End Volume")
+                               .withName("Volume")
                                .withGroupName("Repeats")
-                               .withID(PAR_STACKENDVOLUME)
+                               .withID(PAR_STACKVOLUMEPAR1)
                                .withFlags(CLAP_PARAM_IS_MODULATABLE));
     parmetadatas.push_back(pmd()
                                .withRange(-7.0f, 7.0f)
@@ -1303,14 +1303,39 @@ void ToneGranulator::generate_grain()
             {
                 azirepeatparams[0] = spatspread * 90.0f;
             }
+            float volrepspread = *idtoparvalptr[PAR_STACKVOLUMEPAR1];
+            float volrepeatparams[2] = {0.0f};
+            if (volume_repeats_mode == RepeatsParameterProcessor::RPP_RAMP ||
+                volume_repeats_mode == RepeatsParameterProcessor::RPP_ALTERNATE)
+            {
+                if (volrepspread < 0.5f)
+                {
+                    volrepeatparams[0] = gvol * volrepspread * 2.0f;
+                    volrepeatparams[1] = gvol;
+                }
+                else
+                {
+                    volrepeatparams[0] = gvol;
+                    volrepeatparams[1] = gvol - gvol * (volrepspread - 0.5f) * 2.0f;
+                }
+            }
+            else if (volume_repeats_mode == RepeatsParameterProcessor::RPP_RANDOM)
+            {
+                // volrepeatparams[0] = genev.azimuth;
+                // volrepeatparams[1] = spatspread * 180.0f;
+            }
+            else if (volume_repeats_mode == RepeatsParameterProcessor::RPP_RANDOMWALK)
+            {
+                // volrepeatparams[0] = spatspread * 90.0f;
+            }
             std::array<RepeatsParameterProcessor, 4> par_processors{
                 RepeatsParameterProcessor{rng, pitch_repeats_mode, numToSchedule,
                                           pitchrepeatparams[0], pitchrepeatparams[1],
                                           &genev.pitch_semitones},
                 RepeatsParameterProcessor{rng, azimuth_repeats_mode, numToSchedule,
                                           azirepeatparams[0], azirepeatparams[1], &genev.azimuth},
-                RepeatsParameterProcessor{rng, RepeatsParameterProcessor::RPP_RANDOM, numToSchedule,
-                                          spatspread, 0.0f, cust_target},
+                RepeatsParameterProcessor{rng, volume_repeats_mode, numToSchedule,
+                                          volrepeatparams[0], volrepeatparams[1], &gvol},
                 RepeatsParameterProcessor{rng, RepeatsParameterProcessor::RPP_RANDOM, numToSchedule,
                                           spatspread, 0.0f, cust_target}};
 
@@ -1318,7 +1343,6 @@ void ToneGranulator::generate_grain()
             genev.ambi_rotate = amb_rotate;
             genev.ambi_omni_boost = omniboost;
 
-            float endvol = *idtoparvalptr[PAR_STACKENDVOLUME];
             const float maxtimepow = 3.0f;
             for (int j = 0; j < numToSchedule; ++j)
             {
@@ -1343,7 +1367,8 @@ void ToneGranulator::generate_grain()
                     rwalk.step();
                 }
                 // fading volume for now but should be more adjustable...
-                genev.volume = gvol * (1.0f - ((1.0f - endvol) * normpos));
+                // genev.volume = gvol * (1.0f - ((1.0f - endvol) * normpos));
+                genev.volume = gvol;
                 scheduledGrains.push_back(genev);
             }
             // need to sort because we may have previous unstarted events and our

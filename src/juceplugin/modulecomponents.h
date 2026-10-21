@@ -427,7 +427,7 @@ class StackingModuleComponent : public juce::GroupComponent
               XapSlider::SS_Knob,
               *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKSPATIALIZATIONPAR1]),
           endVolumeKnob(XapSlider::SS_Knob,
-                        *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKENDVOLUME]),
+                        *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKVOLUMEPAR1]),
           repVis(p)
     {
         juce::StringArray modes{"Ramp", "Random Walk", "Random", "Alternate"};

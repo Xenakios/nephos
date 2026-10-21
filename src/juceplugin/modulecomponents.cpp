@@ -1268,7 +1268,7 @@ void RepeatsVisualizer::paint(juce::Graphics &g)
     timespan = 0.0f + 2.0f * std::pow(timespan, 2.0f);
 
     float timecurve = state.modulatedvalues[2];
-    float endlevel = state.modulatedvalues[5];
+    float volmorph = state.modulatedvalues[5];
 
     const float maxtimepow = 3.0f;
 
@@ -1300,6 +1300,43 @@ void RepeatsVisualizer::paint(juce::Graphics &g)
                                                    pitchrepeatparams[0],
                                                    pitchrepeatparams[1],
                                                    &pitchwalk};
+    float processedvol = 0.0f;
+
+    float volrepspread = volmorph;
+    float volrepeatparams[2] = {0.0f};
+    if (processorRef.granulator.volume_repeats_mode ==
+            ToneGranulator::RepeatsParameterProcessor::RPP_RAMP ||
+        processorRef.granulator.volume_repeats_mode ==
+            ToneGranulator::RepeatsParameterProcessor::RPP_ALTERNATE)
+    {
+        if (volrepspread < 0.5f)
+        {
+            volrepeatparams[0] = 1.0 * volrepspread * 2.0f;
+            volrepeatparams[1] = 1.0;
+        }
+        else
+        {
+            volrepeatparams[0] = 1.0;
+            volrepeatparams[1] = 1.0 - 1.0 * (volrepspread - 0.5f) * 2.0f;
+        }
+    }
+    else if (processorRef.granulator.volume_repeats_mode ==
+             ToneGranulator::RepeatsParameterProcessor::RPP_RANDOM)
+    {
+        // volrepeatparams[0] = genev.azimuth;
+        // volrepeatparams[1] = spatspread * 180.0f;
+    }
+    else if (processorRef.granulator.volume_repeats_mode ==
+             ToneGranulator::RepeatsParameterProcessor::RPP_RANDOMWALK)
+    {
+        // volrepeatparams[0] = spatspread * 90.0f;
+    }
+    ToneGranulator::RepeatsParameterProcessor volproc{rng,
+                                                      processorRef.granulator.volume_repeats_mode,
+                                                      count,
+                                                      volrepeatparams[0],
+                                                      volrepeatparams[1],
+                                                      &processedvol};
     for (int i = 0; i < count; ++i)
     {
         float normpos = 0.0f;
@@ -1315,7 +1352,8 @@ void RepeatsVisualizer::paint(juce::Graphics &g)
             float ex = xenakios::mapvalue(timecurve, 0.0f, 1.0f, 1.0f, maxtimepow);
             normpos = 1.0f - std::pow(1.0f - normpos, ex);
         }
-        float level = (1.0f - ((1.0f - endlevel) * normpos));
+        volproc.step();
+        float level = processedvol;
         // jassert(level >= 0.0f);
         normpos *= timespan;
         float xcor = juce::jmap<float>(normpos, 0.0f, 2.0f, visrect.getX(), visrect.getRight());
