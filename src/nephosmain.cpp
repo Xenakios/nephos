@@ -21,6 +21,8 @@
 #include "Tunings.h"
 #include "text/choc_Files.h"
 #include "text/choc_JSON.h"
+#include "sst/basic-blocks/tables/SixSinesWaveProvider.h"
+#include "../Common/automation_sequence.h"
 
 inline void init_clouds(ToneGranulator &g)
 {
@@ -601,9 +603,93 @@ inline void test_tiltfilter()
     std::cout << numcorruptsamples << " samples were corrupt\n";
 }
 
+inline void test_sixsines_table()
+{
+    using table_t = sst::basic_blocks::tables::SixSinesWaveProvider;
+    table_t op1{true};
+    table_t op2{true};
+    double sr = 44100.0;
+    op1.setSampleRate(sr);
+    op2.setSampleRate(sr);
+    op1.setWaveForm(table_t::WaveForm::SIN);
+    op2.setWaveForm(table_t::WaveForm::SIN);
+    unsigned int numoutsamples = sr * 10.0;
+    choc::buffer::ChannelArrayBuffer<float> outbuf{1, numoutsamples};
+    int phase0 = 0;
+    int phase1 = 0;
+    xenakios::Envelope base_pitch_env;
+    base_pitch_env.addPoint({0.0, 1.0});
+    base_pitch_env.addPoint({2.0, 0.0});
+    base_pitch_env.addPoint({2.5, 12.0});
+    base_pitch_env.addPoint({4.0, 12.0});
+    base_pitch_env.addPoint({5.0, -24.5});
+    base_pitch_env.addPoint({8.0, -32.0});
+    base_pitch_env.addPoint({10.0, 48.0});
+    base_pitch_env.sortPoints();
+    xenakios::Envelope fmindexenv;
+    fmindexenv.addPoint({0.0, 0.0});
+    fmindexenv.addPoint({5.0, 10.0});
+    fmindexenv.addPoint({10.0, 0.0});
+    fmindexenv.sortPoints();
+    xenakios::AutomationSequence waveseq;
+    // waveseq.add_event(0.0, 0, table_t::WaveForm::SIN);
+    // waveseq.add_event(2.0, 0, table_t::WaveForm::SQUARISH);
+    // waveseq.add_event(4.5, 0, table_t::WaveForm::SIN_OF_CUBED);
+    // waveseq.add_event(7.25, 0, table_t::WaveForm::TRIANGLE);
+    waveseq.sort_events();
+    xenakios::AutomationSequence::Iterator aiter{waveseq, sr};
+    int32_t dphase0 = 0;
+    int32_t dphase1 = 0;
+    double basehz = 440.0;
+    double fmindex = 0.0;
+    for (size_t i = 0; i < numoutsamples; ++i)
+    {
+        if (i % 32 == 0)
+        {
+            double tpos = i / sr;
+            basehz =
+                440.0 * std::pow(2.0, 1.0 / 12 * (base_pitch_env.getValueAtPosition(tpos) - 9.0));
+            fmindex = fmindexenv.getValueAtPosition(tpos);
+            /*
+        auto evts = aiter.readNextEvents(32);
+        for (auto &e : evts)
+        {
+            if (e.id == 0)
+                op1.setWaveForm((table_t::WaveForm)e.value);
+        }
+        */
+        }
+        dphase1 = op2.dPhase(64.0);
+        float op2out = op2.at(phase1);
+        dphase0 = op1.dPhase(basehz + op2out * basehz * fmindex);
+        float op1out = op1.at(phase0);
+
+        outbuf.getSample(0, i) = op1out * 0.9;
+        phase0 += dphase0;
+        if (phase0 >= op1.nPoints)
+        {
+            phase0 -= op1.nPoints;
+        }
+        phase1 += dphase1;
+        if (phase1 >= op2.nPoints)
+        {
+            phase1 -= op2.nPoints;
+        }
+    }
+    choc::audio::AudioFileProperties props;
+    props.bitDepth = choc::audio::BitDepth::float32;
+    props.numChannels = 1;
+    props.sampleRate = sr;
+    choc::audio::WAVAudioFileFormat<true> wavformat;
+    auto writer = wavformat.createWriter(
+        R"(E:\MusicAudio\sourcesamples\test_signals\nanobind\sixsinestable01.wav)", props);
+    writer->appendFrames(outbuf.getView());
+}
+
 int main(int argc, char **argv)
 {
-    test_tiltfilter();
+    test_sixsines_table();
+    // test_tiltfilter();
     return 0;
     // // test_degrade();
     render_nephos(R"(C:\develop\nephos\Assets\cli_test_state01.json)", 10.0);

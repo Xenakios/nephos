@@ -1265,7 +1265,7 @@ void RepeatsVisualizer::paint(juce::Graphics &g)
 
     float timespan = state.modulatedvalues[1];
     timespan = std::clamp(timespan, 0.0f, 1.0f);
-    timespan = 0.05f + 1.95f * std::pow(timespan, 2.0f);
+    timespan = 0.0f + 2.0f * std::pow(timespan, 2.0f);
 
     float timecurve = state.modulatedvalues[2];
     float endlevel = state.modulatedvalues[5];
@@ -1273,8 +1273,12 @@ void RepeatsVisualizer::paint(juce::Graphics &g)
     const float maxtimepow = 3.0f;
 
     float pitchwalk = 0.0f;
-    float pitchd = state.modulatedvalues[3];
-    ToneGranulator::RepeatsParameterProcessor proc{rng, pitchd, &pitchwalk};
+    float pitchd = -1.0f + 2.0f * state.modulatedvalues[3];
+    float startpitch = -pitchd * 12.0f;
+    float endpitch = pitchd * 12.0f;
+    ToneGranulator::RepeatsParameterProcessor proc{
+        rng,       ToneGranulator::RepeatsParameterProcessor::RPP_RAMP, count, startpitch, endpitch,
+        &pitchwalk};
     for (int i = 0; i < count; ++i)
     {
         float normpos = 0.0f;

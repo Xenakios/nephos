@@ -422,10 +422,10 @@ class StackingModuleComponent : public juce::GroupComponent
           warpKnob(XapSlider::SS_Knob,
                    *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKTIMECURVE]),
           pitchRandomKnob(XapSlider::SS_Knob,
-                          *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKRANDOMPITCH]),
+                          *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKPITCHPAR1]),
           spatRandomKnob(
               XapSlider::SS_Knob,
-              *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKRANDOMSPATIALIZATION]),
+              *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKSPATIALIZATIONPAR1]),
           endVolumeKnob(XapSlider::SS_Knob,
                         *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKENDVOLUME]),
           repVis(p)

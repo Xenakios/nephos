@@ -1083,174 +1083,7 @@ class ToneGranulator
         }
         compensationgainforgui = gainlag.getValue();
     }
-    void generate_grain()
-    {
-        double actgrate =
-            modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_DENSITY});
-        actgrate = std::clamp(actgrate, -1.0, 8.0);
-
-        double grate = 1.0 / std::pow(2.0, actgrate);
-        for (int i = 0; i < granul_block_size; ++i)
-        {
-            if (graingen_phase_prior > graingen_phase)
-            {
-                std::erase_if(scheduledGrains, [](GrainEvent &e) { return e.time_position < 0.0; });
-                float pitch =
-                    modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_PITCH});
-                float gdur =
-                    modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_DURATION});
-                float gvol = modmatrix.m.getTargetValue(
-                    GranulatorModConfig::TargetIdentifier{PAR_GRAINVOLUME});
-                GrainEvent genev{0.0, gdur, pitch, gvol};
-                genev.pitch_quantize_amount =
-                    std::clamp(modmatrix.m.getTargetValue(
-                                   GranulatorModConfig::TargetIdentifier{PAR_QUANTIZEPITCH}),
-                               0.0f, 1.0f);
-                genev.envelope_start_type = *idtoparvalptr[PAR_VOLENVEASINGSTART];
-                genev.envelope_end_type = *idtoparvalptr[PAR_VOLENVEASINGEND];
-                genev.envelope_shape =
-                    modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_ENVMORPH});
-                float azimuth =
-                    modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_AZIMUTH});
-                genev.azimuth = azimuth;
-                float amb_spread = modmatrix.m.getTargetValue(
-                    GranulatorModConfig::TargetIdentifier{PAR_AMBSPREAD});
-                float amb_rotate = modmatrix.m.getTargetValue(
-                    GranulatorModConfig::TargetIdentifier{PAR_AMBROTATE});
-                float elevation = modmatrix.m.getTargetValue(
-                    GranulatorModConfig::TargetIdentifier{PAR_ELEVATION});
-                genev.elevation = elevation;
-                float omniboost = modmatrix.m.getTargetValue(
-                    GranulatorModConfig::TargetIdentifier{PAR_AMBOMNIBOOST});
-                genev.generator_type =
-                    std::round(0.1f + modmatrix.m.getTargetValue(
-                                          GranulatorModConfig::TargetIdentifier{PAR_OSCTYPE}));
-                float fm_pitch =
-                    modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_FMPITCH});
-                genev.fm_pitch = fm_pitch;
-                genev.fm_amount =
-                    modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_FMDEPTH});
-                genev.fm_feedback = modmatrix.m.getTargetValue(
-                    GranulatorModConfig::TargetIdentifier{PAR_FMFEEDBACK});
-                genev.pulse_width =
-                    modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_OSC_PW});
-                genev.noisecorr = modmatrix.m.getTargetValue(
-                    GranulatorModConfig::TargetIdentifier{PAR_NOISECORRELATION});
-                genev.noiseimode = *idtoparvalptr[PAR_NOISEMODE];
-                genev.sync_octaves =
-                    modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_OSC_SYNC});
-                for (size_t j = 0; j < GranulatorVoice::numInsertSlots; ++j)
-                {
-                    auto numpars = voices.front()->insert_fx[j].numParams;
-                    for (size_t k = 0; k < numpars; ++k)
-                    {
-                        int insparid = PAR_INSERTAFIRST + 32 * j + k;
-                        genev.insertparams[j][k] = modmatrix.m.getTargetValue(
-                            GranulatorModConfig::TargetIdentifier{insparid});
-                    }
-                }
-                for (int k = 0; k < 4; ++k)
-                    genev.modamounts[k] = modmatrix.m.getTargetValue(
-                        GranulatorModConfig::TargetIdentifier{PAR_GRAINMODSLOTAMOUNT0 + k});
-                auxenvdepthpmodulated = genev.modamounts[0];
-                for (int k = 0; k < GranulatorVoice::num_aux_envelopes; ++k)
-                {
-                    genev.auxenvparams[k] = modmatrix.m.getTargetValue(
-                        GranulatorModConfig::TargetIdentifier{PAR_AUXENVTIMEWARP + k});
-                    genev.auxenvparams[4 + k] = modmatrix.m.getTargetValue(
-                        GranulatorModConfig::TargetIdentifier{PAR_AUXENVTIMESHIFT + k});
-                    genev.auxenvparams[8 + k] = modmatrix.m.getTargetValue(
-                        GranulatorModConfig::TargetIdentifier{PAR_AUXENVVALUEWARP + k});
-                }
-
-                int numToSchedule = std::clamp(*idtoparvalptr[PAR_STACKCOUNT], 1.0f, 16.0f);
-                float pitchrand = std::clamp(*idtoparvalptr[PAR_STACKRANDOMPITCH], 0.0f, 1.0f);
-                // pitchrand = 12.0f * std::pow(pitchrand, 2.0f);
-                float timeSpanToSchedule = modmatrix.m.getTargetValue(
-                    GranulatorModConfig::TargetIdentifier{PAR_STACKTIMESPAN});
-                timeSpanToSchedule = std::clamp(timeSpanToSchedule, 0.0f, 1.0f);
-                timeSpanToSchedule = 0.05f + 1.95f * std::pow(timeSpanToSchedule, 2.0f);
-                float timeSpanCurve = *idtoparvalptr[PAR_STACKTIMECURVE];
-                float spatrand = *idtoparvalptr[PAR_STACKRANDOMSPATIALIZATION];
-                // if we have no repeats, we could skip the loop and random walk stuff...
-
-                uint32_t customrepeatwalkparam = CLAP_INVALID_ID;
-                float *cust_target = nullptr;
-                if (customrepeatwalkparam == PAR_OSC_SYNC)
-                    cust_target = &genev.sync_octaves;
-                else if (customrepeatwalkparam == PAR_DURATION)
-                    cust_target = &genev.duration;
-                std::array<RepeatsParameterProcessor, 4> par_processors{
-                    RepeatsParameterProcessor{rng, pitchrand, &genev.pitch_semitones},
-                    RepeatsParameterProcessor{rng, spatrand, &genev.azimuth},
-                    RepeatsParameterProcessor{rng, spatrand, &genev.elevation},
-                    RepeatsParameterProcessor{rng, 0.02, cust_target}};
-
-                genev.ambi_spread = amb_spread;
-                genev.ambi_rotate = amb_rotate;
-                genev.ambi_omni_boost = omniboost;
-
-                float endvol = *idtoparvalptr[PAR_STACKENDVOLUME];
-                const float maxtimepow = 3.0f;
-                for (int j = 0; j < numToSchedule; ++j)
-                {
-                    double tpos = playposframes / this->m_sr;
-                    double normpos = 0.0;
-                    if (numToSchedule > 1)
-                        normpos = 1.0 / (numToSchedule - 1) * j;
-                    if (timeSpanCurve < 0.0f)
-                    {
-                        float ex = xenakios::mapvalue(timeSpanCurve, -1.0f, 0.0f, maxtimepow, 1.0f);
-                        normpos = std::pow(normpos, ex);
-                    }
-                    else
-                    {
-                        float ex = xenakios::mapvalue(timeSpanCurve, 0.0f, 1.0f, 1.0f, maxtimepow);
-                        normpos = 1.0f - std::pow(1.0f - normpos, ex);
-                    }
-                    tpos += timeSpanToSchedule * normpos;
-                    genev.time_position = tpos;
-                    for (auto &rwalk : par_processors)
-                    {
-                        rwalk.step();
-                    }
-                    // fading volume for now but should be more adjustable...
-                    genev.volume = gvol * (1.0f - ((1.0f - endvol) * normpos));
-                    scheduledGrains.push_back(genev);
-                }
-                // need to sort because we may have previous unstarted events and our
-                // playback scheduling logic needs the events sorted
-                std::sort(scheduledGrains.begin(), scheduledGrains.end(), [](auto &lhs, auto &rhs) {
-                    return lhs.time_position < rhs.time_position;
-                });
-                const bool printschedulesevents = false;
-                if (printschedulesevents)
-                {
-                    /*
-                    std::print("{:.2f} : ", playposframes / m_sr);
-                    for (auto &scgrain : scheduledGrains)
-                        std::print("{:.2f} ", scgrain.time_position);
-                    std::print("\n");
-                    */
-                }
-
-                for (size_t sm = 0; sm < stepModSources.size(); ++sm)
-                {
-                    stepModValues[sm] = stepModSources[sm].next();
-                }
-                for (size_t rm = 0; rm < randomModSources.size(); ++rm)
-                {
-                    randomModValues[rm] = randomModSources[rm].next();
-                }
-                midiNoteModValue = midiNoteModSource.next();
-                scheduledIndex = 0;
-            }
-            graingen_phase_prior = graingen_phase;
-            graingen_phase += 1.0 / m_sr / grate;
-            if (graingen_phase >= 1.0)
-                graingen_phase -= 1.0;
-        }
-    }
+    void generate_grain();
     void process_modulations()
     {
         float master_rate =
@@ -1301,8 +1134,8 @@ class ToneGranulator
             repmsg.modulatedvalues[0] = modmatrix.m.getTargetValue({PAR_STACKCOUNT});
             repmsg.modulatedvalues[1] = modmatrix.m.getTargetValue({PAR_STACKTIMESPAN});
             repmsg.modulatedvalues[2] = modmatrix.m.getTargetValue({PAR_STACKTIMECURVE});
-            repmsg.modulatedvalues[3] = modmatrix.m.getTargetValue({PAR_STACKRANDOMPITCH});
-            repmsg.modulatedvalues[4] = modmatrix.m.getTargetValue({PAR_STACKRANDOMSPATIALIZATION});
+            repmsg.modulatedvalues[3] = modmatrix.m.getTargetValue({PAR_STACKPITCHPAR1});
+            repmsg.modulatedvalues[4] = modmatrix.m.getTargetValue({PAR_STACKSPATIALIZATIONPAR1});
             repmsg.modulatedvalues[5] = modmatrix.m.getTargetValue({PAR_STACKENDVOLUME});
             repeatsVisMessages.push(repmsg);
             GrainEnvelopeVisMessage msg;
@@ -1455,8 +1288,8 @@ class ToneGranulator
         PAR_NOISEMODE = 2150,
         PAR_STACKCOUNT = 2300,
         PAR_STACKTIMESPAN = 2400,
-        PAR_STACKRANDOMPITCH = 2500,
-        PAR_STACKRANDOMSPATIALIZATION = 2600,
+        PAR_STACKPITCHPAR1 = 2500,
+        PAR_STACKSPATIALIZATIONPAR1 = 2600,
         PAR_STACKTIMECURVE = 2700,
         PAR_STACKENDVOLUME = 2750,
         PAR_VOLENVEASINGSTART = 2800,
@@ -1481,22 +1314,48 @@ class ToneGranulator
     };
     struct RepeatsParameterProcessor
     {
+        enum MODE
+        {
+            RPP_RAMP,
+            RPP_RANDOMWALK,
+            RPP_RANDOM,
+            RPP_ALTERNATE
+        };
+        MODE procmode = RPP_RAMP;
         xenakios::Xoroshiro128Plus &rgen;
-        float deviation = 0.0f;
+        float params[2] = {0.0f};
         float *target = nullptr;
         float walk = 0.0f;
-        RepeatsParameterProcessor(xenakios::Xoroshiro128Plus &r, float d, float *t)
-            : rgen(r), deviation(d), target(t)
+        int numsteps = 0;
+        int stepcount = 0;
+        RepeatsParameterProcessor(xenakios::Xoroshiro128Plus &r, MODE m, int numsteps_, float p0,
+                                  float p1, float *t)
+            : procmode(m), rgen(r), params{p0, p1}, target(t), numsteps(numsteps_)
         {
             if (target)
                 walk = *target;
         }
         void step()
         {
-            if (target)
+            if (!target)
+                return;
+            if (procmode == RPP_RANDOMWALK)
             {
                 *target = walk;
-                walk += rgen.nextHypCos(0.0, deviation);
+                walk += rgen.nextHypCos(0.0, params[0]);
+            }
+            else if (procmode == RPP_RANDOM)
+            {
+                *target = rgen.nextFloatInRange(params[0] - params[1], params[0] + params[1]);
+            }
+            else if (procmode == RPP_RAMP)
+            {
+                if (numsteps < 2)
+                    return;
+                float start = params[0];
+                float end = params[1];
+                *target = start + (end - start) / (numsteps - 1) * stepcount;
+                ++stepcount;
             }
         }
     };
@@ -1546,7 +1405,7 @@ class ToneGranulator
 
   public:
     float get_parameter_value(uint32_t id) { return *idtoparvalptr[id]; }
-    static constexpr bool lag_parameters = true;
+    static constexpr bool lag_parameters = false;
     void set_parameter_value(uint32_t id, float value);
     std::unordered_map<uint32_t, pmd *> idtoparmetadata;
     std::unordered_map<uint32_t, float> modRanges;
@@ -1822,23 +1681,7 @@ class ToneGranulator
 
     int current_ambisonic_order = 0;
     int pending_ambisonic_order = 0;
-    void set_event_list(events_t evlist)
-    {
-        if (evlist.size() > 0)
-        {
-            std::sort(evlist.begin(), evlist.end(), [](GrainEvent &lhs, GrainEvent &rhs) {
-                return lhs.time_position < rhs.time_position;
-            });
-            std::erase_if(evlist, [](GrainEvent &e) {
-                return e.time_position < 0.0 || (e.time_position + e.duration) > 600.0;
-            });
-            std::lock_guard<choc::threading::SpinLock> locker(spinLock);
-            missedgrains = 0;
-            evindex = 0;
-            playposframes = 0;
-            std::swap(evlist, events);
-        }
-    }
+    void set_event_list(events_t evlist);
 
     void set_ambisonics_order(int order);
 
@@ -1888,66 +1731,5 @@ class ToneGranulator
     }
     void advanceCloudPlayers();
     void advanceFullEventList();
-    void advanceAutoGeneratedGrains(float taillen)
-    {
-        bool autogenpaused = *idtoparvalptr[PAR_PAUSEAUTOGEN];
-        if (!autogenpaused)
-        {
-            generate_grain();
-        }
-        GrainEvent *ev = nullptr;
-        if (scheduledIndex < scheduledGrains.size())
-            ev = &scheduledGrains[scheduledIndex];
-        while (ev && std::floor(ev->time_position * m_sr) < playposframes + granul_block_size)
-        {
-            bool voicewasfound = false;
-            for (int j = 0; j < voices.size(); ++j)
-            {
-                if (!voices[j]->active)
-                {
-                    // std::print("starting voice {} for scheduled event {}\n", j, evindex);
-                    // the grain oscillators and/or fx may produce lopsided waveforms
-                    // so have this to counteract
-                    if (graincount % 2 == 0)
-                        voices[j]->polarity_gain = 1.0f;
-                    else
-                        voices[j]->polarity_gain = -1.0f;
-                    // std::cout << graincount << " polarity gain " << voices[j]->polarity_gain
-                    //          << std::endl;
-                    voices[j]->grainid = graincount;
-                    voices[j]->doambnormalization = true;
-                    voices[j]->tail_len = taillen;
-                    voices[j]->tail_fade_len = std::clamp(taillen * 0.5, 0.002, 1.0);
-                    voices[j]->fmfollowsmainpitch =
-                        *idtoparvalptr[PAR_FMPITCHFOLLOWSMAINPITCH] >= 0.5f;
-                    voices[j]->start(*ev);
-                    voicewasfound = true;
-                    if (gatherGrainVisData)
-                    {
-                        GrainVisualizerMessage vmsg;
-                        vmsg.timepos = ev->time_position;
-                        vmsg.pitch = voices[j]->pitch_base;
-                        vmsg.duration = voices[j]->grain_end_phase / m_sr;
-                        vmsg.gain = voices[j]->grain_base_volume;
-                        vmsg.ambidegrees = voices[j]->current_coordinates;
-                        visualizer_fifo.push(vmsg);
-                    }
-                    modulatedOscType = ev->generator_type;
-                    ++graincount;
-                    break;
-                }
-            }
-            // flag scheduled event for removal
-            ev->time_position = -1.0;
-            if (!voicewasfound)
-            {
-                ++missedgrains;
-            }
-            ++scheduledIndex;
-            if (scheduledIndex >= scheduledGrains.size())
-                ev = nullptr;
-            else
-                ev = &scheduledGrains[scheduledIndex];
-        }
-    }
+    void advanceAutoGeneratedGrains(float taillen);
 };
