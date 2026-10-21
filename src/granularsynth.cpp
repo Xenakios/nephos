@@ -1272,12 +1272,13 @@ void ToneGranulator::generate_grain()
                 cust_target = &genev.duration;
             float startpitch = genev.pitch_semitones + -pitchrand * 12.0f;
             float endpitch = genev.pitch_semitones + pitchrand * 12.0f;
+            float azialt0 = genev.azimuth - spatspread * 180.0f;
+            float azialt1 = genev.azimuth + spatspread * 180.0f;
             std::array<RepeatsParameterProcessor, 4> par_processors{
                 RepeatsParameterProcessor{rng, RepeatsParameterProcessor::RPP_RAMP, numToSchedule,
                                           startpitch, endpitch, &genev.pitch_semitones},
-                RepeatsParameterProcessor{rng, RepeatsParameterProcessor::RPP_RANDOM, numToSchedule,
-                                          genev.azimuth, spatspread * 180.0f,
-                                          &genev.azimuth},
+                RepeatsParameterProcessor{rng, RepeatsParameterProcessor::RPP_ALTERNATE,
+                                          numToSchedule, azialt0, azialt1, &genev.azimuth},
                 RepeatsParameterProcessor{rng, RepeatsParameterProcessor::RPP_RANDOM, numToSchedule,
                                           spatspread, 0.0f, cust_target},
                 RepeatsParameterProcessor{rng, RepeatsParameterProcessor::RPP_RANDOM, numToSchedule,

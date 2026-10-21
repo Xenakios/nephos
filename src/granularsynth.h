@@ -1357,6 +1357,14 @@ class ToneGranulator
                 *target = start + (end - start) / (numsteps - 1) * stepcount;
                 ++stepcount;
             }
+            else if (procmode == RPP_ALTERNATE)
+            {
+                if (stepcount % 2 == 0)
+                    *target = params[0];
+                else
+                    *target = params[1];
+                ++stepcount;
+            }
         }
     };
     const int numvoices = 64;
