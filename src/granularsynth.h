@@ -1384,6 +1384,24 @@ class ToneGranulator
             }
         }
     };
+    static constexpr size_t max_num_repeats = 16;
+    static void process_repeats(xenakios::Xoroshiro128Plus &rng, int count,
+                                RepeatsParameterProcessor::MODE mode, std::span<float> parameters,
+                                std::span<float> target)
+    {
+        assert(target.size() >= count);
+        if (mode == RepeatsParameterProcessor::RPP_RAMP)
+        {
+            if (target.size() == 1)
+                target[0] = 0.0f;
+            for (int i = 0; i < count; ++i)
+            {
+                float start = parameters[0];
+                float end = parameters[1];
+                target[i] = start + (end - start) / (count - 1) * i;
+            }
+        }
+    }
     std::atomic<RepeatsParameterProcessor::MODE> pitch_repeats_mode =
         RepeatsParameterProcessor::RPP_RAMP;
     std::atomic<RepeatsParameterProcessor::MODE> azimuth_repeats_mode =

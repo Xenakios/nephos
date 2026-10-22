@@ -1333,6 +1333,15 @@ void ToneGranulator::generate_grain()
             {
                 // volrepeatparams[0] = spatspread * 90.0f;
             }
+            std::array<float, max_num_repeats> repeats_durations = {0.0f};
+            std::array<float, 2> duration_params = {genev.duration, genev.duration - 0.5f};
+            process_repeats(rng, numToSchedule, RepeatsParameterProcessor::RPP_RAMP,
+                            duration_params, repeats_durations);
+            std::array<float, max_num_repeats> repeats_pitches = {0.0f};
+            std::array<float, 2> pitch_params = {repreatpitchpar, -repreatpitchpar};
+            float cachedpitch = genev.pitch_semitones;
+            process_repeats(rng, numToSchedule, RepeatsParameterProcessor::RPP_RAMP, pitch_params,
+                            repeats_pitches);
             std::array<RepeatsParameterProcessor, 4> par_processors{
                 RepeatsParameterProcessor{rng, pitch_repeats_mode, numToSchedule,
                                           pitchrepeatparams[0], pitchrepeatparams[1],
@@ -1374,6 +1383,8 @@ void ToneGranulator::generate_grain()
                 // fading volume for now but should be more adjustable...
                 // genev.volume = gvol * (1.0f - ((1.0f - endvol) * normpos));
                 genev.volume = gvol;
+                genev.duration = repeats_durations[j];
+                genev.pitch_semitones = cachedpitch + 12.0f * repeats_pitches[j];
                 scheduledGrains.push_back(genev);
             }
             // need to sort because we may have previous unstarted events and our
