@@ -1263,7 +1263,9 @@ void ToneGranulator::generate_grain()
             timeSpanToSchedule = std::clamp(timeSpanToSchedule, 0.0f, 1.0f);
             timeSpanToSchedule = 0.00f + 2.0f * std::pow(timeSpanToSchedule, 2.0f);
             float timeSpanCurve = *idtoparvalptr[PAR_STACKTIMECURVE];
-            float spatspread = *idtoparvalptr[PAR_STACKSPATIALIZATIONPAR1];
+            float spatspread = modmatrix.m.getTargetValue(
+                GranulatorModConfig::TargetIdentifier{PAR_STACKSPATIALIZATIONPAR1});
+            spatspread = std::clamp(spatspread, 0.0f, 1.0f);
             // if we have no repeats, we could skip the loop and random walk stuff...
 
             uint32_t customrepeatwalkparam = CLAP_INVALID_ID;
@@ -1279,7 +1281,8 @@ void ToneGranulator::generate_grain()
                 pitchrepeatparams[0] = genev.pitch_semitones - repreatpitchpar * 12.0f;
                 pitchrepeatparams[1] = genev.pitch_semitones + repreatpitchpar * 12.0f;
             }
-            else if (pitch_repeats_mode == RepeatsParameterProcessor::RPP_RANDOM)
+            else if (pitch_repeats_mode == RepeatsParameterProcessor::RPP_RANDOM ||
+                     pitch_repeats_mode == RepeatsParameterProcessor::RPP_EXPAMD)
             {
                 pitchrepeatparams[0] = genev.pitch_semitones;
                 pitchrepeatparams[1] = repreatpitchpar * 12.0f;

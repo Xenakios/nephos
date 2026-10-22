@@ -1319,7 +1319,8 @@ class ToneGranulator
             RPP_RAMP,
             RPP_RANDOMWALK,
             RPP_RANDOM,
-            RPP_ALTERNATE
+            RPP_ALTERNATE,
+            RPP_EXPAMD
         };
         MODE procmode = RPP_RAMP;
         xenakios::Xoroshiro128Plus &rgen;
@@ -1363,6 +1364,22 @@ class ToneGranulator
                     *target = params[0];
                 else
                     *target = params[1];
+                ++stepcount;
+            }
+            else if (procmode == RPP_EXPAMD)
+            {
+                if (numsteps < 2)
+                    return;
+                float x = 0.0f;
+                if (stepcount % 2 == 0)
+                    x = -1.0f;
+                else
+                    x = 1.0f;
+                float start = params[0];
+                float end = params[1];
+                float a = 1.0 / (numsteps - 1) * stepcount;
+                *target = params[0] + x * a * params[1];
+                //*target = x * (start + (end - start) / (numsteps - 1) * stepcount);
                 ++stepcount;
             }
         }

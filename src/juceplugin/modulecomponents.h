@@ -430,7 +430,7 @@ class StackingModuleComponent : public juce::GroupComponent
                         *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKVOLUMEPAR1]),
           repVis(p)
     {
-        juce::StringArray modes{"Ramp", "Random Walk", "Random", "Alternate"};
+        juce::StringArray modes{"Ramp", "Random Walk", "Random", "Alternate", "Expand"};
         pitchRandomKnob.addMenuItemsCallback([modes, this](juce::PopupMenu &menu) {
             menu.addSectionHeader("Pitch pattern");
             for (size_t i = 0; i < modes.size(); ++i)
@@ -441,6 +441,7 @@ class StackingModuleComponent : public juce::GroupComponent
                              [i, this]() {
                                  processorRef.granulator.pitch_repeats_mode =
                                      (ToneGranulator::RepeatsParameterProcessor::MODE)i;
+                                 repVis.repaint();
                              });
             }
         });
