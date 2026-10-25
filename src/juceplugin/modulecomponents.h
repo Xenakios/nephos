@@ -412,6 +412,7 @@ class StackingModuleComponent : public juce::GroupComponent
     XapSlider pitchRandomKnob;
     XapSlider spatRandomKnob;
     XapSlider endVolumeKnob;
+    XapSlider durationKnob;
     RepeatsVisualizer repVis;
     StackingModuleComponent(AudioPluginAudioProcessor &p)
         : juce::GroupComponent("", "Repeats"), processorRef(p),
@@ -428,6 +429,8 @@ class StackingModuleComponent : public juce::GroupComponent
               *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKSPATIALIZATIONPAR1]),
           endVolumeKnob(XapSlider::SS_Knob,
                         *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKVOLUMEPAR1]),
+          durationKnob(XapSlider::SS_Knob,
+                       *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKDURATIONPAR1]),
           repVis(p)
     {
         juce::StringArray modes{"Ramp", "Random Walk", "Random", "Alternate", "Expand"};
@@ -464,6 +467,7 @@ class StackingModuleComponent : public juce::GroupComponent
         addKnob(pitchRandomKnob);
         addKnob(spatRandomKnob);
         addKnob(endVolumeKnob);
+        addKnob(durationKnob);
         addAndMakeVisible(repVis);
     }
 

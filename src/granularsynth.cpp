@@ -437,6 +437,14 @@ ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
                                .withID(PAR_STACKVOLUMEPAR1)
                                .withFlags(CLAP_PARAM_IS_MODULATABLE));
     parmetadatas.push_back(pmd()
+                               .withRange(-1.0f, 1.0f)
+                               .withDefault(0.0)
+                               .withLinearScaleFormatting("", 100.0f)
+                               .withName("Duration")
+                               .withGroupName("Repeats")
+                               .withID(PAR_STACKDURATIONPAR1)
+                               .withFlags(CLAP_PARAM_IS_MODULATABLE));
+    parmetadatas.push_back(pmd()
                                .withRange(-7.0f, 7.0f)
                                .withDefault(0.0)
                                .withDecimalPlaces(3)
@@ -1274,15 +1282,14 @@ void ToneGranulator::generate_grain()
                 cust_target = &genev.duration;
             auto azirepeats = process_spatial_repeats(
                 rng, {numToSchedule, azimuth_repeats_mode, spatspread}, genev.azimuth);
-            
+
             float volrepspread = *idtoparvalptr[PAR_STACKVOLUMEPAR1];
             auto volume_repeats = process_volume_repeats(
                 rng, {numToSchedule, volume_repeats_mode, volrepspread}, gvol);
-            
-            // std::array<float, max_num_repeats> repeats_durations = {0.0f};
-            // std::array<float, 2> duration_params = {genev.duration, genev.duration - 0.5f};
-            // process_repeats(rng, numToSchedule, RepeatsParameterProcessor::RPP_RAMP,
-            //                 duration_params, repeats_durations);
+            float durrepsrap = *idtoparvalptr[PAR_STACKDURATIONPAR1];
+            auto repeats_durations = process_duration_repeats(
+                rng, {numToSchedule, RepeatsParameterProcessor::RPP_RAMP, durrepsrap},
+                genev.duration);
             auto repeats_pitches = process_pitch_repeats(
                 rng, {numToSchedule, pitch_repeats_mode, repreatpitchpar}, genev.pitch_semitones);
             float cachedpitch = genev.pitch_semitones;
@@ -1309,9 +1316,8 @@ void ToneGranulator::generate_grain()
                 }
                 tpos += timeSpanToSchedule * normpos;
                 genev.time_position = tpos;
-
                 genev.volume = volume_repeats[j];
-                // genev.duration = repeats_durations[j];
+                genev.duration = repeats_durations[j];
                 genev.pitch_semitones = repeats_pitches[j];
                 genev.azimuth = azirepeats[j];
                 scheduledGrains.push_back(genev);

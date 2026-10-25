@@ -1292,6 +1292,7 @@ class ToneGranulator
         PAR_STACKSPATIALIZATIONPAR1 = 2600,
         PAR_STACKTIMECURVE = 2700,
         PAR_STACKVOLUMEPAR1 = 2750,
+        PAR_STACKDURATIONPAR1 = 2760,
         PAR_VOLENVEASINGSTART = 2800,
         PAR_VOLENVEASINGEND = 2900,
         PAR_GRAINMODSLOTAMOUNT0 = 3000,
@@ -1428,8 +1429,8 @@ class ToneGranulator
         }
         return result;
     }
-    static std::array<float, max_num_repeats> process_pitch_repeats(xenakios::Xoroshiro128Plus &rng,
-                                                                    RepeatsParameters pars, float basevalue)
+    static std::array<float, max_num_repeats>
+    process_pitch_repeats(xenakios::Xoroshiro128Plus &rng, RepeatsParameters pars, float basevalue)
     {
         RepeatsParameters parameters = pars;
         parameters.par0 = -pars.par0;
@@ -1452,6 +1453,20 @@ class ToneGranulator
         for (auto &e : result)
         {
             e = basevalue + e * 180.0f;
+        }
+        return result;
+    }
+    static std::array<float, max_num_repeats>
+    process_duration_repeats(xenakios::Xoroshiro128Plus &rng, RepeatsParameters pars,
+                             float basevalue)
+    {
+        RepeatsParameters parameters = pars;
+        parameters.par0 = -pars.par0;
+        parameters.par1 = pars.par0;
+        auto result = process_repeats(rng, parameters);
+        for (auto &e : result)
+        {
+            e = basevalue + e * 0.5f;
         }
         return result;
     }
