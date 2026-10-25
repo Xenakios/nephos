@@ -1453,6 +1453,8 @@ class ToneGranulator
             }
         }
         auto result = process_repeats(rng, parameters);
+        if (parameters.count == 1)
+            result[0] = 1.0f;
         return result;
     }
     std::atomic<REPEATSPATTERN> pitch_repeats_mode = RPP_RAMP;
