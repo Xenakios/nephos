@@ -1274,7 +1274,7 @@ void RepeatsVisualizer::paint(juce::Graphics &g)
     const float maxtimepow = 3.0f;
 
     float pitchwalk = 0.0f;
-    float pitchd = -1.0f + 2.0f * state.modulatedvalues[3];
+    float pitchd = state.modulatedvalues[3];
     auto repeats_pitches = ToneGranulator::process_pitch_repeats(
         rng, {count, processorRef.granulator.pitch_repeats_mode, pitchd}, 0.0f);
     float processedvol = 1.0f;

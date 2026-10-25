@@ -413,10 +413,10 @@ ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
                                .withFlags(CLAP_PARAM_IS_MODULATABLE)
                                .withID(PAR_STACKTIMECURVE));
     parmetadatas.push_back(pmd()
-                               .withRange(0.0f, 1.0f)
+                               .withRange(-1.0f, 1.0f)
                                .withDefault(0.0)
-                               .withLinearScaleFormatting("ST")
-                               .withName("Pitch")
+                               .withLinearScaleFormatting("%", 100)
+                               .withName("Pitch Variation")
                                .withGroupName("Repeats")
                                .withID(PAR_STACKPITCHPAR1)
                                .withFlags(CLAP_PARAM_IS_MODULATABLE));
@@ -424,7 +424,7 @@ ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
                                .withRange(-1.0f, 1.0f)
                                .withDefault(0.0)
                                .withLinearScaleFormatting("", 1.0f)
-                               .withName("Spat 1")
+                               .withName("Azimuth Variation")
                                .withGroupName("Repeats")
                                .withID(PAR_STACKSPATIALIZATIONPAR1)
                                .withFlags(CLAP_PARAM_IS_MODULATABLE));
@@ -432,7 +432,7 @@ ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
                                .withRange(0.0f, 1.0f)
                                .withDefault(1.0)
                                .withLinearScaleFormatting("%", 100.0f)
-                               .withName("Volume")
+                               .withName("Volume Variation")
                                .withGroupName("Repeats")
                                .withID(PAR_STACKVOLUMEPAR1)
                                .withFlags(CLAP_PARAM_IS_MODULATABLE));
@@ -440,7 +440,7 @@ ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
                                .withRange(-1.0f, 1.0f)
                                .withDefault(0.0)
                                .withLinearScaleFormatting("", 100.0f)
-                               .withName("Duration")
+                               .withName("Duration Variation")
                                .withGroupName("Repeats")
                                .withID(PAR_STACKDURATIONPAR1)
                                .withFlags(CLAP_PARAM_IS_MODULATABLE));
@@ -1264,8 +1264,7 @@ void ToneGranulator::generate_grain()
             int numToSchedule = std::clamp(*idtoparvalptr[PAR_STACKCOUNT], 1.0f, 16.0f);
             float repreatpitchpar = modmatrix.m.getTargetValue(
                 GranulatorModConfig::TargetIdentifier{PAR_STACKPITCHPAR1});
-            repreatpitchpar = std::clamp(repreatpitchpar, 0.0f, 1.0f);
-            repreatpitchpar = -1.0 + 2.0 * repreatpitchpar;
+            repreatpitchpar = std::clamp(repreatpitchpar, -1.0f, 1.0f);
             float timeSpanToSchedule = modmatrix.m.getTargetValue(
                 GranulatorModConfig::TargetIdentifier{PAR_STACKTIMESPAN});
             timeSpanToSchedule = std::clamp(timeSpanToSchedule, 0.0f, 1.0f);

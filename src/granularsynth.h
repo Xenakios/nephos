@@ -1411,6 +1411,16 @@ class ToneGranulator
                 result[i] = start + (end - start) / (parameters.count - 1) * i;
             }
         }
+        else if (parameters.mode == RepeatsParameterProcessor::RPP_ALTERNATE)
+        {
+            for (int i = 0; i < parameters.count; ++i)
+            {
+                if (i % 2 == 0)
+                    result[i] = parameters.par0;
+                else
+                    result[i] = parameters.par1;
+            }
+        }
         else if (parameters.mode == RepeatsParameterProcessor::RPP_RANDOMWALK)
         {
             float y = 0.0f;
@@ -1436,9 +1446,13 @@ class ToneGranulator
         parameters.par0 = -pars.par0;
         parameters.par1 = pars.par0;
         auto result = process_repeats(rng, parameters);
+        float scale = 12.0f;
+        if (pars.mode == RepeatsParameterProcessor::RPP_RANDOMWALK)
+            scale = 6.0f;
         for (auto &e : result)
         {
-            e = basevalue + e * 12.0f;
+            e = std::clamp(e * scale, -24.0f, 24.0f);
+            e = basevalue + e;
         }
         return result;
     }
