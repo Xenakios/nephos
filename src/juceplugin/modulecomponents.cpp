@@ -1274,71 +1274,11 @@ void RepeatsVisualizer::paint(juce::Graphics &g)
 
     float pitchwalk = 0.0f;
     float pitchd = -1.0f + 2.0f * state.modulatedvalues[3];
-    float pitchrepeatparams[2] = {0.0f};
-    if (processorRef.granulator.pitch_repeats_mode ==
-            ToneGranulator::RepeatsParameterProcessor::RPP_RAMP ||
-        processorRef.granulator.pitch_repeats_mode ==
-            ToneGranulator::RepeatsParameterProcessor::RPP_ALTERNATE)
-    {
-        pitchrepeatparams[0] = -pitchd * 12.0f;
-        pitchrepeatparams[1] = pitchd * 12.0f;
-    }
-    else if (processorRef.granulator.pitch_repeats_mode ==
-                 ToneGranulator::RepeatsParameterProcessor::RPP_RANDOM ||
-             processorRef.granulator.pitch_repeats_mode ==
-                 ToneGranulator::RepeatsParameterProcessor::RPP_EXPAMD)
-    {
-        pitchrepeatparams[0] = 0.0;
-        pitchrepeatparams[1] = pitchd * 12.0f;
-    }
-    else if (processorRef.granulator.pitch_repeats_mode ==
-             ToneGranulator::RepeatsParameterProcessor::RPP_RANDOMWALK)
-    {
-        pitchrepeatparams[0] = pitchd * 6.0f;
-    }
-    ToneGranulator::RepeatsParameterProcessor proc{rng,
-                                                   processorRef.granulator.pitch_repeats_mode,
-                                                   count,
-                                                   pitchrepeatparams[0],
-                                                   pitchrepeatparams[1],
-                                                   &pitchwalk};
-    float processedvol = 0.0f;
-
-    float volrepspread = volmorph;
-    float volrepeatparams[2] = {0.0f};
-    if (processorRef.granulator.volume_repeats_mode ==
-            ToneGranulator::RepeatsParameterProcessor::RPP_RAMP ||
-        processorRef.granulator.volume_repeats_mode ==
-            ToneGranulator::RepeatsParameterProcessor::RPP_ALTERNATE)
-    {
-        if (volrepspread < 0.5f)
-        {
-            volrepeatparams[0] = 1.0 * volrepspread * 2.0f;
-            volrepeatparams[1] = 1.0;
-        }
-        else
-        {
-            volrepeatparams[0] = 1.0;
-            volrepeatparams[1] = 1.0 - 1.0 * (volrepspread - 0.5f) * 2.0f;
-        }
-    }
-    else if (processorRef.granulator.volume_repeats_mode ==
-             ToneGranulator::RepeatsParameterProcessor::RPP_RANDOM)
-    {
-        // volrepeatparams[0] = genev.azimuth;
-        // volrepeatparams[1] = spatspread * 180.0f;
-    }
-    else if (processorRef.granulator.volume_repeats_mode ==
-             ToneGranulator::RepeatsParameterProcessor::RPP_RANDOMWALK)
-    {
-        // volrepeatparams[0] = spatspread * 90.0f;
-    }
-    ToneGranulator::RepeatsParameterProcessor volproc{rng,
-                                                      processorRef.granulator.volume_repeats_mode,
-                                                      count,
-                                                      volrepeatparams[0],
-                                                      volrepeatparams[1],
-                                                      &processedvol};
+    auto repeats_pitches = ToneGranulator::process_pitch_repeats(
+        rng, {count, processorRef.granulator.pitch_repeats_mode, pitchd}, 0.0f);
+    float processedvol = 1.0f;
+    auto repeats_volumes = ToneGranulator::process_volume_repeats(
+        rng, {count, processorRef.granulator.volume_repeats_mode, volmorph}, processedvol);
     for (int i = 0; i < count; ++i)
     {
         float normpos = 0.0f;
@@ -1354,8 +1294,7 @@ void RepeatsVisualizer::paint(juce::Graphics &g)
             float ex = xenakios::mapvalue(timecurve, 0.0f, 1.0f, 1.0f, maxtimepow);
             normpos = 1.0f - std::pow(1.0f - normpos, ex);
         }
-        volproc.step();
-        float level = processedvol;
+        float level = repeats_volumes[i];
         // jassert(level >= 0.0f);
         normpos *= timespan;
         float xcor = juce::jmap<float>(normpos, 0.0f, 2.0f, visrect.getX(), visrect.getRight());
@@ -1363,8 +1302,8 @@ void RepeatsVisualizer::paint(juce::Graphics &g)
         float ycor = visrect.getBottom() - level * visrect.getHeight();
         g.setColour(juce::Colours::white);
         g.drawLine(xcor, ycor, xcor, visrect.getBottom(), 2.0f);
-        proc.step();
-        ycor = juce::jmap<float>(pitchwalk, -12.0f, 12.0f, visrect.getBottom(), visrect.getY());
+        ycor = juce::jmap<float>(repeats_pitches[i], -12.0f, 12.0f, visrect.getBottom(),
+                                 visrect.getY());
         g.setColour(juce::Colours::lightgreen);
         const float r = 8.0f;
         g.fillEllipse(xcor - r / 2.0f, ycor - r / 2.0f, r, r);

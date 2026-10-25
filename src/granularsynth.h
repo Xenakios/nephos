@@ -1385,22 +1385,95 @@ class ToneGranulator
         }
     };
     static constexpr size_t max_num_repeats = 16;
-    static void process_repeats(xenakios::Xoroshiro128Plus &rng, int count,
-                                RepeatsParameterProcessor::MODE mode, std::span<float> parameters,
-                                std::span<float> target)
+    struct RepeatsParameters
     {
-        assert(target.size() >= count);
-        if (mode == RepeatsParameterProcessor::RPP_RAMP)
+        int count = 1;
+        RepeatsParameterProcessor::MODE mode = RepeatsParameterProcessor::RPP_RAMP;
+        float par0 = 0.0f;
+        float par1 = 0.0f;
+    };
+    static std::array<float, max_num_repeats> process_repeats(xenakios::Xoroshiro128Plus &rng,
+                                                              RepeatsParameters parameters)
+    {
+        std::array<float, max_num_repeats> result = {0.0f};
+        if (parameters.count == 1)
         {
-            if (target.size() == 1)
-                target[0] = 0.0f;
-            for (int i = 0; i < count; ++i)
+            result[0] = 0.0f;
+            return result;
+        }
+        if (parameters.mode == RepeatsParameterProcessor::RPP_RAMP)
+        {
+            for (int i = 0; i < parameters.count; ++i)
             {
-                float start = parameters[0];
-                float end = parameters[1];
-                target[i] = start + (end - start) / (count - 1) * i;
+                float start = parameters.par0;
+                float end = parameters.par1;
+                result[i] = start + (end - start) / (parameters.count - 1) * i;
             }
         }
+        else if (parameters.mode == RepeatsParameterProcessor::RPP_RANDOMWALK)
+        {
+            float y = 0.0f;
+            for (int i = 0; i < parameters.count; ++i)
+            {
+                result[i] = y;
+                y += rng.nextHypCos(0.0f, parameters.par0);
+            }
+        }
+        else if (parameters.mode == RepeatsParameterProcessor::RPP_RANDOM)
+        {
+            for (int i = 0; i < parameters.count; ++i)
+            {
+                result[i] = rng.nextFloatInRange(parameters.par0, parameters.par1);
+            }
+        }
+        return result;
+    }
+    static std::array<float, max_num_repeats> process_pitch_repeats(xenakios::Xoroshiro128Plus &rng,
+                                                                    RepeatsParameters pars, float basevalue)
+    {
+        RepeatsParameters parameters = pars;
+        parameters.par0 = -pars.par0;
+        parameters.par1 = pars.par0;
+        auto result = process_repeats(rng, parameters);
+        for (auto &e : result)
+        {
+            e = basevalue + e * 12.0f;
+        }
+        return result;
+    }
+    static std::array<float, max_num_repeats>
+    process_spatial_repeats(xenakios::Xoroshiro128Plus &rng, RepeatsParameters pars,
+                            float basevalue)
+    {
+        RepeatsParameters parameters = pars;
+        parameters.par0 = -pars.par0;
+        parameters.par1 = pars.par0;
+        auto result = process_repeats(rng, parameters);
+        for (auto &e : result)
+        {
+            e = basevalue + e * 180.0f;
+        }
+        return result;
+    }
+    static std::array<float, max_num_repeats>
+    process_volume_repeats(xenakios::Xoroshiro128Plus &rng, RepeatsParameters pars, float gvol)
+    {
+        RepeatsParameters parameters = pars;
+        if (pars.mode == RepeatsParameterProcessor::RPP_RAMP)
+        {
+            if (pars.par0 < 0.5f)
+            {
+                parameters.par0 = gvol * pars.par0 * 2.0f;
+                parameters.par1 = gvol;
+            }
+            else
+            {
+                parameters.par0 = gvol;
+                parameters.par1 = gvol - gvol * (pars.par0 - 0.5f) * 2.0f;
+            }
+        }
+        auto result = process_repeats(rng, parameters);
+        return result;
     }
     std::atomic<RepeatsParameterProcessor::MODE> pitch_repeats_mode =
         RepeatsParameterProcessor::RPP_RAMP;

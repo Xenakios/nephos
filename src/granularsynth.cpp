@@ -421,7 +421,7 @@ ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
                                .withID(PAR_STACKPITCHPAR1)
                                .withFlags(CLAP_PARAM_IS_MODULATABLE));
     parmetadatas.push_back(pmd()
-                               .withRange(0.0f, 1.0f)
+                               .withRange(-1.0f, 1.0f)
                                .withDefault(0.0)
                                .withLinearScaleFormatting("", 1.0f)
                                .withName("Spat 1")
@@ -1265,94 +1265,27 @@ void ToneGranulator::generate_grain()
             float timeSpanCurve = *idtoparvalptr[PAR_STACKTIMECURVE];
             float spatspread = modmatrix.m.getTargetValue(
                 GranulatorModConfig::TargetIdentifier{PAR_STACKSPATIALIZATIONPAR1});
-            spatspread = std::clamp(spatspread, 0.0f, 1.0f);
-            // if we have no repeats, we could skip the loop and random walk stuff...
-
+            spatspread = std::clamp(spatspread, -1.0f, 1.0f);
             uint32_t customrepeatwalkparam = CLAP_INVALID_ID;
             float *cust_target = nullptr;
             if (customrepeatwalkparam == PAR_OSC_SYNC)
                 cust_target = &genev.sync_octaves;
             else if (customrepeatwalkparam == PAR_DURATION)
                 cust_target = &genev.duration;
-            float pitchrepeatparams[2] = {0.0f};
-            if (pitch_repeats_mode == RepeatsParameterProcessor::RPP_RAMP ||
-                pitch_repeats_mode == RepeatsParameterProcessor::RPP_ALTERNATE)
-            {
-                pitchrepeatparams[0] = genev.pitch_semitones - repreatpitchpar * 12.0f;
-                pitchrepeatparams[1] = genev.pitch_semitones + repreatpitchpar * 12.0f;
-            }
-            else if (pitch_repeats_mode == RepeatsParameterProcessor::RPP_RANDOM ||
-                     pitch_repeats_mode == RepeatsParameterProcessor::RPP_EXPAMD)
-            {
-                pitchrepeatparams[0] = genev.pitch_semitones;
-                pitchrepeatparams[1] = repreatpitchpar * 12.0f;
-            }
-            else if (pitch_repeats_mode == RepeatsParameterProcessor::RPP_RANDOMWALK)
-            {
-                pitchrepeatparams[0] = repreatpitchpar * 6.0f;
-            }
-            float azirepeatparams[2] = {0.0f};
-            if (azimuth_repeats_mode == RepeatsParameterProcessor::RPP_RAMP ||
-                azimuth_repeats_mode == RepeatsParameterProcessor::RPP_ALTERNATE)
-            {
-                spatspread = -1.0f + 2.0f * spatspread;
-                azirepeatparams[0] = genev.azimuth - spatspread * 180.0f;
-                azirepeatparams[1] = genev.azimuth + spatspread * 180.0f;
-            }
-            else if (azimuth_repeats_mode == RepeatsParameterProcessor::RPP_RANDOM)
-            {
-                azirepeatparams[0] = genev.azimuth;
-                azirepeatparams[1] = spatspread * 180.0f;
-            }
-            else if (azimuth_repeats_mode == RepeatsParameterProcessor::RPP_RANDOMWALK)
-            {
-                azirepeatparams[0] = spatspread * 90.0f;
-            }
+            auto azirepeats = process_spatial_repeats(
+                rng, {numToSchedule, azimuth_repeats_mode, spatspread}, genev.azimuth);
+            
             float volrepspread = *idtoparvalptr[PAR_STACKVOLUMEPAR1];
-            float volrepeatparams[2] = {0.0f};
-            if (volume_repeats_mode == RepeatsParameterProcessor::RPP_RAMP ||
-                volume_repeats_mode == RepeatsParameterProcessor::RPP_ALTERNATE)
-            {
-                if (volrepspread < 0.5f)
-                {
-                    volrepeatparams[0] = gvol * volrepspread * 2.0f;
-                    volrepeatparams[1] = gvol;
-                }
-                else
-                {
-                    volrepeatparams[0] = gvol;
-                    volrepeatparams[1] = gvol - gvol * (volrepspread - 0.5f) * 2.0f;
-                }
-            }
-            else if (volume_repeats_mode == RepeatsParameterProcessor::RPP_RANDOM)
-            {
-                // volrepeatparams[0] = genev.azimuth;
-                // volrepeatparams[1] = spatspread * 180.0f;
-            }
-            else if (volume_repeats_mode == RepeatsParameterProcessor::RPP_RANDOMWALK)
-            {
-                // volrepeatparams[0] = spatspread * 90.0f;
-            }
-            std::array<float, max_num_repeats> repeats_durations = {0.0f};
-            std::array<float, 2> duration_params = {genev.duration, genev.duration - 0.5f};
-            process_repeats(rng, numToSchedule, RepeatsParameterProcessor::RPP_RAMP,
-                            duration_params, repeats_durations);
-            std::array<float, max_num_repeats> repeats_pitches = {0.0f};
-            std::array<float, 2> pitch_params = {repreatpitchpar, -repreatpitchpar};
+            auto volume_repeats = process_volume_repeats(
+                rng, {numToSchedule, volume_repeats_mode, volrepspread}, gvol);
+            
+            // std::array<float, max_num_repeats> repeats_durations = {0.0f};
+            // std::array<float, 2> duration_params = {genev.duration, genev.duration - 0.5f};
+            // process_repeats(rng, numToSchedule, RepeatsParameterProcessor::RPP_RAMP,
+            //                 duration_params, repeats_durations);
+            auto repeats_pitches = process_pitch_repeats(
+                rng, {numToSchedule, pitch_repeats_mode, repreatpitchpar}, genev.pitch_semitones);
             float cachedpitch = genev.pitch_semitones;
-            process_repeats(rng, numToSchedule, RepeatsParameterProcessor::RPP_RAMP, pitch_params,
-                            repeats_pitches);
-            std::array<RepeatsParameterProcessor, 4> par_processors{
-                RepeatsParameterProcessor{rng, pitch_repeats_mode, numToSchedule,
-                                          pitchrepeatparams[0], pitchrepeatparams[1],
-                                          &genev.pitch_semitones},
-                RepeatsParameterProcessor{rng, azimuth_repeats_mode, numToSchedule,
-                                          azirepeatparams[0], azirepeatparams[1], &genev.azimuth},
-                RepeatsParameterProcessor{rng, volume_repeats_mode, numToSchedule,
-                                          volrepeatparams[0], volrepeatparams[1], &gvol},
-                RepeatsParameterProcessor{rng, RepeatsParameterProcessor::RPP_RANDOM, numToSchedule,
-                                          spatspread, 0.0f, cust_target}};
-
             genev.ambi_spread = amb_spread;
             genev.ambi_rotate = amb_rotate;
             genev.ambi_omni_boost = omniboost;
@@ -1376,15 +1309,11 @@ void ToneGranulator::generate_grain()
                 }
                 tpos += timeSpanToSchedule * normpos;
                 genev.time_position = tpos;
-                for (auto &rwalk : par_processors)
-                {
-                    rwalk.step();
-                }
-                // fading volume for now but should be more adjustable...
-                // genev.volume = gvol * (1.0f - ((1.0f - endvol) * normpos));
-                genev.volume = gvol;
-                genev.duration = repeats_durations[j];
-                genev.pitch_semitones = cachedpitch + 12.0f * repeats_pitches[j];
+
+                genev.volume = volume_repeats[j];
+                // genev.duration = repeats_durations[j];
+                genev.pitch_semitones = repeats_pitches[j];
+                genev.azimuth = azirepeats[j];
                 scheduledGrains.push_back(genev);
             }
             // need to sort because we may have previous unstarted events and our
