@@ -1314,83 +1314,20 @@ class ToneGranulator
         PAR_LFOUNIPOLARS = 100500,
         PAR_LFOMASTERSYNCS = 100600
     };
-    struct RepeatsParameterProcessor
+    enum REPEATSPATTERN
     {
-        enum MODE
-        {
-            RPP_RAMP,
-            RPP_RANDOMWALK,
-            RPP_RANDOM,
-            RPP_ALTERNATE,
-            RPP_EXPAMD
-        };
-        MODE procmode = RPP_RAMP;
-        xenakios::Xoroshiro128Plus &rgen;
-        float params[2] = {0.0f};
-        float *target = nullptr;
-        float walk = 0.0f;
-        int numsteps = 0;
-        int stepcount = 0;
-        RepeatsParameterProcessor(xenakios::Xoroshiro128Plus &r, MODE m, int numsteps_, float p0,
-                                  float p1, float *t)
-            : procmode(m), rgen(r), params{p0, p1}, target(t), numsteps(numsteps_)
-        {
-            if (target)
-                walk = *target;
-        }
-        void step()
-        {
-            if (!target)
-                return;
-            if (procmode == RPP_RANDOMWALK)
-            {
-                *target = walk;
-                walk += rgen.nextHypCos(0.0, params[0]);
-            }
-            else if (procmode == RPP_RANDOM)
-            {
-                *target = rgen.nextFloatInRange(params[0] - params[1], params[0] + params[1]);
-            }
-            else if (procmode == RPP_RAMP)
-            {
-                if (numsteps < 2)
-                    return;
-                float start = params[0];
-                float end = params[1];
-                *target = start + (end - start) / (numsteps - 1) * stepcount;
-                ++stepcount;
-            }
-            else if (procmode == RPP_ALTERNATE)
-            {
-                if (stepcount % 2 == 0)
-                    *target = params[0];
-                else
-                    *target = params[1];
-                ++stepcount;
-            }
-            else if (procmode == RPP_EXPAMD)
-            {
-                if (numsteps < 2)
-                    return;
-                float x = 0.0f;
-                if (stepcount % 2 == 0)
-                    x = -1.0f;
-                else
-                    x = 1.0f;
-                float start = params[0];
-                float end = params[1];
-                float a = 1.0 / (numsteps - 1) * stepcount;
-                *target = params[0] + x * a * params[1];
-                //*target = x * (start + (end - start) / (numsteps - 1) * stepcount);
-                ++stepcount;
-            }
-        }
+        RPP_RAMP,
+        RPP_RANDOMWALK,
+        RPP_RANDOM,
+        RPP_ALTERNATE,
+        RPP_EXPAMD
     };
+
     static constexpr size_t max_num_repeats = 16;
     struct RepeatsParameters
     {
         int count = 1;
-        RepeatsParameterProcessor::MODE mode = RepeatsParameterProcessor::RPP_RAMP;
+        REPEATSPATTERN mode = REPEATSPATTERN::RPP_RAMP;
         float par0 = 0.0f;
         float par1 = 0.0f;
     };
@@ -1403,7 +1340,7 @@ class ToneGranulator
             result[0] = 0.0f;
             return result;
         }
-        if (parameters.mode == RepeatsParameterProcessor::RPP_RAMP)
+        if (parameters.mode == RPP_RAMP)
         {
             for (int i = 0; i < parameters.count; ++i)
             {
@@ -1412,7 +1349,7 @@ class ToneGranulator
                 result[i] = start + (end - start) / (parameters.count - 1) * i;
             }
         }
-        else if (parameters.mode == RepeatsParameterProcessor::RPP_ALTERNATE)
+        else if (parameters.mode == RPP_ALTERNATE)
         {
             for (int i = 0; i < parameters.count; ++i)
             {
@@ -1422,7 +1359,7 @@ class ToneGranulator
                     result[i] = parameters.par1;
             }
         }
-        else if (parameters.mode == RepeatsParameterProcessor::RPP_RANDOMWALK)
+        else if (parameters.mode == RPP_RANDOMWALK)
         {
             float y = 0.0f;
             for (int i = 0; i < parameters.count; ++i)
@@ -1431,11 +1368,24 @@ class ToneGranulator
                 y += rng.nextHypCos(0.0f, parameters.par0);
             }
         }
-        else if (parameters.mode == RepeatsParameterProcessor::RPP_RANDOM)
+        else if (parameters.mode == RPP_RANDOM)
         {
             for (int i = 0; i < parameters.count; ++i)
             {
                 result[i] = rng.nextFloatInRange(parameters.par0, parameters.par1);
+            }
+        }
+        else if (parameters.mode == RPP_EXPAMD)
+        {
+            float x = 0.0f;
+            for (int i = 0; i < parameters.count; ++i)
+            {
+                if (i % 2 == 0)
+                    x = -1.0f;
+                else
+                    x = 1.0f;
+                float a = 1.0 / (parameters.count - 1) * i;
+                result[i] = parameters.par0 * x * a;
             }
         }
         return result;
@@ -1448,7 +1398,7 @@ class ToneGranulator
         parameters.par1 = pars.par0;
         auto result = process_repeats(rng, parameters);
         float scale = 12.0f;
-        if (pars.mode == RepeatsParameterProcessor::RPP_RANDOMWALK)
+        if (pars.mode == RPP_RANDOMWALK)
             scale = 6.0f;
         for (auto &e : result)
         {
@@ -1489,7 +1439,7 @@ class ToneGranulator
     process_volume_repeats(xenakios::Xoroshiro128Plus &rng, RepeatsParameters pars, float gvol)
     {
         RepeatsParameters parameters = pars;
-        if (pars.mode == RepeatsParameterProcessor::RPP_RAMP)
+        if (pars.mode == RPP_RAMP)
         {
             if (pars.par0 < 0.5f)
             {
@@ -1505,14 +1455,10 @@ class ToneGranulator
         auto result = process_repeats(rng, parameters);
         return result;
     }
-    std::atomic<RepeatsParameterProcessor::MODE> pitch_repeats_mode =
-        RepeatsParameterProcessor::RPP_RAMP;
-    std::atomic<RepeatsParameterProcessor::MODE> azimuth_repeats_mode =
-        RepeatsParameterProcessor::RPP_RAMP;
-    std::atomic<RepeatsParameterProcessor::MODE> elevation_repeats_mode =
-        RepeatsParameterProcessor::RPP_RAMP;
-    std::atomic<RepeatsParameterProcessor::MODE> volume_repeats_mode =
-        RepeatsParameterProcessor::RPP_RAMP;
+    std::atomic<REPEATSPATTERN> pitch_repeats_mode = RPP_RAMP;
+    std::atomic<REPEATSPATTERN> azimuth_repeats_mode = RPP_RAMP;
+    std::atomic<REPEATSPATTERN> elevation_repeats_mode = RPP_RAMP;
+    std::atomic<REPEATSPATTERN> volume_repeats_mode = RPP_RAMP;
     const int numvoices = 64;
     double m_sr = 0.0;
     int graincount = 0;

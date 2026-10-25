@@ -849,10 +849,10 @@ void StackingModuleComponent::resized()
     flex.items.add(juce::FlexItem(pitchRandomKnob).withFlex(1.0).withMargin(2));
     flex.items.add(juce::FlexItem(azimuthKnob).withFlex(1.0).withMargin(2));
     flex.items.add(juce::FlexItem(elevationKnob).withFlex(1.0).withMargin(2));
-    flex.items.add(juce::FlexItem(endVolumeKnob).withFlex(1.0).withMargin(2));
+    flex.items.add(juce::FlexItem(volumeKnob).withFlex(1.0).withMargin(2));
     flex.items.add(juce::FlexItem(durationKnob).withFlex(1.0).withMargin(2));
     flex.performLayout(juce::Rectangle<int>(7, 17, getWidth() - 14, 80));
-    repVis.setBounds(7, endVolumeKnob.getBottom() + 2, getWidth() - 14, 70);
+    repVis.setBounds(7, volumeKnob.getBottom() + 2, getWidth() - 14, 70);
 }
 
 void AnalysisSourceComponent::paint(juce::Graphics &g)

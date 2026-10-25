@@ -1299,8 +1299,7 @@ void ToneGranulator::generate_grain()
                 rng, {numToSchedule, volume_repeats_mode, volrepspread}, gvol);
             float durrepsrap = *idtoparvalptr[PAR_STACKDURATIONPAR1];
             auto repeats_durations = process_duration_repeats(
-                rng, {numToSchedule, RepeatsParameterProcessor::RPP_RAMP, durrepsrap},
-                genev.duration);
+                rng, {numToSchedule, RPP_RAMP, durrepsrap}, genev.duration);
             auto repeats_pitches = process_pitch_repeats(
                 rng, {numToSchedule, pitch_repeats_mode, repreatpitchpar}, genev.pitch_semitones);
             float cachedpitch = genev.pitch_semitones;

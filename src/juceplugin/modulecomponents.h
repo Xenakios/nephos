@@ -412,7 +412,7 @@ class StackingModuleComponent : public juce::GroupComponent
     XapSlider pitchRandomKnob;
     XapSlider azimuthKnob;
     XapSlider elevationKnob;
-    XapSlider endVolumeKnob;
+    XapSlider volumeKnob;
     XapSlider durationKnob;
     RepeatsVisualizer repVis;
     StackingModuleComponent(AudioPluginAudioProcessor &p)
@@ -429,7 +429,7 @@ class StackingModuleComponent : public juce::GroupComponent
                       *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKSPATIALIZATIONPAR1]),
           elevationKnob(XapSlider::SS_Knob,
                         *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKSPATIALIZATIONPAR2]),
-          endVolumeKnob(XapSlider::SS_Knob,
+          volumeKnob(XapSlider::SS_Knob,
                         *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKVOLUMEPAR1]),
           durationKnob(XapSlider::SS_Knob,
                        *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKDURATIONPAR1]),
@@ -438,14 +438,14 @@ class StackingModuleComponent : public juce::GroupComponent
         juce::StringArray modes{"Ramp", "Random Walk", "Random", "Alternate", "Expand"};
         auto patternmenufunc =
             [this, modes](XapSlider &targknob, juce::PopupMenu &menu, juce::String sectionheader,
-                          std::atomic<ToneGranulator::RepeatsParameterProcessor::MODE> &targmode) {
+                          std::atomic<ToneGranulator::REPEATSPATTERN> &targmode) {
                 menu.addSectionHeader(sectionheader);
                 for (size_t i = 0; i < modes.size(); ++i)
                 {
                     menu.addItem(modes[i], true,
-                                 targmode == (ToneGranulator::RepeatsParameterProcessor::MODE)i,
+                                 targmode == (ToneGranulator::REPEATSPATTERN)i,
                                  [i, this, &targmode]() {
-                                     targmode = (ToneGranulator::RepeatsParameterProcessor::MODE)i;
+                                     targmode = (ToneGranulator::REPEATSPATTERN)i;
                                      repVis.repaint();
                                  });
                 }
@@ -464,7 +464,7 @@ class StackingModuleComponent : public juce::GroupComponent
         addKnob(pitchRandomKnob);
         addKnob(azimuthKnob);
         addKnob(elevationKnob);
-        addKnob(endVolumeKnob);
+        addKnob(volumeKnob);
         addKnob(durationKnob);
         addAndMakeVisible(repVis);
     }
