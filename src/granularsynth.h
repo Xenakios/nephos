@@ -1441,15 +1441,15 @@ class ToneGranulator
         RepeatsParameters parameters = pars;
         if (pars.mode == RPP_RAMP)
         {
-            if (pars.par0 < 0.5f)
+            if (pars.par0 < 0.0f)
             {
-                parameters.par0 = gvol * pars.par0 * 2.0f;
+                parameters.par0 = gvol * (pars.par0 + 1.0f);
                 parameters.par1 = gvol;
             }
             else
             {
                 parameters.par0 = gvol;
-                parameters.par1 = gvol - gvol * (pars.par0 - 0.5f) * 2.0f;
+                parameters.par1 = gvol - gvol * (pars.par0) * 1.0f;
             }
         }
         auto result = process_repeats(rng, parameters);

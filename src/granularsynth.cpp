@@ -437,8 +437,8 @@ ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
                                .withID(PAR_STACKSPATIALIZATIONPAR2)
                                .withFlags(CLAP_PARAM_IS_MODULATABLE));
     parmetadatas.push_back(pmd()
-                               .withRange(0.0f, 1.0f)
-                               .withDefault(1.0)
+                               .withRange(-1.0f, 1.0f)
+                               .withDefault(0.0)
                                .withLinearScaleFormatting("%", 100.0f)
                                .withName("Volume Variation")
                                .withGroupName("Repeats")
@@ -1295,6 +1295,7 @@ void ToneGranulator::generate_grain()
             auto elerepeats = process_spatial_repeats(
                 rng, {numToSchedule, elevation_repeats_mode, elevation_spread}, genev.elevation);
             float volrepspread = *idtoparvalptr[PAR_STACKVOLUMEPAR1];
+            volrepspread = std::clamp(volrepspread, -1.0f, 1.0f);
             auto volume_repeats = process_volume_repeats(
                 rng, {numToSchedule, volume_repeats_mode, volrepspread}, gvol);
             float durrepsrap = *idtoparvalptr[PAR_STACKDURATIONPAR1];
