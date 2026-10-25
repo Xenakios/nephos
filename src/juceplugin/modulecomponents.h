@@ -410,7 +410,8 @@ class StackingModuleComponent : public juce::GroupComponent
     XapSlider lengthKnob;
     XapSlider warpKnob;
     XapSlider pitchRandomKnob;
-    XapSlider spatRandomKnob;
+    XapSlider azimuthKnob;
+    XapSlider elevationKnob;
     XapSlider endVolumeKnob;
     XapSlider durationKnob;
     RepeatsVisualizer repVis;
@@ -424,9 +425,10 @@ class StackingModuleComponent : public juce::GroupComponent
                    *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKTIMECURVE]),
           pitchRandomKnob(XapSlider::SS_Knob,
                           *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKPITCHPAR1]),
-          spatRandomKnob(
-              XapSlider::SS_Knob,
-              *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKSPATIALIZATIONPAR1]),
+          azimuthKnob(XapSlider::SS_Knob,
+                      *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKSPATIALIZATIONPAR1]),
+          elevationKnob(XapSlider::SS_Knob,
+                        *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKSPATIALIZATIONPAR2]),
           endVolumeKnob(XapSlider::SS_Knob,
                         *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKVOLUMEPAR1]),
           durationKnob(XapSlider::SS_Knob,
@@ -434,38 +436,34 @@ class StackingModuleComponent : public juce::GroupComponent
           repVis(p)
     {
         juce::StringArray modes{"Ramp", "Random Walk", "Random", "Alternate", "Expand"};
-        pitchRandomKnob.addMenuItemsCallback([modes, this](juce::PopupMenu &menu) {
-            menu.addSectionHeader("Pitch pattern");
-            for (size_t i = 0; i < modes.size(); ++i)
-            {
-                menu.addItem(modes[i], true,
-                             processorRef.granulator.pitch_repeats_mode ==
-                                 (ToneGranulator::RepeatsParameterProcessor::MODE)i,
-                             [i, this]() {
-                                 processorRef.granulator.pitch_repeats_mode =
-                                     (ToneGranulator::RepeatsParameterProcessor::MODE)i;
-                                 repVis.repaint();
-                             });
-            }
+        auto patternmenufunc =
+            [this, modes](XapSlider &targknob, juce::PopupMenu &menu, juce::String sectionheader,
+                          std::atomic<ToneGranulator::RepeatsParameterProcessor::MODE> &targmode) {
+                menu.addSectionHeader(sectionheader);
+                for (size_t i = 0; i < modes.size(); ++i)
+                {
+                    menu.addItem(modes[i], true,
+                                 targmode == (ToneGranulator::RepeatsParameterProcessor::MODE)i,
+                                 [i, this, &targmode]() {
+                                     targmode = (ToneGranulator::RepeatsParameterProcessor::MODE)i;
+                                     repVis.repaint();
+                                 });
+                }
+            };
+        pitchRandomKnob.addMenuItemsCallback([modes, this, patternmenufunc](juce::PopupMenu &menu) {
+            patternmenufunc(pitchRandomKnob, menu, "Pitch pattern",
+                            processorRef.granulator.pitch_repeats_mode);
         });
-        spatRandomKnob.addMenuItemsCallback([modes, this](juce::PopupMenu &menu) {
-            menu.addSectionHeader("Azimuth pattern");
-            for (size_t i = 0; i < modes.size(); ++i)
-            {
-                menu.addItem(modes[i], true,
-                             processorRef.granulator.azimuth_repeats_mode ==
-                                 (ToneGranulator::RepeatsParameterProcessor::MODE)i,
-                             [i, this]() {
-                                 processorRef.granulator.azimuth_repeats_mode =
-                                     (ToneGranulator::RepeatsParameterProcessor::MODE)i;
-                             });
-            }
+        azimuthKnob.addMenuItemsCallback([modes, this, patternmenufunc](juce::PopupMenu &menu) {
+            patternmenufunc(azimuthKnob, menu, "Azimuth pattern",
+                            processorRef.granulator.azimuth_repeats_mode);
         });
         addKnob(countKnob);
         addKnob(lengthKnob);
         addKnob(warpKnob);
         addKnob(pitchRandomKnob);
-        addKnob(spatRandomKnob);
+        addKnob(azimuthKnob);
+        addKnob(elevationKnob);
         addKnob(endVolumeKnob);
         addKnob(durationKnob);
         addAndMakeVisible(repVis);

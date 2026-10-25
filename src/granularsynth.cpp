@@ -429,6 +429,14 @@ ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
                                .withID(PAR_STACKSPATIALIZATIONPAR1)
                                .withFlags(CLAP_PARAM_IS_MODULATABLE));
     parmetadatas.push_back(pmd()
+                               .withRange(-1.0f, 1.0f)
+                               .withDefault(0.0)
+                               .withLinearScaleFormatting("", 1.0f)
+                               .withName("Elevation Variation")
+                               .withGroupName("Repeats")
+                               .withID(PAR_STACKSPATIALIZATIONPAR2)
+                               .withFlags(CLAP_PARAM_IS_MODULATABLE));
+    parmetadatas.push_back(pmd()
                                .withRange(0.0f, 1.0f)
                                .withDefault(1.0)
                                .withLinearScaleFormatting("%", 100.0f)
@@ -1270,9 +1278,12 @@ void ToneGranulator::generate_grain()
             timeSpanToSchedule = std::clamp(timeSpanToSchedule, 0.0f, 1.0f);
             timeSpanToSchedule = 0.00f + 2.0f * std::pow(timeSpanToSchedule, 2.0f);
             float timeSpanCurve = *idtoparvalptr[PAR_STACKTIMECURVE];
-            float spatspread = modmatrix.m.getTargetValue(
+            float azimuth_spread = modmatrix.m.getTargetValue(
                 GranulatorModConfig::TargetIdentifier{PAR_STACKSPATIALIZATIONPAR1});
-            spatspread = std::clamp(spatspread, -1.0f, 1.0f);
+            azimuth_spread = std::clamp(azimuth_spread, -1.0f, 1.0f);
+            float elevation_spread = modmatrix.m.getTargetValue(
+                GranulatorModConfig::TargetIdentifier{PAR_STACKSPATIALIZATIONPAR2});
+            elevation_spread = std::clamp(elevation_spread, -1.0f, 1.0f);
             uint32_t customrepeatwalkparam = CLAP_INVALID_ID;
             float *cust_target = nullptr;
             if (customrepeatwalkparam == PAR_OSC_SYNC)
@@ -1280,8 +1291,9 @@ void ToneGranulator::generate_grain()
             else if (customrepeatwalkparam == PAR_DURATION)
                 cust_target = &genev.duration;
             auto azirepeats = process_spatial_repeats(
-                rng, {numToSchedule, azimuth_repeats_mode, spatspread}, genev.azimuth);
-
+                rng, {numToSchedule, azimuth_repeats_mode, azimuth_spread}, genev.azimuth);
+            auto elerepeats = process_spatial_repeats(
+                rng, {numToSchedule, elevation_repeats_mode, elevation_spread}, genev.elevation);
             float volrepspread = *idtoparvalptr[PAR_STACKVOLUMEPAR1];
             auto volume_repeats = process_volume_repeats(
                 rng, {numToSchedule, volume_repeats_mode, volrepspread}, gvol);
@@ -1319,6 +1331,7 @@ void ToneGranulator::generate_grain()
                 genev.duration = repeats_durations[j];
                 genev.pitch_semitones = repeats_pitches[j];
                 genev.azimuth = azirepeats[j];
+                genev.elevation = elerepeats[j];
                 scheduledGrains.push_back(genev);
             }
             // need to sort because we may have previous unstarted events and our

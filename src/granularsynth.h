@@ -1290,6 +1290,7 @@ class ToneGranulator
         PAR_STACKTIMESPAN = 2400,
         PAR_STACKPITCHPAR1 = 2500,
         PAR_STACKSPATIALIZATIONPAR1 = 2600,
+        PAR_STACKSPATIALIZATIONPAR2 = 2610,
         PAR_STACKTIMECURVE = 2700,
         PAR_STACKVOLUMEPAR1 = 2750,
         PAR_STACKDURATIONPAR1 = 2760,
@@ -1507,6 +1508,8 @@ class ToneGranulator
     std::atomic<RepeatsParameterProcessor::MODE> pitch_repeats_mode =
         RepeatsParameterProcessor::RPP_RAMP;
     std::atomic<RepeatsParameterProcessor::MODE> azimuth_repeats_mode =
+        RepeatsParameterProcessor::RPP_RAMP;
+    std::atomic<RepeatsParameterProcessor::MODE> elevation_repeats_mode =
         RepeatsParameterProcessor::RPP_RAMP;
     std::atomic<RepeatsParameterProcessor::MODE> volume_repeats_mode =
         RepeatsParameterProcessor::RPP_RAMP;
