@@ -1317,6 +1317,7 @@ class ToneGranulator
     enum REPEATSPATTERN
     {
         RPP_RAMP,
+        RPP_RAMPFROMCENTER,
         RPP_RANDOMWALK,
         RPP_RANDOM,
         RPP_ALTERNATE,
@@ -1341,12 +1342,15 @@ class ToneGranulator
             result[0] = 0.0f;
             return result;
         }
-        if (parameters.mode == RPP_RAMP)
+        if (parameters.mode == RPP_RAMP || parameters.mode == RPP_RAMPFROMCENTER)
         {
+            float start = parameters.par0;
+            if (parameters.mode == RPP_RAMPFROMCENTER)
+                start = 0.0f;
+            float end = parameters.par1;
             for (int i = 0; i < parameters.count; ++i)
             {
-                float start = parameters.par0;
-                float end = parameters.par1;
+                
                 result[i] = start + (end - start) / (parameters.count - 1) * i;
             }
         }

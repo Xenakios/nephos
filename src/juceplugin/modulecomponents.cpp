@@ -858,7 +858,8 @@ StackingModuleComponent::StackingModuleComponent(AudioPluginAudioProcessor &p)
                    *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKDURATIONPAR1]),
       repVis(p)
 {
-    juce::StringArray modes{"Ramp", "Random Walk", "Random", "Alternate", "Expand", "Sine"};
+    juce::StringArray modes{"Ramp bipolar", "Ramp unipolar", "Random Walk", "Random",
+                            "Alternate",    "Expand",        "Sine"};
     auto patternmenufunc = [this, modes](XapSlider &targknob, juce::PopupMenu &menu,
                                          juce::String sectionheader,
                                          std::atomic<ToneGranulator::REPEATSPATTERN> &targmode) {
