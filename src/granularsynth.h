@@ -1320,7 +1320,8 @@ class ToneGranulator
         RPP_RANDOMWALK,
         RPP_RANDOM,
         RPP_ALTERNATE,
-        RPP_EXPAMD
+        RPP_EXPAMD,
+        RPP_SINE
     };
 
     static constexpr size_t max_num_repeats = 16;
@@ -1357,6 +1358,13 @@ class ToneGranulator
                     result[i] = parameters.par0;
                 else
                     result[i] = parameters.par1;
+            }
+        }
+        else if (parameters.mode == RPP_SINE)
+        {
+            for (int i = 0; i < parameters.count; ++i)
+            {
+                result[i] = -parameters.par0 * std::sin(2 * M_PI / (parameters.count - 1) * i);
             }
         }
         else if (parameters.mode == RPP_RANDOMWALK)
@@ -1397,7 +1405,7 @@ class ToneGranulator
         parameters.par0 = -pars.par0;
         parameters.par1 = pars.par0;
         auto result = process_repeats(rng, parameters);
-        float scale = 12.0f;
+        float scale = 24.0f;
         if (pars.mode == RPP_RANDOMWALK)
             scale = 6.0f;
         for (auto &e : result)

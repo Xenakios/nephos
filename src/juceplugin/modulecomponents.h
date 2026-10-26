@@ -415,59 +415,7 @@ class StackingModuleComponent : public juce::GroupComponent
     XapSlider volumeKnob;
     XapSlider durationKnob;
     RepeatsVisualizer repVis;
-    StackingModuleComponent(AudioPluginAudioProcessor &p)
-        : juce::GroupComponent("", "Repeats"), processorRef(p),
-          countKnob(XapSlider::SS_Knob,
-                    *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKCOUNT]),
-          lengthKnob(XapSlider::SS_Knob,
-                     *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKTIMESPAN]),
-          warpKnob(XapSlider::SS_Knob,
-                   *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKTIMECURVE]),
-          pitchRandomKnob(XapSlider::SS_Knob,
-                          *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKPITCHPAR1]),
-          azimuthKnob(XapSlider::SS_Knob,
-                      *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKSPATIALIZATIONPAR1]),
-          elevationKnob(XapSlider::SS_Knob,
-                        *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKSPATIALIZATIONPAR2]),
-          volumeKnob(XapSlider::SS_Knob,
-                        *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKVOLUMEPAR1]),
-          durationKnob(XapSlider::SS_Knob,
-                       *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKDURATIONPAR1]),
-          repVis(p)
-    {
-        juce::StringArray modes{"Ramp", "Random Walk", "Random", "Alternate", "Expand"};
-        auto patternmenufunc =
-            [this, modes](XapSlider &targknob, juce::PopupMenu &menu, juce::String sectionheader,
-                          std::atomic<ToneGranulator::REPEATSPATTERN> &targmode) {
-                menu.addSectionHeader(sectionheader);
-                for (size_t i = 0; i < modes.size(); ++i)
-                {
-                    menu.addItem(modes[i], true,
-                                 targmode == (ToneGranulator::REPEATSPATTERN)i,
-                                 [i, this, &targmode]() {
-                                     targmode = (ToneGranulator::REPEATSPATTERN)i;
-                                     repVis.repaint();
-                                 });
-                }
-            };
-        pitchRandomKnob.addMenuItemsCallback([modes, this, patternmenufunc](juce::PopupMenu &menu) {
-            patternmenufunc(pitchRandomKnob, menu, "Pitch pattern",
-                            processorRef.granulator.pitch_repeats_mode);
-        });
-        azimuthKnob.addMenuItemsCallback([modes, this, patternmenufunc](juce::PopupMenu &menu) {
-            patternmenufunc(azimuthKnob, menu, "Azimuth pattern",
-                            processorRef.granulator.azimuth_repeats_mode);
-        });
-        addKnob(countKnob);
-        addKnob(lengthKnob);
-        addKnob(warpKnob);
-        addKnob(pitchRandomKnob);
-        addKnob(azimuthKnob);
-        addKnob(elevationKnob);
-        addKnob(volumeKnob);
-        addKnob(durationKnob);
-        addAndMakeVisible(repVis);
-    }
+    StackingModuleComponent(AudioPluginAudioProcessor &p);
 
     void addKnob(XapSlider &slid)
     {
