@@ -388,7 +388,7 @@ ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
                                .withFlags(CLAP_PARAM_IS_MODULATABLE));
     parmetadatas.push_back(pmd()
                                .asInt()
-                               .withRange(1.0f, 16.0f)
+                               .withRange(1.0f, max_num_repeats)
                                .withDefault(1.0)
                                .withCustomMinDisplay("OFF")
                                .withIntegerQuantization()
@@ -1272,7 +1272,8 @@ void ToneGranulator::generate_grain()
                     GranulatorModConfig::TargetIdentifier{PAR_AUXENVVALUEWARP + k});
             }
 
-            int numToSchedule = std::clamp(*idtoparvalptr[PAR_STACKCOUNT], 1.0f, 16.0f);
+            int numToSchedule =
+                std::clamp(*idtoparvalptr[PAR_STACKCOUNT], 1.0f, (float)max_num_repeats);
             float repreatpitchpar = modmatrix.m.getTargetValue(
                 GranulatorModConfig::TargetIdentifier{PAR_STACKPITCHPAR1});
             repreatpitchpar = std::clamp(repreatpitchpar, -1.0f, 1.0f);

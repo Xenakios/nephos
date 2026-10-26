@@ -1325,7 +1325,7 @@ class ToneGranulator
         RPP_SINE
     };
 
-    static constexpr size_t max_num_repeats = 16;
+    static constexpr size_t max_num_repeats = 32;
     struct RepeatsParameters
     {
         int count = 1;
