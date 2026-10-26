@@ -680,6 +680,17 @@ OscillatorModuleComponent::OscillatorModuleComponent(AudioPluginAudioProcessor &
 
     initSlider(p, *this, oscPitchKnob);
     initSlider(p, *this, quantizePitchKnob);
+
+    quantizePitchKnob.addMenuItemsCallback([this](juce::PopupMenu &menu) {
+        juce::StringArray qmodes{"MIX", "MAGNETIC"};
+        menu.addSectionHeader("Pitch quantize mode");
+        for (size_t i = 0; i < qmodes.size(); ++i)
+        {
+            menu.addItem(qmodes[i], true, i == processorRef.granulator.pitchquantizemode,
+                         [i, this]() { processorRef.granulator.pitchquantizemode = i; });
+        }
+    });
+
     for (int i = 0; i < GrainEvent::max_grain_mod_slots; ++i)
     {
         auto knob = std::make_unique<XapSlider>(

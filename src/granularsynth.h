@@ -745,6 +745,12 @@ class GranulatorVoice
     int prior_osc_type = -1;
     EasingLUTS *eluts = nullptr;
     Tunings::Tuning *tuning = nullptr;
+    enum PITCHQUANTIZEMODE
+    {
+        PQM_MIX,
+        PQM_MAGNETIC
+    };
+    std::atomic<int> *pitchquantizemode = nullptr;
     bool fmfollowsmainpitch = false;
     std::span<int> osctypemapping;
     // 2x up to 7th order Ambisonics
@@ -1350,7 +1356,7 @@ class ToneGranulator
             float end = parameters.par1;
             for (int i = 0; i < parameters.count; ++i)
             {
-                
+
                 result[i] = start + (end - start) / (parameters.count - 1) * i;
             }
         }
@@ -1528,6 +1534,7 @@ class ToneGranulator
     choc::fifo::SingleReaderSingleWriterFIFO<StepModSource::Message> fifo;
     choc::fifo::SingleReaderSingleWriterFIFO<ParameterMessage> params_to_gui_fifo;
     alignas(16) Tunings::Tuning tuning;
+    std::atomic<int> pitchquantizemode = GranulatorVoice::PQM_MIX;
     struct GrainRepeatsVisMessage
     {
         std::array<float, 6> modulatedvalues = {0.0f};

@@ -618,6 +618,7 @@ void ToneGranulator::create_voices()
     {
         auto v = std::make_unique<GranulatorVoice>();
         v->tuning = &tuning;
+        v->pitchquantizemode = &pitchquantizemode;
         v->aux_envelopes = &voiceaux_envelopes;
         v->pitchBandAttens = pitchBandAttensShared;
         v->osctypemapping = osctypemapping;
@@ -1475,11 +1476,18 @@ void GranulatorVoice::start(GrainEvent &evpars)
     if (evpars.pitch_quantize_amount > 0.0f && tuning)
     {
         // our middle C is 0.0, Tuning library has it at 60.0
-        float quanamount = 1.0f - std::pow(1.0f - evpars.pitch_quantize_amount, 2.0f);
-        auto quantpitch = quantize_pitch_binary(*tuning, pitch_base + 60.0, quanamount) - 60.0;
-        pitch_base = quantpitch;
-        // pitch_base = pitch_base * (1.0f - evpars.pitch_quantize_amount) +
-        //             quantpitch * evpars.pitch_quantize_amount;
+        if (*pitchquantizemode == PQM_MAGNETIC)
+        {
+            float quanamount = 1.0f - std::pow(1.0f - evpars.pitch_quantize_amount, 2.0f);
+            auto quantpitch = quantize_pitch_binary(*tuning, pitch_base + 60.0, quanamount) - 60.0;
+            pitch_base = quantpitch;
+        }
+        else if (*pitchquantizemode == PQM_MIX)
+        {
+            float quanamount = evpars.pitch_quantize_amount;
+            auto quantpitch = quantize_pitch_binary(*tuning, pitch_base + 60.0, 1.0) - 60.0;
+            pitch_base = pitch_base * (1.0f - quanamount) + quantpitch * quanamount;
+        }
     }
     auto syncratio = std::clamp(evpars.sync_octaves, 0.0f, 4.0f);
     syncratio = std::pow(2.0f, syncratio);
