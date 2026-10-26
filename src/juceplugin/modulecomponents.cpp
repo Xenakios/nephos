@@ -867,6 +867,10 @@ StackingModuleComponent::StackingModuleComponent(AudioPluginAudioProcessor &p)
                  *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKVOLUMEPAR1]),
       durationKnob(XapSlider::SS_Knob,
                    *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKDURATIONPAR1]),
+      user0Knob(XapSlider::SS_Knob,
+                *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKUSERPAR0]),
+      user1Knob(XapSlider::SS_Knob,
+                *p.granulator.idtoparmetadata[ToneGranulator::PAR_STACKUSERPAR1]),
       repVis(p)
 {
     juce::StringArray modes{"Ramp bipolar", "Ramp unipolar", "Random Walk", "Random",
@@ -900,12 +904,15 @@ StackingModuleComponent::StackingModuleComponent(AudioPluginAudioProcessor &p)
     addKnob(elevationKnob);
     addKnob(volumeKnob);
     addKnob(durationKnob);
+    addKnob(user0Knob);
+    addKnob(user1Knob);
     addAndMakeVisible(repVis);
 }
 void StackingModuleComponent::resized()
 {
     juce::FlexBox flex;
     flex.flexDirection = juce::FlexBox::Direction::row;
+    flex.flexWrap = juce::FlexBox::Wrap::wrap;
     flex.items.add(juce::FlexItem(countKnob).withFlex(1.0).withMargin(2));
     flex.items.add(juce::FlexItem(lengthKnob).withFlex(1.0).withMargin(2));
     flex.items.add(juce::FlexItem(warpKnob).withFlex(1.0).withMargin(2));
@@ -914,8 +921,15 @@ void StackingModuleComponent::resized()
     flex.items.add(juce::FlexItem(elevationKnob).withFlex(1.0).withMargin(2));
     flex.items.add(juce::FlexItem(volumeKnob).withFlex(1.0).withMargin(2));
     flex.items.add(juce::FlexItem(durationKnob).withFlex(1.0).withMargin(2));
-    flex.performLayout(juce::Rectangle<int>(7, 17, getWidth() - 14, 80));
-    repVis.setBounds(7, volumeKnob.getBottom() + 2, getWidth() - 14, 70);
+    flex.items.add(juce::FlexItem(user0Knob).withFlex(1.0).withMargin(2));
+    flex.items.add(juce::FlexItem(user1Knob).withFlex(1.0).withMargin(2));
+    for (auto &e : flex.items)
+    {
+        e = e.withMaxHeight(80);
+        e = e.withMinWidth(90);
+    }
+    flex.performLayout(juce::Rectangle<int>(7, 17, getWidth() - 14, 162));
+    repVis.setBounds(7, 17 + 162 + 2, getWidth() - 14, 70);
 }
 
 void AnalysisSourceComponent::paint(juce::Graphics &g)

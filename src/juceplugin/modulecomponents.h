@@ -414,6 +414,8 @@ class StackingModuleComponent : public juce::GroupComponent
     XapSlider elevationKnob;
     XapSlider volumeKnob;
     XapSlider durationKnob;
+    XapSlider user0Knob;
+    XapSlider user1Knob;
     RepeatsVisualizer repVis;
     StackingModuleComponent(AudioPluginAudioProcessor &p);
 
