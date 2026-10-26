@@ -1519,6 +1519,7 @@ class ToneGranulator
     void set_parameter_value(uint32_t id, float value);
     std::unordered_map<uint32_t, pmd *> idtoparmetadata;
     std::unordered_map<uint32_t, float> modRanges;
+    std::unordered_map<uint32_t, std::string> modUnits;
     std::unordered_map<int, int> shapeParToActualShape;
     choc::fifo::SingleReaderSingleWriterFIFO<StepModSource::Message> fifo;
     choc::fifo::SingleReaderSingleWriterFIFO<ParameterMessage> params_to_gui_fifo;

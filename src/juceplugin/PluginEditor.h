@@ -144,7 +144,8 @@ struct ModulationRowComponent : public juce::Component
         {
             auto pmd = gr->idtoparmetadata[parid];
             auto d = gr->modRanges[parid];
-            depthSlider.setModulationDisplayDepth(d, pmd->unit);
+            auto unit = gr->modUnits[parid];
+            depthSlider.setModulationDisplayDepth(d, unit);
         }
     }
 
