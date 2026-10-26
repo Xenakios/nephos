@@ -1332,6 +1332,7 @@ class ToneGranulator
     };
 
     static constexpr size_t max_num_repeats = 32;
+    static constexpr double max_repeats_time_span = 2.0;
     struct RepeatsParameters
     {
         int count = 1;

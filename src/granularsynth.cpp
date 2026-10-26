@@ -396,15 +396,16 @@ ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
                                .withGroupName("Repeats")
                                .withFlags(CLAP_PARAM_IS_MODULATABLE)
                                .withID(PAR_STACKCOUNT));
-    parmetadatas.push_back(pmd()
-                               .withRange(0.0f, 1.0f)
-                               .withDefault(0.5)
-                               .withOffsetPowerFormatting("ms", 0.00f, 2.0, 2.0f, 1000.0f)
-                               .withName("Time Span")
-                               .withDecimalPlaces(0)
-                               .withGroupName("Repeats")
-                               .withFlags(CLAP_PARAM_IS_MODULATABLE)
-                               .withID(PAR_STACKTIMESPAN));
+    parmetadatas.push_back(
+        pmd()
+            .withRange(0.0f, 1.0f)
+            .withDefault(0.5)
+            .withOffsetPowerFormatting("ms", 0.00f, max_repeats_time_span, 2.0f, 1000.0f)
+            .withName("Time Span")
+            .withDecimalPlaces(0)
+            .withGroupName("Repeats")
+            .withFlags(CLAP_PARAM_IS_MODULATABLE)
+            .withID(PAR_STACKTIMESPAN));
     parmetadatas.push_back(pmd()
                                .withRange(-1.0f, 1.0f)
                                .withDefault(0.0)
@@ -1204,7 +1205,9 @@ void ToneGranulator::generate_grain()
     {
         if (graingen_phase_prior > graingen_phase)
         {
+            // delete scheduled grains that were already started
             std::erase_if(scheduledGrains, [](GrainEvent &e) { return e.time_position < 0.0; });
+
             float pitch =
                 modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_PITCH});
             float gdur =
@@ -1281,7 +1284,7 @@ void ToneGranulator::generate_grain()
             float timeSpanToSchedule = modmatrix.m.getTargetValue(
                 GranulatorModConfig::TargetIdentifier{PAR_STACKTIMESPAN});
             timeSpanToSchedule = std::clamp(timeSpanToSchedule, 0.0f, 1.0f);
-            timeSpanToSchedule = 0.00f + 2.0f * std::pow(timeSpanToSchedule, 2.0f);
+            timeSpanToSchedule = 0.00f + max_repeats_time_span * std::pow(timeSpanToSchedule, 2.0f);
             float timeSpanCurve = *idtoparvalptr[PAR_STACKTIMECURVE];
             float azimuth_spread = modmatrix.m.getTargetValue(
                 GranulatorModConfig::TargetIdentifier{PAR_STACKSPATIALIZATIONPAR1});
