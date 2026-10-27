@@ -319,14 +319,15 @@ void MainPageComponent::resized()
     timeModuleComponent.setBounds(oscModuleComponent.getRight() + 2, 0, 300, 125);
 
     spatModuleComponent.setBounds(0, volumeModuleComponent.getBottom() + 2, 600, 125);
-    mainOutModuleComponent.setBounds(spatModuleComponent.getRight() + 2,
-                                     volumeModuleComponent.getBottom() + 2, 600, 125);
+    stackModuleComponent.setBounds(oscModuleComponent.getRight() + 2,
+                                   timeModuleComponent.getBottom() + 2, 490, 260);
+    mainOutModuleComponent.setBounds(volumeModuleComponent.getRight() + 2,
+                                     stackModuleComponent.getBottom() + 2, 725, 175);
     insertComponents[0]->setBounds(0, spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 125);
     insertComponents[1]->setBounds(insertComponents[0]->getRight() + 1,
                                    spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 125);
 
-    stackModuleComponent.setBounds(oscModuleComponent.getRight() + 2,
-                                   timeModuleComponent.getBottom() + 2, 490, 260);
+    
     // processorRef.xenAvisComponent.setBounds(getWidth() - 501, stackModuleComponent.getBottom() +
     // 2,
     //                                         500, 250);

@@ -742,8 +742,8 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             for (int j = 0; j < buffer.getNumSamples(); ++j)
             {
                 float samp = buffer.getSample(ch, j);
-                float scaler = std::sqrt(std::abs(samp));
-                samp *= scaler;
+                // float scaler = std::sqrt(std::abs(samp));
+                // samp *= scaler;
                 visualizerAudioBuffer.setSample(ch, j, samp);
             }
         }

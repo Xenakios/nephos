@@ -432,18 +432,27 @@ void DashBoardComponent::paint(juce::Graphics &g)
     h = std::clamp(h, mindb, maxdb);
     h = juce::jmap<float>(h, mindb, maxdb, 0.0, getHeight());
     g.fillRect(juce::Rectangle<float>{0.0f, (float)getHeight() - h, 10.0f, h});
+
     h = juce::Decibels::gainToDecibels(gr->mixgainforgui.load());
     h = std::clamp(h, mindb, maxdb);
     h = juce::jmap<float>(h, mindb, maxdb, 0.0, getHeight());
     g.setColour(juce::Colours::cyan);
     g.fillRect(juce::Rectangle<float>{11.0f, (float)getHeight() - h, 10.0f, h});
+
+    h = juce::Decibels::gainToDecibels(gr->omnilevelforgui.load());
+    h = std::clamp(h, mindb, maxdb);
+    h = juce::jmap<float>(h, mindb, maxdb, 0.0, getHeight());
+    g.setColour(juce::Colours::salmon);
+    g.fillRect(juce::Rectangle<float>{22.0f, (float)getHeight() - h, 10.0f, h});
+
     g.setColour(juce::Colours::white);
     for (double db = mindb; db < maxdb; db += 3.0)
     {
         h = juce::jmap<float>(db, mindb, maxdb, getHeight(), 0.0);
         g.drawLine(0.0f, h, 10.0f, h);
-        g.drawLine(11.0f, h, 10.0f, h);
-        g.drawText(juce::String(db, 0) + "dB", 22.0f, h - 8, 45.0, 20.0f,
+        g.drawLine(11.0f, h, 21.0f, h);
+        g.drawLine(22.0f, h, 32.0f, h);
+        g.drawText(juce::String(db, 0) + "dB", 32.0f, h - 8, 45.0, 20.0f,
                    juce::Justification::centredRight);
     }
 

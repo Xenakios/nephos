@@ -1095,7 +1095,7 @@ class ToneGranulator
         {
             // we might want to have a more complicated dynamics response curve,
             // but this gives some kind of useful response
-            if (wg >= maingain)
+            if (wg > 1.0)
                 // if (wg > 0.0)
                 compengain = 1.0 / wg;
         }
@@ -1111,7 +1111,7 @@ class ToneGranulator
         }
         assert(compengain >= 0.0 && compengain <= 16.0);
         gainlag.setTarget(compengain * maingain);
-
+        float maxlevel = 0.0f;
         for (int k = 0; k < granul_block_size; ++k)
         {
             gainlag.process();
@@ -1122,7 +1122,11 @@ class ToneGranulator
             {
                 outputbuffer[k * num_out_chans + chan] = mixsum[k][chan] * gain;
             }
+            maxlevel = std::max(maxlevel, std::abs(outputbuffer[k * num_out_chans]));
         }
+        if (maxlevel < 0.0001)
+            maxlevel = 0.0001;
+        omnilevelforgui = maxlevel;
         compensationgainforgui = gainlag.getValue();
     }
     void generate_grain();
@@ -1552,6 +1556,7 @@ class ToneGranulator
     std::atomic<MIXVOLUMEMODE> mixvolumemode = MVM_LIMITSLOW;
     std::atomic<float> compensationgainforgui{1.0f};
     std::atomic<float> mixgainforgui{1.0f};
+    std::atomic<float> omnilevelforgui{1.0f};
     using pmd = sst::basic_blocks::params::ParamMetaData;
     std::vector<pmd> parmetadatas;
     std::vector<float> paramvalues;
