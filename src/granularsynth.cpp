@@ -120,7 +120,6 @@ ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
                                .withFlags(CLAP_PARAM_IS_MODULATABLE));
     parmetadatas.push_back(pmd()
                                .withRange(0.0f, 1.0f)
-                               .withDefault(0.75f)
                                .asCubicDecibelAttenuation()
                                .withName("Grain volume")
                                .withGroupName("Volume")
