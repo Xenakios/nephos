@@ -1069,18 +1069,22 @@ class ToneGranulator
         }
 #endif
         double wg = 0.0;
+        // this rms calculation is probably not super useful
+        // since the measured time is so short, but maybe
+        // it is better than not doing it at all
+        // perhaps could implement rms with longer history later
         for (size_t j = 0; j < granul_block_size; ++j)
         {
             wg += mixsum[j][0] * mixsum[j][0];
         }
         wg = std::sqrt(wg / granul_block_size);
         double compengain = 1.0;
-        // if (numactive > 0)
-        //     compengain = 1.0 / std::sqrt(numactive);
         float maingain =
             modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_MAINVOLUME});
         maingain = std::clamp(maingain, -96.0f, 0.0f);
         maingain = xenakios::decibelsToGain(maingain);
+        // we might want to have a more complicated dynamics response curve,
+        // but this gives some kind of useful response
         if (wg >= maingain)
             compengain = maingain / wg;
         assert(compengain >= 0.0 && compengain <= 16.0);
