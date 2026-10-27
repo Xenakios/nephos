@@ -737,7 +737,17 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             buffer.clear();
         }
         // for convenience stereo output, visualize the MS decoded stereo
-        avisComponent.pushBuffer(buffer);
+        for (int ch = 0; ch < 2; ++ch)
+        {
+            for (int j = 0; j < buffer.getNumSamples(); ++j)
+            {
+                float samp = buffer.getSample(ch, j);
+                float scaler = std::sqrt(std::abs(samp));
+                samp *= scaler;
+                visualizerAudioBuffer.setSample(ch, j, samp);
+            }
+        }
+        avisComponent.pushBuffer(visualizerAudioBuffer);
     }
     if (totalNumOutputChannels > 2)
     {

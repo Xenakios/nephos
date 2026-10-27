@@ -423,11 +423,22 @@ void DashBoardComponent::paint(juce::Graphics &g)
     g.restoreState();
     paintAmbisonicFieldPolar(g);
     // paintAmbisonicFieldHammerProjection(g);
-    g.setColour(juce::Colours::yellow);
+
+    g.setColour(juce::Colours::orange);
     float h = juce::Decibels::gainToDecibels(gr->compensationgainforgui.load());
-    h = std::clamp(h, -40.0f, 0.0f);
-    h = juce::jmap<float>(h, -40.0, 0.0, 0.0, getHeight());
+    g.drawText(juce::String(h), 60, 0, 45, 20, juce::Justification::centredRight);
+    h = std::clamp(h, -40.0f, 6.0f);
+    h = juce::jmap<float>(h, -40.0, 6.0, 0.0, getHeight());
     g.fillRect(juce::Rectangle<float>{0.0f, (float)getHeight() - h, 10.0f, h});
+    g.setColour(juce::Colours::white);
+    for (double db = -42.0; db < 6.0; db += 3.0)
+    {
+        h = juce::jmap<float>(db, -40.0, 6.0, getHeight(), 0.0);
+        g.drawLine(0.0f, h, 10.0f, h);
+        g.drawText(juce::String(db, 0) + "dB", 10.0f, h - 8, 45.0, 20.0f,
+                   juce::Justification::centredRight);
+    }
+
     g.setColour(juce::Colours::white);
     int mins = static_cast<int>(enginetime / 60.0);
     int secs = static_cast<int>(std::fmod(enginetime, 60.0));
@@ -449,7 +460,7 @@ void DashBoardComponent::paint(juce::Graphics &g)
 #endif
     infoText += "\n" + juce::String(processorRef.granulator.lagged_params.size()) +
                 " lagging params active\n";
-    
+
     processorRef.granulator.lagged_params_spinlock.lock();
     for (auto &e : processorRef.granulator.lagged_params)
     {
@@ -464,7 +475,7 @@ void DashBoardComponent::paint(juce::Graphics &g)
             juce::String(pmd->groupName) + "/" + juce::String(pmd->name) + juce::String(" ");
     }
     processorRef.granulator.lagged_params_spinlock.unlock();
-    
+
     g.setFont(18.0f);
     g.drawMultiLineText(infoText, cloudArea.getX(), 19.0f, cloudArea.getWidth(),
                         juce::Justification::left);

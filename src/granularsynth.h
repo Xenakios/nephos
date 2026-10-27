@@ -1077,13 +1077,13 @@ class ToneGranulator
         double compengain = 1.0;
         // if (numactive > 0)
         //     compengain = 1.0 / std::sqrt(numactive);
-        if (wg >= 0.125)
-            compengain = 1.0 / wg;
-        assert(compengain >= 0.0 && compengain <= 10.0);
         float maingain =
             modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_MAINVOLUME});
         maingain = std::clamp(maingain, -96.0f, 0.0f);
         maingain = xenakios::decibelsToGain(maingain);
+        if (wg >= maingain)
+            compengain = maingain / wg;
+        assert(compengain >= 0.0 && compengain <= 16.0);
         gainlag.setTarget(compengain * maingain);
 
         for (int k = 0; k < granul_block_size; ++k)
@@ -1485,7 +1485,7 @@ class ToneGranulator
         }
         auto result = process_repeats(rng, parameters);
         if (parameters.count == 1)
-            result[0] = 1.0f;
+            result[0] = gvol;
         return result;
     }
     std::atomic<REPEATSPATTERN> pitch_repeats_mode = RPP_RAMP;
