@@ -1201,7 +1201,9 @@ void ToneGranulator::prepare(float samplerate, int filter_routing, float tail_le
         evindex = 0;
         playposframes = 0;
         gainlag.setRateInMilliseconds(1000.0, m_sr, 1.0);
+        mixgainlag.setRateInMilliseconds(50.0, m_sr, 1.0 / granul_block_size);
         gainlag.snapTo(0.0);
+        mixgainlag.snapTo(1.0);
         graingen_phase = 0.0;
         graingen_phase_prior = 2.0;
         modmatrix.set_sample_rate(samplerate);

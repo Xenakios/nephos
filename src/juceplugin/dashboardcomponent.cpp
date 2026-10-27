@@ -37,7 +37,7 @@ PolarPoint polar_project(float azi_deg, float ele_deg)
 void DashBoardComponent::paintAmbisonicFieldPolar(juce::Graphics &g)
 {
     g.setColour(juce::Colours::white);
-    juce::Rectangle<float> area{35.0f, getHeight() / 2.0f - 200.0f, 400.0f, 400.0f};
+    juce::Rectangle<float> area{70.0f, getHeight() / 2.0f - 200.0f, 400.0f, 400.0f};
     g.drawEllipse(area, 2.0f);
     drawRotatedText(g, "LEFT", area.getX() - 10.f, area.getCentreY(), -90.0f);
     drawRotatedText(g, "RIGHT", area.getRight() + 10.0f, area.getCentreY(), 90.0f);
@@ -424,18 +424,26 @@ void DashBoardComponent::paint(juce::Graphics &g)
     paintAmbisonicFieldPolar(g);
     // paintAmbisonicFieldHammerProjection(g);
 
+    float mindb = -60.0f;
+    float maxdb = 24.0f;
     g.setColour(juce::Colours::orange);
     float h = juce::Decibels::gainToDecibels(gr->compensationgainforgui.load());
     g.drawText(juce::String(h), 60, 0, 45, 20, juce::Justification::centredRight);
-    h = std::clamp(h, -40.0f, 6.0f);
-    h = juce::jmap<float>(h, -40.0, 6.0, 0.0, getHeight());
+    h = std::clamp(h, mindb, maxdb);
+    h = juce::jmap<float>(h, mindb, maxdb, 0.0, getHeight());
     g.fillRect(juce::Rectangle<float>{0.0f, (float)getHeight() - h, 10.0f, h});
+    h = juce::Decibels::gainToDecibels(gr->mixgainforgui.load());
+    h = std::clamp(h, mindb, maxdb);
+    h = juce::jmap<float>(h, mindb, maxdb, 0.0, getHeight());
+    g.setColour(juce::Colours::cyan);
+    g.fillRect(juce::Rectangle<float>{11.0f, (float)getHeight() - h, 10.0f, h});
     g.setColour(juce::Colours::white);
-    for (double db = -42.0; db < 6.0; db += 3.0)
+    for (double db = mindb; db < maxdb; db += 3.0)
     {
-        h = juce::jmap<float>(db, -40.0, 6.0, getHeight(), 0.0);
+        h = juce::jmap<float>(db, mindb, maxdb, getHeight(), 0.0);
         g.drawLine(0.0f, h, 10.0f, h);
-        g.drawText(juce::String(db, 0) + "dB", 10.0f, h - 8, 45.0, 20.0f,
+        g.drawLine(11.0f, h, 10.0f, h);
+        g.drawText(juce::String(db, 0) + "dB", 22.0f, h - 8, 45.0, 20.0f,
                    juce::Justification::centredRight);
     }
 

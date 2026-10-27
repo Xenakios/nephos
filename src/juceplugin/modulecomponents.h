@@ -479,6 +479,18 @@ class MainOutputModule : public juce::GroupComponent, public juce::Timer
               XapSlider::SS_Knob,
               *p.granulator.idtoparmetadata[ToneGranulator::PAR_MASTERHIGHPASSCUTOFF])
     {
+        mainVolumeKnob.addMenuItemsCallback([this](juce::PopupMenu &menu) {
+            menu.addSectionHeader("Volume compensation mode");
+            juce::StringArray modes{"Number of voices", "Square root of number of voices",
+                                    "Fast limiter", "Slow limiter"};
+            for (int i = 0; i < modes.size(); ++i)
+            {
+                menu.addItem(
+                    modes[i], true, processorRef.granulator.mixvolumemode == i, [this, i]() {
+                        processorRef.granulator.mixvolumemode = (ToneGranulator::MIXVOLUMEMODE)i;
+                    });
+            }
+        });
         initSlider(p, *this, mainVolumeKnob);
         initSlider(p, *this, highPassCutoffKnob);
         addAndMakeVisible(perfComponent);

@@ -1078,15 +1078,37 @@ class ToneGranulator
             wg += mixsum[j][0] * mixsum[j][0];
         }
         wg = std::sqrt(wg / granul_block_size);
+        assert(wg > 0.0);
+        auto wgforgui = wg;
+        if (wgforgui < 0.0001)
+            wgforgui = 0.0001;
+        mixgainlag.setTarget(wgforgui);
+        mixgainlag.process();
+        mixgainforgui = mixgainlag.getValue();
+
         double compengain = 1.0;
         float maingain =
             modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_MAINVOLUME});
         maingain = std::clamp(maingain, -96.0f, 0.0f);
         maingain = xenakios::decibelsToGain(maingain);
-        // we might want to have a more complicated dynamics response curve,
-        // but this gives some kind of useful response
-        if (wg >= maingain)
-            compengain = maingain / wg;
+        if (mixvolumemode == MVM_LIMITSLOW || mixvolumemode == MVM_LIMITFAST)
+        {
+            // we might want to have a more complicated dynamics response curve,
+            // but this gives some kind of useful response
+            if (wg >= maingain)
+                // if (wg > 0.0)
+                compengain = 1.0 / wg;
+        }
+        else if (mixvolumemode == MVM_NUMVOICES)
+        {
+            // dubious if this is ever useful but for completeness have this mode too
+            compengain = 1.0 / numvoices;
+        }
+        else if (mixvolumemode == MVM_SQRTNUMVOICES)
+        {
+            // sqrt of 64 voices is 8, so we will probably overshoot the gain target
+            compengain = 1.0 / std::sqrt(numvoices);
+        }
         assert(compengain >= 0.0 && compengain <= 16.0);
         gainlag.setTarget(compengain * maingain);
 
@@ -1516,10 +1538,20 @@ class ToneGranulator
     alignas(16) double graingen_phase = 0.0;
     alignas(16) double graingen_phase_prior = 2.0;
     alignas(16) sst::basic_blocks::dsp::OnePoleLag<float, true> gainlag;
+    alignas(16) sst::basic_blocks::dsp::OnePoleLag<float, true> mixgainlag;
     alignas(16) xenakios::Xoroshiro128Plus rng;
     alignas(32) GranulatorModMatrix modmatrix;
     alignas(16) FilterBank masterHighPassFilter;
-    std::atomic<float> compensationgainforgui{0.0f};
+    enum MIXVOLUMEMODE
+    {
+        MVM_NUMVOICES,
+        MVM_SQRTNUMVOICES,
+        MVM_LIMITFAST,
+        MVM_LIMITSLOW
+    };
+    std::atomic<MIXVOLUMEMODE> mixvolumemode = MVM_LIMITSLOW;
+    std::atomic<float> compensationgainforgui{1.0f};
+    std::atomic<float> mixgainforgui{1.0f};
     using pmd = sst::basic_blocks::params::ParamMetaData;
     std::vector<pmd> parmetadatas;
     std::vector<float> paramvalues;
