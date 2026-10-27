@@ -37,7 +37,7 @@ PolarPoint polar_project(float azi_deg, float ele_deg)
 void DashBoardComponent::paintAmbisonicFieldPolar(juce::Graphics &g)
 {
     g.setColour(juce::Colours::white);
-    juce::Rectangle<float> area{70.0f, getHeight() / 2.0f - 200.0f, 400.0f, 400.0f};
+    juce::Rectangle<float> area{100.0f, getHeight() / 2.0f - 185.0f, 370.0f, 370.0f};
     g.drawEllipse(area, 2.0f);
     drawRotatedText(g, "LEFT", area.getX() - 10.f, area.getCentreY(), -90.0f);
     drawRotatedText(g, "RIGHT", area.getRight() + 10.0f, area.getCentreY(), 90.0f);
@@ -425,7 +425,7 @@ void DashBoardComponent::paint(juce::Graphics &g)
     // paintAmbisonicFieldHammerProjection(g);
 
     float mindb = -60.0f;
-    float maxdb = 24.0f;
+    float maxdb = 12.0f;
     g.setColour(juce::Colours::orange);
     float h = juce::Decibels::gainToDecibels(gr->compensationgainforgui.load());
     g.drawText(juce::String(h), 60, 0, 45, 20, juce::Justification::centredRight);

@@ -68,7 +68,7 @@ ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
     parmetadatas.reserve(128);
     parmetadatas.push_back(pmd()
                                .withRange(-24.0, 0.0)
-                               .withDefault(-6.0)
+                               .withDefault(-12.0)
                                .withLinearScaleFormatting("dB")
                                .withName("Main volume")
                                .withFlags(CLAP_PARAM_IS_MODULATABLE)
@@ -1202,7 +1202,9 @@ void ToneGranulator::prepare(float samplerate, int filter_routing, float tail_le
         playposframes = 0;
         gainlag.setRateInMilliseconds(1000.0, m_sr, 1.0);
         mixgainlag.setRateInMilliseconds(50.0, m_sr, 1.0 / granul_block_size);
+        omnilevellag.setRateInMilliseconds(50.0, m_sr, 1.0 / granul_block_size);
         gainlag.snapTo(0.0);
+        omnilevellag.snapTo(0.0);
         mixgainlag.snapTo(1.0);
         graingen_phase = 0.0;
         graingen_phase_prior = 2.0;

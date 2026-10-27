@@ -1126,7 +1126,9 @@ class ToneGranulator
         }
         if (maxlevel < 0.0001)
             maxlevel = 0.0001;
-        omnilevelforgui = maxlevel;
+        omnilevellag.setTarget(maxlevel);
+        omnilevellag.process();
+        omnilevelforgui = omnilevellag.getValue();
         compensationgainforgui = gainlag.getValue();
     }
     void generate_grain();
@@ -1543,6 +1545,7 @@ class ToneGranulator
     alignas(16) double graingen_phase_prior = 2.0;
     alignas(16) sst::basic_blocks::dsp::OnePoleLag<float, true> gainlag;
     alignas(16) sst::basic_blocks::dsp::OnePoleLag<float, true> mixgainlag;
+    alignas(16) sst::basic_blocks::dsp::OnePoleLag<float, true> omnilevellag;
     alignas(16) xenakios::Xoroshiro128Plus rng;
     alignas(32) GranulatorModMatrix modmatrix;
     alignas(16) FilterBank masterHighPassFilter;
