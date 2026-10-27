@@ -1025,6 +1025,7 @@ class ToneGranulator
 
         int numactive = 0;
         alignas(32) float voiceout[64 * granul_block_size];
+
 // #define USE_AVX_SUMMING
 #ifdef USE_AVX_SUMMING
         for (size_t j = 0; j < voices.size(); ++j)
@@ -1067,9 +1068,18 @@ class ToneGranulator
             }
         }
 #endif
+        double wg = 0.0;
+        for (size_t j = 0; j < granul_block_size; ++j)
+        {
+            wg += mixsum[j][0] * mixsum[j][0];
+        }
+        wg = std::sqrt(wg / granul_block_size);
         double compengain = 1.0;
-        if (numactive > 0)
-            compengain = 1.0 / std::sqrt(numactive);
+        // if (numactive > 0)
+        //     compengain = 1.0 / std::sqrt(numactive);
+        if (wg >= 0.125)
+            compengain = 1.0 / wg;
+        assert(compengain >= 0.0 && compengain <= 10.0);
         float maingain =
             modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_MAINVOLUME});
         maingain = std::clamp(maingain, -96.0f, 0.0f);
@@ -1482,7 +1492,7 @@ class ToneGranulator
     std::atomic<REPEATSPATTERN> azimuth_repeats_mode = RPP_RAMP;
     std::atomic<REPEATSPATTERN> elevation_repeats_mode = RPP_RAMP;
     std::atomic<REPEATSPATTERN> volume_repeats_mode = RPP_RAMP;
-    const int numvoices = 64;
+    static constexpr int numvoices = 64;
     double m_sr = 0.0;
     int graincount = 0;
     std::atomic<int> modulatedOscType{-1};
