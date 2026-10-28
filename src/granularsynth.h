@@ -1098,16 +1098,6 @@ class ToneGranulator
                 // if (wg > 0.0)
                 compengain = 1.0 / wg;
         }
-        else if (mixvolumemode == MVM_NUMVOICES)
-        {
-            // dubious if this is ever useful but for completeness have this mode too
-            compengain = 1.0 / numvoices;
-        }
-        else if (mixvolumemode == MVM_SQRTNUMVOICES)
-        {
-            // sqrt of 64 voices is 8, so we will probably overshoot the gain target
-            compengain = 1.0 / std::sqrt(numvoices);
-        }
         assert(compengain >= 0.0 && compengain <= 16.0);
         gainlag.setTarget(compengain * maingain);
         float maxlevel = 0.0f;
@@ -1548,12 +1538,20 @@ class ToneGranulator
     alignas(16) FilterBank masterHighPassFilter;
     enum MIXVOLUMEMODE
     {
-        MVM_NUMVOICES,
-        MVM_SQRTNUMVOICES,
         MVM_LIMITFAST,
         MVM_LIMITSLOW
     };
     std::atomic<MIXVOLUMEMODE> mixvolumemode = MVM_LIMITSLOW;
+    void set_main_volume_mode(int m)
+    {
+        if (m == mixvolumemode)
+            return;
+        mixvolumemode = (MIXVOLUMEMODE)m;
+        if (mixvolumemode == MVM_LIMITSLOW)
+            gainlag.setRateInMilliseconds(1000.0, m_sr, 1.0);
+        if (mixvolumemode == MVM_LIMITFAST)
+            gainlag.setRateInMilliseconds(50.0, m_sr, 1.0);
+    }
     std::atomic<float> compensationgainforgui{1.0f};
     std::atomic<float> mixgainforgui{1.0f};
     std::atomic<float> omnilevelforgui{1.0f};

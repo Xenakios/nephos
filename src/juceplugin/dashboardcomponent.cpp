@@ -305,13 +305,13 @@ DashBoardComponent::DashBoardComponent(AudioPluginAudioProcessor &p)
     });
 }
 
-// to avoid getting -infs which the juce::Graphics won't tolerate
-inline float safe_gain_to_db(float gain)
+// to sanity check and to avoid getting -infs which the juce::Graphics won't tolerate
+template <typename T> inline T safe_gain_to_db(T gain)
 {
+    assert(std::isfinite(gain) && gain >= T{});
     if (gain < 0.0001)
         gain = 0.0001;
-    float db = juce::Decibels::gainToDecibels(gain);
-    return db;
+    return juce::Decibels::gainToDecibels(gain);
 }
 
 void DashBoardComponent::paint(juce::Graphics &g)

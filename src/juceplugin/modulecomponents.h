@@ -481,13 +481,12 @@ class MainOutputModule : public juce::GroupComponent, public juce::Timer
     {
         mainVolumeKnob.addMenuItemsCallback([this](juce::PopupMenu &menu) {
             menu.addSectionHeader("Volume compensation mode");
-            juce::StringArray modes{"Number of voices", "Square root of number of voices",
-                                    "Fast limiter", "Slow limiter"};
+            juce::StringArray modes{"Fast limiter", "Slow limiter"};
             for (int i = 0; i < modes.size(); ++i)
             {
                 menu.addItem(
                     modes[i], true, processorRef.granulator.mixvolumemode == i, [this, i]() {
-                        processorRef.granulator.mixvolumemode = (ToneGranulator::MIXVOLUMEMODE)i;
+                        processorRef.granulator.set_main_volume_mode(i);
                     });
             }
         });
