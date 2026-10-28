@@ -1575,18 +1575,34 @@ class ToneGranulator
     enum MIXVOLUMEMODE
     {
         MVM_LIMITFAST,
-        MVM_LIMITSLOW
+        MVM_LIMITSLOW,
+        MVM_NOTSET
     };
-    std::atomic<MIXVOLUMEMODE> mixvolumemode = MVM_LIMITSLOW;
+    std::atomic<MIXVOLUMEMODE> mixvolumemode = MVM_NOTSET;
     void set_main_volume_mode(int m)
     {
         if (m == mixvolumemode)
             return;
         mixvolumemode = (MIXVOLUMEMODE)m;
+        using comptype = decltype(masterCompressor);
+        spinLock.lock();
         if (mixvolumemode == MVM_LIMITSLOW)
+        {
             gainlag.setRateInMilliseconds(1000.0, m_sr, 1.0);
+            masterCompressor.setFloatParam(comptype::fpThreshold, -24.0);
+            masterCompressor.setFloatParam(comptype::fpRatio, 2.0);
+            masterCompressor.setFloatParam(comptype::fpAttack, 0.1);
+            masterCompressor.setFloatParam(comptype::fpRelease, 2.0);
+        }
         if (mixvolumemode == MVM_LIMITFAST)
+        {
             gainlag.setRateInMilliseconds(50.0, m_sr, 1.0);
+            masterCompressor.setFloatParam(comptype::fpThreshold, -9.0);
+            masterCompressor.setFloatParam(comptype::fpRatio, 10.0);
+            masterCompressor.setFloatParam(comptype::fpAttack, 0.001);
+            masterCompressor.setFloatParam(comptype::fpRelease, 0.05);
+        }
+        spinLock.unlock();
     }
     std::atomic<float> compensationgainforgui{1.0f};
     std::atomic<float> mixgainforgui{1.0f};

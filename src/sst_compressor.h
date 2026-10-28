@@ -201,9 +201,6 @@ template <typename VFXConfig> struct Compressor : core::VoiceEffectTemplateBase<
 
         for (int i = 0; i < VFXConfig::blockSize; i++)
         {
-            // auto outputL = datainL[i];
-            // auto outputR = datainR[i];
-
             float sidechain = 0.0;
             for (int j = 0; j < num_active_channels; ++j)
             {
@@ -233,57 +230,8 @@ template <typename VFXConfig> struct Compressor : core::VoiceEffectTemplateBase<
             {
                 audio_in_out[i * num_active_channels + j] *= reductionFactor;
             }
-            // outputL *= reductionFactor;
-            // outputR *= reductionFactor;
-
-            // dataoutL[i] = outputL;
-            // dataoutR[i] = outputR;
         }
         // gainLerp.multiply_2_blocks(dataoutL, dataoutR);
-    }
-
-    void processMonoToMono(const float *const datain, float *dataout, float pitch)
-    {
-        auto makeup = this->dbToLinear(this->getFloatParam(fpMakeUp));
-        gainLerp.set_target(makeup);
-
-        bool RMS = this->getIntParam(ipDetector);
-        auto threshold_db = this->getFloatParam(fpThreshold);
-        auto ratio_recip = 1 / this->getFloatParam(fpRatio);
-
-        ballistics.set_attack(this->getFloatParam(fpAttack));
-        ballistics.set_release(this->getFloatParam(fpRelease));
-
-        setTiltCoeffs(pitch);
-
-        for (int i = 0; i < VFXConfig::blockSize; i++)
-        {
-            float output = datain[i];
-
-            float sidechain = output;
-            tilter.processBlockStep(sidechain);
-            float env = fabsf(sidechain);
-
-            if (RMS)
-            {
-                env = RA.step(env);
-            }
-            ballistics.process_sample(env, env);
-            env = amplitudeToDecibels(env);
-
-            auto over = env - threshold_db;
-            float reductionFactorDB = 0.0f;
-            if (env > threshold_db)
-            {
-                reductionFactorDB = threshold_db + over * ratio_recip - env;
-            }
-            float reductionFactor = this->dbToLinear(reductionFactorDB);
-
-            output *= reductionFactor;
-
-            dataout[i] = output;
-        }
-        gainLerp.multiply_block(dataout);
     }
 
     void setTiltCoeffs(float pitch)

@@ -480,8 +480,8 @@ class MainOutputModule : public juce::GroupComponent, public juce::Timer
               *p.granulator.idtoparmetadata[ToneGranulator::PAR_MASTERHIGHPASSCUTOFF])
     {
         mainVolumeKnob.addMenuItemsCallback([this](juce::PopupMenu &menu) {
-            menu.addSectionHeader("Volume compensation mode");
-            juce::StringArray modes{"Fast limiter", "Slow limiter", "Beads limiter"};
+            menu.addSectionHeader("Dynamics processing");
+            juce::StringArray modes{"Fast", "Slow"};
             for (int i = 0; i < modes.size(); ++i)
             {
                 menu.addItem(

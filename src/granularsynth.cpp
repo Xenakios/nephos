@@ -1227,9 +1227,7 @@ void ToneGranulator::prepare(float samplerate, int filter_routing, float tail_le
         masterCompressor.samplerate = m_sr;
         masterCompressor.initVoiceEffect();
         masterCompressor.initVoiceEffectParams();
-        using comptype = decltype(masterCompressor);
-        masterCompressor.setFloatParam(comptype::fpThreshold, -12.0);
-        masterCompressor.setFloatParam(comptype::fpRatio, 2.0);
+        set_main_volume_mode(MVM_LIMITSLOW);
         fxInstanceForMetadata.prepareInstance(m_sr, granul_block_size);
     }
 }
