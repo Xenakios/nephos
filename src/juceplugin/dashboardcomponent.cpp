@@ -1,5 +1,6 @@
 #include "dashboardcomponent.h"
 #include "clap/id.h"
+#include "juce_audio_basics/juce_audio_basics.h"
 #include "juce_core/juce_core.h"
 #include "juce_graphics/juce_graphics.h"
 
@@ -303,6 +304,16 @@ DashBoardComponent::DashBoardComponent(AudioPluginAudioProcessor &p)
         }
     });
 }
+
+// to avoid getting -infs which the juce::Graphics won't tolerate
+inline float safe_gain_to_db(float gain)
+{
+    if (gain < 0.0001)
+        gain = 0.0001;
+    float db = juce::Decibels::gainToDecibels(gain);
+    return db;
+}
+
 void DashBoardComponent::paint(juce::Graphics &g)
 {
     g.fillAll(juce::Colours::black);
@@ -427,19 +438,19 @@ void DashBoardComponent::paint(juce::Graphics &g)
     float mindb = -60.0f;
     float maxdb = 12.0f;
     g.setColour(juce::Colours::orange);
-    float h = juce::Decibels::gainToDecibels(gr->compensationgainforgui.load());
+    float h = safe_gain_to_db(gr->compensationgainforgui.load());
     g.drawText(juce::String(h), 60, 0, 45, 20, juce::Justification::centredRight);
     h = std::clamp(h, mindb, maxdb);
     h = juce::jmap<float>(h, mindb, maxdb, 0.0, getHeight());
     g.fillRect(juce::Rectangle<float>{0.0f, (float)getHeight() - h, 10.0f, h});
 
-    h = juce::Decibels::gainToDecibels(gr->mixgainforgui.load());
+    h = safe_gain_to_db(gr->mixgainforgui.load());
     h = std::clamp(h, mindb, maxdb);
     h = juce::jmap<float>(h, mindb, maxdb, 0.0, getHeight());
     g.setColour(juce::Colours::cyan);
     g.fillRect(juce::Rectangle<float>{11.0f, (float)getHeight() - h, 10.0f, h});
 
-    h = juce::Decibels::gainToDecibels(gr->omnilevelforgui.load());
+    h = safe_gain_to_db(gr->omnilevelforgui.load());
     h = std::clamp(h, mindb, maxdb);
     h = juce::jmap<float>(h, mindb, maxdb, 0.0, getHeight());
     g.setColour(juce::Colours::salmon);

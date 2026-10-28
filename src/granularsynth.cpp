@@ -942,23 +942,34 @@ void ToneGranulator::set_event_list(events_t evlist)
         std::swap(evlist, events);
     }
 }
+void ToneGranulator::set_ambisonics_order_impl(int order)
+{
+    current_ambisonic_order = order;
+    num_out_chans = ambisonicOrderNumChannels(current_ambisonic_order);
+    masterHighPassFilter.numactivechannels = num_out_chans;
+    // std::print(std::cerr, "changed ambisonic order to {}\n", current_ambisonic_order);
+    for (auto &vc : voices)
+    {
+        vc->active = false;
+        vc->ambisonic_order = current_ambisonic_order;
+        vc->num_outputchans = num_out_chans;
+    }
+}
 void ToneGranulator::set_ambisonics_order(int order)
 {
     assert(order > 0 && order < 8);
+    // at audio start set the order directly so we won't have a mess
+    // where things have not been initialized properly for a period of time
+    if (audiocallbackcount == 0)
+    {
+        set_ambisonics_order_impl(order);
+        return;
+    }
     if (current_ambisonic_order == order || fadeForLargeStateChange.is_active())
         return;
     pending_ambisonic_order = order;
     fadeForLargeStateChange.start(m_sr, 500.0f, [this]() {
-        current_ambisonic_order = pending_ambisonic_order;
-        num_out_chans = ambisonicOrderNumChannels(current_ambisonic_order);
-        masterHighPassFilter.numactivechannels = num_out_chans;
-        // std::print(std::cerr, "changed ambisonic order to {}\n", current_ambisonic_order);
-        for (auto &vc : voices)
-        {
-            vc->active = false;
-            vc->ambisonic_order = current_ambisonic_order;
-            vc->num_outputchans = num_out_chans;
-        }
+        set_ambisonics_order_impl(pending_ambisonic_order);
     });
     return;
     current_ambisonic_order = order;

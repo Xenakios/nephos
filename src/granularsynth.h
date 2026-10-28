@@ -544,7 +544,7 @@ class GranulatorVoice
             modulation_slots[i] = {CLAP_INVALID_ID, 0.0f, CLAP_INVALID_ID};
     }
     void start(GrainEvent &evpars);
-    void process(float *outputs)
+    void process(std::span<float> outputs)
     {
         double normphase = (double)phase / grain_end_phase;
         alignas(16) float modulatedvalues[NUMMODTARGETS] = {0.0f};
@@ -1024,7 +1024,7 @@ class ToneGranulator
         }
 
         int numactive = 0;
-        alignas(32) float voiceout[64 * granul_block_size];
+        alignas(32) float voiceout[64 * granul_block_size] = {0.0f};
 
 // #define USE_AVX_SUMMING
 #ifdef USE_AVX_SUMMING
@@ -1075,13 +1075,12 @@ class ToneGranulator
         // perhaps could implement rms with longer history later
         for (size_t j = 0; j < granul_block_size; ++j)
         {
-            wg += mixsum[j][0] * mixsum[j][0];
+            float s = mixsum[j][0];
+            wg += s * s;
         }
         wg = std::sqrt(wg / granul_block_size);
-        assert(wg > 0.0);
+        assert(std::isfinite(wg) && wg >= 0.0);
         auto wgforgui = wg;
-        if (wgforgui < 0.0001)
-            wgforgui = 0.0001;
         mixgainlag.setTarget(wgforgui);
         mixgainlag.process();
         mixgainforgui = mixgainlag.getValue();
@@ -1124,8 +1123,6 @@ class ToneGranulator
             }
             maxlevel = std::max(maxlevel, std::abs(outputbuffer[k * num_out_chans]));
         }
-        if (maxlevel < 0.0001)
-            maxlevel = 0.0001;
         omnilevellag.setTarget(maxlevel);
         omnilevellag.process();
         omnilevelforgui = omnilevellag.getValue();
@@ -1863,6 +1860,7 @@ class ToneGranulator
     void set_event_list(events_t evlist);
 
     void set_ambisonics_order(int order);
+    void set_ambisonics_order_impl(int order);
 
     std::atomic<float> auxenvdepthpmodulated = 0.0f;
     std::atomic<uint32_t> modulatedParamToStore{0};
