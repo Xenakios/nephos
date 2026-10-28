@@ -1088,6 +1088,9 @@ class ToneGranulator
         }
         if (mixvolumemode != MVM_OFF)
         {
+            using comptype = decltype(masterCompressor);
+            float th = *idtoparvalptr[PAR_MASTERCOMPTHRESHOLD];
+            masterCompressor.setFloatParam(comptype::fpThreshold, th);
             masterCompressor.processMultiChannel(outputbuffer, 60.0);
         }
         float maxlevel = 0.0f;
@@ -1323,6 +1326,7 @@ class ToneGranulator
         PAR_AUXENVTIMESHIFT = 3054,
         PAR_AUXENVVALUEWARP = 3058,
         PAR_MASTERHIGHPASSCUTOFF = 3100,
+        PAR_MASTERCOMPTHRESHOLD = 3200,
         PAR_MASTERLFORATE = 4000,
         PAR_MAINMODDEPTHSTART = 5000,
         PAR_LFORATES = 100000,
@@ -1562,20 +1566,22 @@ class ToneGranulator
         using comptype = decltype(masterCompressor);
         if (takelock)
             spinLock.lock();
+        masterCompressor.setIntParam(comptype::ipDetector, 0);
+        gainlag.setRateInMilliseconds(100.0, m_sr, 1.0);
         if (mixvolumemode == MVM_LIMITSLOW)
         {
-            gainlag.setRateInMilliseconds(1000.0, m_sr, 1.0);
-            masterCompressor.setFloatParam(comptype::fpThreshold, -24.0);
+            //gainlag.setRateInMilliseconds(1000.0, m_sr, 1.0);
+            
             masterCompressor.setFloatParam(comptype::fpRatio, 2.0);
-            masterCompressor.setFloatParam(comptype::fpAttack, 0.1);
-            masterCompressor.setFloatParam(comptype::fpRelease, 2.0);
+            masterCompressor.setFloatParam(comptype::fpAttack, 0.01);
+            masterCompressor.setFloatParam(comptype::fpRelease, 0.5);
         }
         if (mixvolumemode == MVM_LIMITFAST)
         {
-            gainlag.setRateInMilliseconds(50.0, m_sr, 1.0);
-            masterCompressor.setFloatParam(comptype::fpThreshold, -9.0);
+            //gainlag.setRateInMilliseconds(50.0, m_sr, 1.0);
+            
             masterCompressor.setFloatParam(comptype::fpRatio, 10.0);
-            masterCompressor.setFloatParam(comptype::fpAttack, 0.001);
+            masterCompressor.setFloatParam(comptype::fpAttack, 0.0001);
             masterCompressor.setFloatParam(comptype::fpRelease, 0.05);
         }
         if (takelock)

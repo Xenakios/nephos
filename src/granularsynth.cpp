@@ -80,10 +80,19 @@ ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
                                .withRange(-48, 0)
                                .withDefault(-36)
                                .withSemitoneZeroAt440Formatting()
-                               .withName("Main Highpass Cutoff")
+                               .withName("Highpass Cutoff")
                                .withFlags(CLAP_PARAM_IS_MODULATABLE)
                                .withGroupName("Main output")
                                .withID(PAR_MASTERHIGHPASSCUTOFF));
+    parmetadatas.push_back(pmd()
+                               .withType(pmd::FLOAT)
+                               .withRange(-48, 0)
+                               .withDefault(0.0)
+                               .withLinearScaleFormatting("dB")
+                               .withName("Compressor Threshold")
+                               .withFlags(CLAP_PARAM_IS_MODULATABLE)
+                               .withGroupName("Main output")
+                               .withID(PAR_MASTERCOMPTHRESHOLD));
     parmetadatas.push_back(pmd()
                                .withUnorderedMapFormatting({{0, "Ambisonic 1st Order"},
                                                             {1, "Ambisonic 2nd Order"},

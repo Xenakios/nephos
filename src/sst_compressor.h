@@ -201,12 +201,14 @@ template <typename VFXConfig> struct Compressor : core::VoiceEffectTemplateBase<
 
         for (int i = 0; i < VFXConfig::blockSize; i++)
         {
-            float sidechain = 0.0;
+            float sidechain = audio_in_out[i * num_active_channels];
+            /*
             for (int j = 0; j < num_active_channels; ++j)
             {
                 sidechain += audio_in_out[i * num_active_channels + j];
             }
             sidechain /= num_active_channels;
+            */
             tilter.processBlockStep(sidechain);
             float env = fabsf(sidechain);
 

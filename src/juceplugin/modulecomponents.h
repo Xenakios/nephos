@@ -469,6 +469,7 @@ class MainOutputModule : public juce::GroupComponent, public juce::Timer
     AudioPluginAudioProcessor &processorRef;
     XapSlider mainVolumeKnob;
     XapSlider highPassCutoffKnob;
+    XapSlider thresholdKnob;
     PerformanceComponent perfComponent;
     juce::TextButton continueButton;
     MainOutputModule(AudioPluginAudioProcessor &p)
@@ -477,23 +478,24 @@ class MainOutputModule : public juce::GroupComponent, public juce::Timer
                          *p.granulator.idtoparmetadata[ToneGranulator::PAR_MAINVOLUME]),
           highPassCutoffKnob(
               XapSlider::SS_Knob,
-              *p.granulator.idtoparmetadata[ToneGranulator::PAR_MASTERHIGHPASSCUTOFF])
+              *p.granulator.idtoparmetadata[ToneGranulator::PAR_MASTERHIGHPASSCUTOFF]),
+          thresholdKnob(XapSlider::SS_Knob,
+                        *p.granulator.idtoparmetadata[ToneGranulator::PAR_MASTERCOMPTHRESHOLD])
     {
         mainVolumeKnob.addMenuItemsCallback([this](juce::PopupMenu &menu) {
             menu.addSectionHeader("Dynamics processing");
-            juce::StringArray modes{"Off","Fast", "Slow"};
+            juce::StringArray modes{"Off", "Fast", "Slow"};
             for (int i = 0; i < modes.size(); ++i)
             {
                 menu.addItem(
-                    modes[i], true, processorRef.granulator.mixvolumemode == i, [this, i]() {
-                        processorRef.granulator.set_main_volume_mode(i, true);
-                    });
+                    modes[i], true, processorRef.granulator.mixvolumemode == i,
+                    [this, i]() { processorRef.granulator.set_main_volume_mode(i, true); });
             }
         });
         initSlider(p, *this, mainVolumeKnob);
         initSlider(p, *this, highPassCutoffKnob);
+        initSlider(p, *this, thresholdKnob);
         addAndMakeVisible(perfComponent);
-        addAndMakeVisible(highPassCutoffKnob);
         addAndMakeVisible(p.avisComponent);
         addChildComponent(continueButton);
         continueButton.setButtonText("Corrupt audio detected, click to attempt resuming");
@@ -515,8 +517,9 @@ class MainOutputModule : public juce::GroupComponent, public juce::Timer
     }
     void resized() override
     {
-        mainVolumeKnob.setBounds(7, 17, 100, getHeight() - 25);
-        highPassCutoffKnob.setBounds(mainVolumeKnob.getRight() + 2, 17, 100, getHeight() - 25);
+        mainVolumeKnob.setBounds(7, 17, 100, 80);
+        highPassCutoffKnob.setBounds(mainVolumeKnob.getRight() + 2, 17, 100, 80);
+        thresholdKnob.setBounds(7, 17 + 81, 100, 80);
         perfComponent.setBounds(highPassCutoffKnob.getRight() + 2, 17, getWidth() - 220, 21);
         processorRef.avisComponent.setBounds(highPassCutoffKnob.getRight() + 2,
                                              perfComponent.getBottom() + 1, getWidth() - 220,
