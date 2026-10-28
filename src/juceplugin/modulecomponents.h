@@ -481,7 +481,7 @@ class MainOutputModule : public juce::GroupComponent, public juce::Timer
     {
         mainVolumeKnob.addMenuItemsCallback([this](juce::PopupMenu &menu) {
             menu.addSectionHeader("Volume compensation mode");
-            juce::StringArray modes{"Fast limiter", "Slow limiter"};
+            juce::StringArray modes{"Fast limiter", "Slow limiter", "Beads limiter"};
             for (int i = 0; i < modes.size(); ++i)
             {
                 menu.addItem(

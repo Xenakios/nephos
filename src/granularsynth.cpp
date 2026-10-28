@@ -1,6 +1,7 @@
 #include "granularsynth.h"
 #include "Tunings.h"
 #include "easing.h"
+#include "sst_compressor.h"
 #include "xen_modulationsources.h"
 #include <unordered_map>
 
@@ -947,6 +948,8 @@ void ToneGranulator::set_ambisonics_order_impl(int order)
     current_ambisonic_order = order;
     num_out_chans = ambisonicOrderNumChannels(current_ambisonic_order);
     masterHighPassFilter.numactivechannels = num_out_chans;
+    masterCompressor.num_active_channels = num_out_chans;
+
     // std::print(std::cerr, "changed ambisonic order to {}\n", current_ambisonic_order);
     for (auto &vc : voices)
     {
@@ -968,9 +971,8 @@ void ToneGranulator::set_ambisonics_order(int order)
     if (current_ambisonic_order == order || fadeForLargeStateChange.is_active())
         return;
     pending_ambisonic_order = order;
-    fadeForLargeStateChange.start(m_sr, 500.0f, [this]() {
-        set_ambisonics_order_impl(pending_ambisonic_order);
-    });
+    fadeForLargeStateChange.start(m_sr, 500.0f,
+                                  [this]() { set_ambisonics_order_impl(pending_ambisonic_order); });
     return;
     current_ambisonic_order = order;
     for (auto &v : voices)
@@ -1221,6 +1223,13 @@ void ToneGranulator::prepare(float samplerate, int filter_routing, float tail_le
         modmatrix.set_sample_rate(samplerate);
         modmatrix.m.prepare(modmatrix.rt, samplerate, granul_block_size);
         masterHighPassFilter.prepare(m_sr);
+
+        masterCompressor.samplerate = m_sr;
+        masterCompressor.initVoiceEffect();
+        masterCompressor.initVoiceEffectParams();
+        using comptype = decltype(masterCompressor);
+        masterCompressor.setFloatParam(comptype::fpThreshold, -12.0);
+        masterCompressor.setFloatParam(comptype::fpRatio, 2.0);
         fxInstanceForMetadata.prepareInstance(m_sr, granul_block_size);
     }
 }

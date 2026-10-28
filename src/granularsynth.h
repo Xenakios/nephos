@@ -9,6 +9,7 @@
 #include <vector>
 #include <span>
 // #include "sst/basic-blocks/dsp/CorrelatedNoise.h"
+#include "VoiceEffectCore.h"
 #include "clap/id.h"
 #include "containers/choc_Value.h"
 #include "fmt/format.h"
@@ -34,6 +35,7 @@
 #include <simde/x86/avx2.h>
 #include <simde/x86/fma.h>
 #include "Tunings.h"
+#include "sst_compressor.h"
 
 using namespace sst::basic_blocks::mod_matrix;
 
@@ -1099,8 +1101,8 @@ class ToneGranulator
                 compengain = 1.0 / wg;
         }
         assert(compengain >= 0.0 && compengain <= 16.0);
-        gainlag.setTarget(compengain * maingain);
-        float maxlevel = 0.0f;
+        // gainlag.setTarget(compengain * maingain);
+        gainlag.setTarget(maingain);
         for (int k = 0; k < granul_block_size; ++k)
         {
             gainlag.process();
@@ -1111,12 +1113,17 @@ class ToneGranulator
             {
                 outputbuffer[k * num_out_chans + chan] = mixsum[k][chan] * gain;
             }
+        }
+        masterCompressor.processMultiChannel(outputbuffer, 60.0);
+        float maxlevel = 0.0f;
+        for (int k = 0; k < granul_block_size; ++k)
+        {
             maxlevel = std::max(maxlevel, std::abs(outputbuffer[k * num_out_chans]));
         }
         omnilevellag.setTarget(maxlevel);
         omnilevellag.process();
         omnilevelforgui = omnilevellag.getValue();
-        compensationgainforgui = gainlag.getValue();
+        compensationgainforgui = masterCompressor.last_used_gain_change;
     }
     void generate_grain();
     void process_modulations()
@@ -1536,6 +1543,35 @@ class ToneGranulator
     alignas(16) xenakios::Xoroshiro128Plus rng;
     alignas(32) GranulatorModMatrix modmatrix;
     alignas(16) FilterBank masterHighPassFilter;
+    struct VTestConfig
+    {
+        struct BaseClass
+        {
+            std::array<float, 256> fb{};
+            std::array<int, 256> ib{};
+            float samplerate = 0.0f;
+        };
+        static constexpr int blockSize{granul_block_size};
+        static void setFloatParam(BaseClass *b, int i, float f) { b->fb[i] = f; }
+        static float getFloatParam(const BaseClass *b, int i) { return b->fb[i]; }
+
+        static void setIntParam(BaseClass *b, int i, int v) { b->ib[i] = v; }
+        static int getIntParam(const BaseClass *b, int i) { return b->ib[i]; }
+
+        static float dbToLinear(const BaseClass *, float f) { return xenakios::decibelsToGain(f); }
+        static float equalNoteToPitch(const BaseClass *, float f)
+        {
+            return pow(2.f, (f + 69) / 12.f);
+        }
+        static float getSampleRate(const BaseClass *b) { return b->samplerate; }
+        static float getSampleRateInv(const BaseClass *b) { return 1.0 / b->samplerate; }
+
+        static void preReservePool(BaseClass *, size_t) {}
+        static void preReserveSingleInstancePool(BaseClass *, size_t) {}
+        static uint8_t *checkoutBlock(BaseClass *, size_t s) { return (uint8_t *)malloc(s); }
+        static void returnBlock(BaseClass *, uint8_t *p, size_t) { free(p); }
+    };
+    alignas(16) sst::voice_effects::dynamics::Compressor<VTestConfig> masterCompressor;
     enum MIXVOLUMEMODE
     {
         MVM_LIMITFAST,
