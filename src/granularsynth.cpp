@@ -1216,7 +1216,7 @@ void ToneGranulator::prepare(float samplerate, int filter_routing, float tail_le
         mixgainlag.setRateInMilliseconds(50.0, m_sr, 1.0 / granul_block_size);
         omnilevellag.setRateInMilliseconds(50.0, m_sr, 1.0 / granul_block_size);
         gainlag.snapTo(0.0);
-        omnilevellag.snapTo(0.0);
+        omnilevellag.snapTo(1.0);
         mixgainlag.snapTo(1.0);
         graingen_phase = 0.0;
         graingen_phase_prior = 2.0;
@@ -1227,7 +1227,7 @@ void ToneGranulator::prepare(float samplerate, int filter_routing, float tail_le
         masterCompressor.samplerate = m_sr;
         masterCompressor.initVoiceEffect();
         masterCompressor.initVoiceEffectParams();
-        set_main_volume_mode(MVM_LIMITSLOW);
+        set_main_volume_mode(MVM_LIMITSLOW, false);
         fxInstanceForMetadata.prepareInstance(m_sr, granul_block_size);
     }
 }

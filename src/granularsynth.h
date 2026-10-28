@@ -1070,38 +1070,10 @@ class ToneGranulator
             }
         }
 #endif
-        double wg = 0.0;
-        // this rms calculation is probably not super useful
-        // since the measured time is so short, but maybe
-        // it is better than not doing it at all
-        // perhaps could implement rms with longer history later
-        for (size_t j = 0; j < granul_block_size; ++j)
-        {
-            float s = mixsum[j][0];
-            wg += s * s;
-        }
-        wg = std::sqrt(wg / granul_block_size);
-        assert(std::isfinite(wg) && wg >= 0.0);
-        auto wgforgui = wg;
-        mixgainlag.setTarget(wgforgui);
-        mixgainlag.process();
-        mixgainforgui = mixgainlag.getValue();
-
-        double compengain = 1.0;
         float maingain =
             modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_MAINVOLUME});
         maingain = std::clamp(maingain, -96.0f, 0.0f);
         maingain = xenakios::decibelsToGain(maingain);
-        if (mixvolumemode == MVM_LIMITSLOW || mixvolumemode == MVM_LIMITFAST)
-        {
-            // we might want to have a more complicated dynamics response curve,
-            // but this gives some kind of useful response
-            if (wg > 1.0)
-                // if (wg > 0.0)
-                compengain = 1.0 / wg;
-        }
-        assert(compengain >= 0.0 && compengain <= 16.0);
-        // gainlag.setTarget(compengain * maingain);
         gainlag.setTarget(maingain);
         for (int k = 0; k < granul_block_size; ++k)
         {
@@ -1114,7 +1086,10 @@ class ToneGranulator
                 outputbuffer[k * num_out_chans + chan] = mixsum[k][chan] * gain;
             }
         }
-        masterCompressor.processMultiChannel(outputbuffer, 60.0);
+        if (mixvolumemode != MVM_OFF)
+        {
+            masterCompressor.processMultiChannel(outputbuffer, 60.0);
+        }
         float maxlevel = 0.0f;
         for (int k = 0; k < granul_block_size; ++k)
         {
@@ -1574,18 +1549,19 @@ class ToneGranulator
     alignas(16) sst::voice_effects::dynamics::Compressor<VTestConfig> masterCompressor;
     enum MIXVOLUMEMODE
     {
+        MVM_OFF,
         MVM_LIMITFAST,
-        MVM_LIMITSLOW,
-        MVM_NOTSET
+        MVM_LIMITSLOW
     };
-    std::atomic<MIXVOLUMEMODE> mixvolumemode = MVM_NOTSET;
-    void set_main_volume_mode(int m)
+    std::atomic<MIXVOLUMEMODE> mixvolumemode = MVM_OFF;
+    void set_main_volume_mode(int m, bool takelock)
     {
         if (m == mixvolumemode)
             return;
         mixvolumemode = (MIXVOLUMEMODE)m;
         using comptype = decltype(masterCompressor);
-        spinLock.lock();
+        if (takelock)
+            spinLock.lock();
         if (mixvolumemode == MVM_LIMITSLOW)
         {
             gainlag.setRateInMilliseconds(1000.0, m_sr, 1.0);
@@ -1602,7 +1578,8 @@ class ToneGranulator
             masterCompressor.setFloatParam(comptype::fpAttack, 0.001);
             masterCompressor.setFloatParam(comptype::fpRelease, 0.05);
         }
-        spinLock.unlock();
+        if (takelock)
+            spinLock.unlock();
     }
     std::atomic<float> compensationgainforgui{1.0f};
     std::atomic<float> mixgainforgui{1.0f};

@@ -439,7 +439,7 @@ void DashBoardComponent::paint(juce::Graphics &g)
     float maxdb = 12.0f;
     g.setColour(juce::Colours::orange);
     float h = safe_gain_to_db(gr->compensationgainforgui.load());
-    g.drawText(juce::String(h), 60, 0, 45, 20, juce::Justification::centredRight);
+    // g.drawText(juce::String(h), 60, 0, 45, 20, juce::Justification::centredRight);
     h = std::clamp(h, mindb, maxdb);
     h = juce::jmap<float>(h, mindb, maxdb, 0.0, getHeight());
     g.fillRect(juce::Rectangle<float>{0.0f, (float)getHeight() - h, 10.0f, h});

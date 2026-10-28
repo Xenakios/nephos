@@ -268,6 +268,7 @@ void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerB
     {
         baconSpectrum->setHostSampleRate(sampleRate);
     }
+    DBG("finished preparetoplay");
 }
 
 void AudioPluginAudioProcessor::releaseResources() {}

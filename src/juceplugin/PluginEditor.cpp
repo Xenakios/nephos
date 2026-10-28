@@ -45,6 +45,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
             std::make_unique<baconpaul::six_sines::ui::SpectrumAnalyzerComponent>(44100.0);
     }
     */
+    
     addAndMakeVisible(macrosPresetsComp);
     addChildComponent(overlaylabel);
     mainTabs.addTab("MAIN", juce::Colours::grey, &mainPage, false);
