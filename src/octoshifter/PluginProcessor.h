@@ -7,6 +7,8 @@
 #include "signalsmith-stretch.h"
 #include "sst/basic-blocks/modulators/SimpleLFO.h"
 
+#include "containers/choc_SingleReaderSingleWriterFIFO.h"
+
 class PitchShifter
 {
   public:
@@ -17,9 +19,18 @@ class PitchShifter
     alignas(32) float table_envrate_linear[512];
     using lfo_t = sst::basic_blocks::modulators::SimpleLFO<PitchShifter, BLOCKSIZE>;
     lfo_t lfo;
+    float basepitch = 0.0f;
+    float lforate = 0.0f;
+    float lfodeform = 0.0f;
+    float lfowarp = 0.0f;
+    float lfoshift = 0.0f;
+    float lfoamount = 0.0f;
+    int lfoshape = 0;
     PitchShifter() : lfo(this)
     {
         stretch = std::make_unique<signalsmith::stretch::SignalsmithStretch<>>();
+        infifo.reset(BLOCKSIZE);
+        outfifo.reset(BLOCKSIZE);
     }
 
     void set_sample_rate(double hz)
@@ -48,6 +59,35 @@ class PitchShifter
         return (1 - a) * table_envrate_linear[e & 0x1ff] +
                a * table_envrate_linear[(e + 1) & 0x1ff];
     }
+    float process_sample(float input)
+    {
+        infifo.push(input);
+        if (infifo.getUsedSlots() == BLOCKSIZE)
+        {
+            float x = 0.0f;
+            float processinbuffer[1][BLOCKSIZE];
+            float processoutbuffer[1][BLOCKSIZE];
+            for (int i = 0; i < BLOCKSIZE; ++i)
+            {
+                infifo.pop(x);
+                processinbuffer[0][i] = x;
+            }
+            lfo.applyPhaseOffset(lfoshift);
+            lfo.process_block(lforate, lfodeform, lfoshape, false, 1.0, lfowarp);
+            float finalpitch = basepitch + lfoamount * lfo.outputBlock[0];
+            stretch->setTransposeSemitones(finalpitch);
+            stretch->process(processinbuffer, BLOCKSIZE, processoutbuffer, BLOCKSIZE);
+            for (int i = 0; i < BLOCKSIZE; ++i)
+            {
+                outfifo.push(processoutbuffer[0][i]);
+            }
+        }
+        float x = 0.0f;
+        outfifo.pop(x);
+        return x;
+    }
+    choc::fifo::SingleReaderSingleWriterFIFO<float> infifo;
+    choc::fifo::SingleReaderSingleWriterFIFO<float> outfifo;
 };
 
 class AudioPluginAudioProcessor final : public juce::AudioProcessor
@@ -88,14 +128,17 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     //==============================================================================
     void getStateInformation(juce::MemoryBlock &destData) override;
     void setStateInformation(const void *data, int sizeInBytes) override;
-    PitchShifter shifter;
+    static constexpr size_t numshifters = 2;
+    std::array<PitchShifter, numshifters> shifters;
 
   private:
     juce::AudioBuffer<float> workbuffer;
-    juce::AudioParameterFloat *par_pitch = nullptr;
+    juce::AudioParameterFloat *par_pitch[numshifters] = {nullptr};
+
     juce::AudioParameterFloat *par_lforate = nullptr;
     juce::AudioParameterFloat *par_lfodeform = nullptr;
     juce::AudioParameterFloat *par_lfowarp = nullptr;
+    juce::AudioParameterFloat *par_lfoshift = nullptr;
     juce::AudioParameterChoice *par_lfoshape = nullptr;
     juce::AudioParameterFloat *par_lfoamount = nullptr;
     int samplecount = 0;

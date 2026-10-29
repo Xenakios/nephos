@@ -15,8 +15,11 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
 #endif
       )
 {
-    addParameter(par_pitch = new juce::AudioParameterFloat(
-                     juce::ParameterID{"pitch0", 1}, "Pitch",
+    addParameter(par_pitch[0] = new juce::AudioParameterFloat(
+                     juce::ParameterID{"pitch0", 1}, "Pitch 1",
+                     juce::NormalisableRange<float>{-12.0f, 12.0f}, 0.0f));
+    addParameter(par_pitch[1] = new juce::AudioParameterFloat(
+                     juce::ParameterID{"pitch1", 1}, "Pitch 2",
                      juce::NormalisableRange<float>{-12.0f, 12.0f}, 0.0f));
     choicetolfoshapemap[0] = PitchShifter::lfo_t::SINE;
     choicetolfoshapemap[1] = PitchShifter::lfo_t::TRI;
@@ -28,6 +31,9 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         par_lfoshape = new juce::AudioParameterChoice(
             juce::ParameterID{"lfoshape0", 1}, "LFO Shape",
             juce::StringArray{"SINE", "TRIANGLE", "RAMP", "SQUARE", "RANDOM", "SMOOTH RANDOM"}, 2));
+    addParameter(par_lfoshift = new juce::AudioParameterFloat(
+                     juce::ParameterID{"lfoshift0", 1}, "LFO Phase Shift",
+                     juce::NormalisableRange<float>{0.0f, 1.0f}, 0.0f));
     addParameter(par_lforate = new juce::AudioParameterFloat(
                      juce::ParameterID{"lforate0", 1}, "LFO Rate",
                      juce::NormalisableRange<float>{-2.0f, 2.0f}, 0.0f));
@@ -100,8 +106,12 @@ void AudioPluginAudioProcessor::changeProgramName(int index, const juce::String 
 //==============================================================================
 void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-    shifter.stretch->presetDefault(getTotalNumInputChannels(), sampleRate);
-    shifter.set_sample_rate(sampleRate);
+    for (int i = 0; i < shifters.size(); ++i)
+    {
+        shifters[i].stretch->presetDefault(1, sampleRate);
+        shifters[i].set_sample_rate(sampleRate);
+    }
+
     workbuffer.setSize(getTotalNumInputChannels(), samplesPerBlock);
     workbuffer.clear();
 }
@@ -147,31 +157,26 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
 
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
-    workbuffer.setSize(getTotalNumOutputChannels(), buffer.getNumSamples(), true, true);
+    auto writepointers = buffer.getArrayOfWritePointers();
+    int shape = *par_lfoshape;
+    shape = choicetolfoshapemap[shape];
+    for (int i = 0; i < shifters.size(); ++i)
+    {
+        shifters[i].lfoamount = *par_lfoamount;
+        shifters[i].lfoshape = shape;
+        shifters[i].lfodeform = *par_lfodeform;
+        shifters[i].lfowarp = *par_lfowarp;
+        shifters[i].lforate = *par_lforate;
+        float shift = 1.0 / (numshifters - 1) * i;
+        shifters[i].lfoshift = shift * *par_lfoshift;
+        shifters[i].basepitch = *par_pitch[i];
+    }
+
     for (int i = 0; i < buffer.getNumSamples(); ++i)
     {
-        if (samplecount == 0)
-        {
-            float rate = *par_lforate;
-            float deform = *par_lfodeform;
-            float warp = *par_lfowarp;
-            int shape = *par_lfoshape;
-            shape = choicetolfoshapemap[shape];
-            shifter.lfo.process_block(rate, deform, shape, false, 1.0, warp);
-        }
-        ++samplecount;
-        if (samplecount == PitchShifter::BLOCKSIZE)
-        {
-            samplecount = 0;
-        }
+        writepointers[0][i] = shifters[0].process_sample(writepointers[0][i]);
+        writepointers[1][i] = shifters[1].process_sample(writepointers[1][i]);
     }
-    float pitchmod = *par_lfoamount * shifter.lfo.outputBlock[0];
-    float finalpitch = *par_pitch + pitchmod;
-    shifter.stretch->setTransposeSemitones(finalpitch);
-    shifter.stretch->process(buffer.getArrayOfReadPointers(), buffer.getNumSamples(),
-                             workbuffer.getArrayOfWritePointers(), buffer.getNumSamples());
-    buffer.copyFrom(0, 0, workbuffer, 0, 0, buffer.getNumSamples());
-    buffer.copyFrom(1, 0, workbuffer, 1, 0, buffer.getNumSamples());
 }
 
 //==============================================================================
