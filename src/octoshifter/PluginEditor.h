@@ -4,6 +4,7 @@
 #include "../juceplugin/xap_slider.h"
 #include "juce_events/juce_events.h"
 #include "juce_gui_basics/juce_gui_basics.h"
+#include <unordered_map>
 
 inline void add_xapslider(AudioPluginAudioProcessor &proc, juce::Component &parentcomp,
                           XapSlider &slid)
@@ -58,7 +59,7 @@ class ShifterComponent : public juce::Component
     // XapSlider spatKnob;
 };
 
-class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor
+class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor, public juce::Timer
 {
   public:
     explicit AudioPluginAudioProcessorEditor(AudioPluginAudioProcessor &);
@@ -67,6 +68,7 @@ class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor
     //==============================================================================
     void paint(juce::Graphics &) override;
     void resized() override;
+    void timerCallback() override;
 
   private:
     // This reference is provided as a quick way for your editor to
@@ -79,5 +81,6 @@ class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor
     XapSlider lfoShiftKnob;
     XapSlider lfoWarpKnob;
     XapSlider lfoAmountKnob;
+    std::unordered_map<uint32_t, XapSlider *> paridtoslidermap;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioPluginAudioProcessorEditor)
 };

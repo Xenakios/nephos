@@ -3,6 +3,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <unordered_map>
 #include "clap/id.h"
+#include "containers/choc_Value.h"
 #include "juce_audio_basics/juce_audio_basics.h"
 #include "juce_audio_processors_headless/juce_audio_processors_headless.h"
 #include "signalsmith-stretch.h"
@@ -162,7 +163,10 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     std::array<float, 256> param_values;
     std::unordered_map<uint32_t, float *> par_id_to_value_pointer;
     choc::fifo::SingleReaderSingleWriterFIFO<ParamChangeMessage> params_from_gui_fifo;
-
+    choc::fifo::SingleReaderSingleWriterFIFO<ParamChangeMessage> params_to_gui_fifo;
+    void set_state(choc::value::ValueView view);
+    void set_parameter_value(uint32_t id, float value);
+    void send_param_updates_to_gui();
   private:
     double sinphase = 0.0;
     juce::AudioBuffer<float> workbuffer;

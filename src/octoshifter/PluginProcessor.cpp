@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "containers/choc_Value.h"
 #include "fmt/format.h"
 #include "juce_audio_basics/juce_audio_basics.h"
 #include "juce_audio_processors/juce_audio_processors.h"
@@ -19,6 +20,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
       )
 {
     params_from_gui_fifo.reset(2048);
+    params_to_gui_fifo.reset(2048);
     for (int i = 0; i < numshifters; ++i)
     {
         param_metadatas.push_back(pmd()
@@ -207,60 +209,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     while (params_from_gui_fifo.pop(msg))
     {
         // DBG(msg.id << " " << msg.val);
-        if (msg.id == PAR_LFOSHAPE)
-        {
-            int shape = choicetolfoshapemap[(int)msg.val];
-            for (int i = 0; i < numshifters; ++i)
-            {
-                shifters[i].lfoshape = shape;
-            }
-        }
-        if (msg.id == PAR_LFOAMOUNT)
-        {
-            for (int i = 0; i < numshifters; ++i)
-            {
-                shifters[i].lfoamount = msg.val * 12.0f;
-            }
-        }
-        if (msg.id == PAR_LFODEFORM)
-        {
-            for (int i = 0; i < numshifters; ++i)
-            {
-                shifters[i].lfodeform = msg.val;
-            }
-        }
-        if (msg.id == PAR_LFOWARP)
-        {
-            for (int i = 0; i < numshifters; ++i)
-            {
-                shifters[i].lfowarp = msg.val;
-            }
-        }
-        if (msg.id == PAR_LFOSHIFT)
-        {
-            for (int i = 0; i < numshifters; ++i)
-            {
-                float shift = 0.5 / (numshifters - 1) * i;
-                shifters[i].lfoshift = msg.val * shift;
-            }
-        }
-
-        if (msg.id == PAR_LFORATE)
-        {
-            for (int i = 0; i < numshifters; ++i)
-            {
-                shifters[i].lforate = msg.val;
-            }
-        }
-        if (msg.id >= PAR_PITCH && msg.id < PAR_PITCH + numshifters)
-        {
-            shifters[msg.id - PAR_PITCH].basepitch = msg.val;
-        }
-        if (msg.id >= PAR_INPUT_GAIN && msg.id < PAR_INPUT_GAIN + numshifters)
-        {
-            shifters[msg.id - PAR_INPUT_GAIN].ingainlag.setTarget(
-                juce::Decibels::decibelsToGain(msg.val));
-        }
+        set_parameter_value(msg.id, msg.val);
     }
     int shifterstouse = numshifters;
 #if JUCE_DEBUG
@@ -295,17 +244,121 @@ juce::AudioProcessorEditor *AudioPluginAudioProcessor::createEditor()
 //==============================================================================
 void AudioPluginAudioProcessor::getStateInformation(juce::MemoryBlock &destData)
 {
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
-    juce::ignoreUnused(destData);
+    auto state = choc::value::createObject("state");
+    auto params_state = choc::value::createObject("params");
+    for (auto &e : param_metadatas)
+    {
+        std::string idstr = std::to_string(e.id);
+        params_state.setMember(idstr, *par_id_to_value_pointer[e.id]);
+    }
+    state.setMember("parameters", params_state);
+    auto sdata = state.serialise();
+    destData.append(sdata.data.data(), sdata.data.size());
+}
+
+void AudioPluginAudioProcessor::send_param_updates_to_gui()
+{
+    for(auto& e : par_id_to_value_pointer)
+    {
+        ParamChangeMessage msg;
+        msg.id = e.first;
+        msg.val = *e.second;
+        params_to_gui_fifo.push(msg);
+    }
+}
+
+void AudioPluginAudioProcessor::set_parameter_value(uint32_t id, float value)
+{
+    *par_id_to_value_pointer[id] = value;
+    if (id == PAR_LFOSHAPE)
+    {
+        int shape = choicetolfoshapemap[(int)value];
+        for (int i = 0; i < numshifters; ++i)
+        {
+            shifters[i].lfoshape = shape;
+        }
+    }
+    if (id == PAR_LFOAMOUNT)
+    {
+        for (int i = 0; i < numshifters; ++i)
+        {
+            shifters[i].lfoamount = value * 12.0f;
+        }
+    }
+    if (id == PAR_LFODEFORM)
+    {
+        for (int i = 0; i < numshifters; ++i)
+        {
+            shifters[i].lfodeform = value;
+        }
+    }
+    if (id == PAR_LFOWARP)
+    {
+        for (int i = 0; i < numshifters; ++i)
+        {
+            shifters[i].lfowarp = value;
+        }
+    }
+    if (id == PAR_LFOSHIFT)
+    {
+        for (int i = 0; i < numshifters; ++i)
+        {
+            float shift = 0.5 / (numshifters - 1) * i;
+            shifters[i].lfoshift = value * shift;
+        }
+    }
+
+    if (id == PAR_LFORATE)
+    {
+        for (int i = 0; i < numshifters; ++i)
+        {
+            shifters[i].lforate = value;
+        }
+    }
+    if (id >= PAR_PITCH && id < PAR_PITCH + numshifters)
+    {
+        shifters[id - PAR_PITCH].basepitch = value;
+    }
+    if (id >= PAR_INPUT_GAIN && id < PAR_INPUT_GAIN + numshifters)
+    {
+        shifters[id - PAR_INPUT_GAIN].ingainlag.setTarget(juce::Decibels::decibelsToGain(value));
+    }
+}
+
+void AudioPluginAudioProcessor::set_state(choc::value::ValueView view)
+{
+    if (view.hasObjectMember("parameters"))
+    {
+        auto params = view["parameters"];
+        auto &pars = param_metadatas;
+        for (int i = 0; i < pars.size(); ++i)
+        {
+            std::string id = std::to_string(pars[i].id);
+            if (params.hasObjectMember(id))
+            {
+                float v = params[id].getWithDefault(pars[i].defaultVal);
+                set_parameter_value(pars[i].id, v);
+            }
+        }
+        send_param_updates_to_gui();
+    }
 }
 
 void AudioPluginAudioProcessor::setStateInformation(const void *data, int sizeInBytes)
 {
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
-    juce::ignoreUnused(data, sizeInBytes);
+    DBG("setStateInformation");
+    try
+    {
+        if (sizeInBytes < 1)
+            return;
+        choc::value::InputData idata{(const uint8_t *)data, (const uint8_t *)data + sizeInBytes};
+        auto state = choc::value::Value::deserialise(idata);
+        set_state(state.getView());
+    }
+    catch (std::exception &ex)
+    {
+        DBG("OctoShifter error restoring state : " << ex.what());
+    }
 }
 
 //==============================================================================

@@ -2,6 +2,19 @@
 #include "juce_gui_basics/juce_gui_basics.h"
 #include "PluginEditor.h"
 
+template <typename CompType>
+inline void visitAll(juce::Component &c, std::function<void(CompType *)> fn)
+{
+    for (auto *child : c.getChildren())
+    {
+        if (auto *d = dynamic_cast<CompType *>(child))
+        {
+            fn(d);
+        }
+        visitAll(*child, fn);
+    }
+}
+
 //==============================================================================
 AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudioProcessor &p)
     : AudioProcessorEditor(&p), processorRef(p),
@@ -31,12 +44,28 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
     add_xapslider(p, *this, lfoDeformKnob);
     add_xapslider(p, *this, lfoShiftKnob);
     add_xapslider(p, *this, lfoWarpKnob);
+    visitAll<XapSlider>(*this, [this](XapSlider *slid) {
+        paridtoslidermap[slid->getParameterMetaData().id] = slid;
+    });
+    startTimerHz(10);
     setSize(600, 500);
 }
 
 AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor() {}
 
-//==============================================================================
+void AudioPluginAudioProcessorEditor::timerCallback()
+{
+    ParamChangeMessage msg;
+    while (processorRef.params_to_gui_fifo.pop(msg))
+    {
+        auto it = paridtoslidermap.find(msg.id);
+        if (it != paridtoslidermap.end())
+        {
+            it->second->setValue(msg.val);
+        }
+    }
+}
+
 void AudioPluginAudioProcessorEditor::paint(juce::Graphics &g)
 {
     // (Our component is opaque, so we must completely fill the background with a solid colour)
