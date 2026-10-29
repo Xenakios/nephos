@@ -9,6 +9,12 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
                    *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_LFOSHAPE]),
       lfoRateKnob(XapSlider::SS_Knob,
                   *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_LFORATE]),
+      lfoDeformKnob(XapSlider::SS_Knob,
+                    *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_LFODEFORM]),
+      lfoShiftKnob(XapSlider::SS_Knob,
+                   *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_LFOSHIFT]),
+      lfoWarpKnob(XapSlider::SS_Knob,
+                  *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_LFOWARP]),
       lfoAmountKnob(XapSlider::SS_Knob,
                     *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_LFOAMOUNT])
 {
@@ -22,6 +28,9 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
     add_xapslider(p, *this, lfoShapeKnob);
     add_xapslider(p, *this, lfoRateKnob);
     add_xapslider(p, *this, lfoAmountKnob);
+    add_xapslider(p, *this, lfoDeformKnob);
+    add_xapslider(p, *this, lfoShiftKnob);
+    add_xapslider(p, *this, lfoWarpKnob);
     setSize(600, 500);
 }
 
@@ -48,9 +57,16 @@ void AudioPluginAudioProcessorEditor::resized()
     }
     juce::FlexBox lfoflex;
     lfoflex.flexDirection = juce::FlexBox::Direction::row;
-    lfoflex.items.add(juce::FlexItem(lfoShapeKnob).withFlex(3));
+    lfoflex.items.add(juce::FlexItem(lfoShapeKnob).withFlex(3).withMaxHeight(25));
     lfoflex.items.add(juce::FlexItem(lfoRateKnob).withFlex(1));
+    lfoflex.items.add(juce::FlexItem(lfoDeformKnob).withFlex(1));
+    lfoflex.items.add(juce::FlexItem(lfoShiftKnob).withFlex(1));
+    lfoflex.items.add(juce::FlexItem(lfoWarpKnob).withFlex(1));
     lfoflex.items.add(juce::FlexItem(lfoAmountKnob).withFlex(1));
-    flex.items.add(juce::FlexItem(lfoflex).withFlex(0.75));
+    for (auto &e : lfoflex.items)
+    {
+        e = e.withMargin(2.0);
+    }
+    flex.items.add(juce::FlexItem(lfoflex).withFlex(1.0));
     flex.performLayout(getLocalBounds());
 }

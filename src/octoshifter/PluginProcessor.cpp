@@ -37,10 +37,6 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                                       .withRange(-12.0f, 12.0f)
                                       .withLinearScaleFormatting("SEMITONES")
                                       .withID(PAR_FORMANT + i));
-        addParameter(par_pitch[i] = new juce::AudioParameterFloat(
-                         juce::ParameterID{"pitch" + juce::String(i), 1},
-                         "Pitch " + juce::String(i + 1),
-                         juce::NormalisableRange<float>{-12.0f, 12.0f}, 0.0f));
     }
     param_metadatas.push_back(pmd()
                                   .withName("LFO RATE")
@@ -52,12 +48,30 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                                   .withRange(-1.0f, 1.0f)
                                   .withLinearScaleFormatting("%", 100.0)
                                   .withID(PAR_LFOAMOUNT));
-    param_metadatas.push_back(
-        pmd()
-            .withName("LFO SHAPE")
-            .withUnorderedMapFormatting({{0, "SINE"}, {1, "SIN<>SQR<>TRI"}, {2, "DOWN<>TRI<>UP"}},
-                                        true)
-            .withID(PAR_LFOSHAPE));
+    param_metadatas.push_back(pmd()
+                                  .withName("LFO DEFORM")
+                                  .withRange(-1.0f, 1.0f)
+                                  .withLinearScaleFormatting("%", 100.0)
+                                  .withID(PAR_LFODEFORM));
+    param_metadatas.push_back(pmd()
+                                  .withName("LFO SHIFT")
+                                  .withRange(-1.0f, 1.0f)
+                                  .withLinearScaleFormatting("%", 100.0)
+                                  .withID(PAR_LFOSHIFT));
+    param_metadatas.push_back(pmd()
+                                  .withName("LFO WARP")
+                                  .withRange(-1.0f, 1.0f)
+                                  .withLinearScaleFormatting("%", 100.0)
+                                  .withID(PAR_LFOWARP));
+    param_metadatas.push_back(pmd()
+                                  .withName("LFO SHAPE")
+                                  .withUnorderedMapFormatting({{0, "SINE"},
+                                                               {1, "SIN<>SQR<>TRI"},
+                                                               {2, "DOWN<>TRI<>UP"},
+                                                               {3, "SMOOTH RANDOM"},
+                                                               {4, "RANDOM"}},
+                                                              true)
+                                  .withID(PAR_LFOSHAPE));
 
     for (int i = 0; i < param_metadatas.size(); ++i)
     {
@@ -70,26 +84,6 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     choicetolfoshapemap[2] = PitchShifter::lfo_t::SAW_TRI_RAMP;
     choicetolfoshapemap[3] = PitchShifter::lfo_t::SMOOTH_NOISE;
     choicetolfoshapemap[4] = PitchShifter::lfo_t::SH_NOISE;
-    addParameter(
-        par_lfoshape = new juce::AudioParameterChoice(
-            juce::ParameterID{"lfoshape0", 1}, "LFO Shape",
-            juce::StringArray{"SINE", "SIN<>SQR<>TRI", "DOWN<>TRI<>UP", "SMOOTH RANDOM", "RANDOM"},
-            2));
-    addParameter(par_lfoshift = new juce::AudioParameterFloat(
-                     juce::ParameterID{"lfoshift0", 1}, "LFO Phase Shift",
-                     juce::NormalisableRange<float>{0.0f, 1.0f}, 0.0f));
-    addParameter(par_lforate = new juce::AudioParameterFloat(
-                     juce::ParameterID{"lforate0", 1}, "LFO Rate",
-                     juce::NormalisableRange<float>{-2.0f, 2.0f}, 0.0f));
-    addParameter(par_lfodeform = new juce::AudioParameterFloat(
-                     juce::ParameterID{"lfodeform0", 1}, "LFO Deform",
-                     juce::NormalisableRange<float>{-1.0f, 1.0f}, 0.0f));
-    addParameter(par_lfowarp = new juce::AudioParameterFloat(
-                     juce::ParameterID{"lfowarp0", 1}, "LFO Warp",
-                     juce::NormalisableRange<float>{-1.0f, 1.0f}, 0.0f));
-    addParameter(par_lfoamount = new juce::AudioParameterFloat(
-                     juce::ParameterID{"lfoamount0", 1}, "LFO To Pitch Amount",
-                     juce::NormalisableRange<float>{-12.0f, 12.0f}, 0.0f));
 }
 
 AudioPluginAudioProcessor::~AudioPluginAudioProcessor() {}
@@ -209,15 +203,13 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         writepointers[1][i] = s;
         sinphase += 2 * M_PI / getSampleRate() * 440.0;
     }
-    int shape = *par_lfoshape;
-
     ParamChangeMessage msg;
     while (params_from_gui_fifo.pop(msg))
     {
         // DBG(msg.id << " " << msg.val);
         if (msg.id == PAR_LFOSHAPE)
         {
-            shape = choicetolfoshapemap[msg.val];
+            int shape = choicetolfoshapemap[(int)msg.val];
             for (int i = 0; i < numshifters; ++i)
             {
                 shifters[i].lfoshape = shape;
@@ -230,6 +222,29 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 shifters[i].lfoamount = msg.val * 12.0f;
             }
         }
+        if (msg.id == PAR_LFODEFORM)
+        {
+            for (int i = 0; i < numshifters; ++i)
+            {
+                shifters[i].lfodeform = msg.val;
+            }
+        }
+        if (msg.id == PAR_LFOWARP)
+        {
+            for (int i = 0; i < numshifters; ++i)
+            {
+                shifters[i].lfowarp = msg.val;
+            }
+        }
+        if (msg.id == PAR_LFOSHIFT)
+        {
+            for (int i = 0; i < numshifters; ++i)
+            {
+                float shift = 0.5 / (numshifters - 1) * i;
+                shifters[i].lfoshift = msg.val * shift;
+            }
+        }
+
         if (msg.id == PAR_LFORATE)
         {
             for (int i = 0; i < numshifters; ++i)
@@ -247,19 +262,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 juce::Decibels::decibelsToGain(msg.val));
         }
     }
-    /*
-    for (int i = 0; i < shifters.size(); ++i)
-    {
-        shifters[i].lfoamount = *par_lfoamount;
-        shifters[i].lfoshape = shape;
-        shifters[i].lfodeform = *par_lfodeform;
-        shifters[i].lfowarp = *par_lfowarp;
-        shifters[i].lforate = *par_lforate;
-        float shift = 0.5 / (numshifters - 1) * i;
-        shifters[i].lfoshift = shift * *par_lfoshift;
-        shifters[i].basepitch = *par_pitch[i];
-    }
-    */
+    
     for (int i = 0; i < buffer.getNumSamples(); ++i)
     {
         float insamples[2] = {writepointers[0][i], writepointers[1][i]};

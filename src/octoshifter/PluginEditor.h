@@ -75,6 +75,9 @@ class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor
     std::vector<std::unique_ptr<ShifterComponent>> shiftercomps;
     XapSlider lfoShapeKnob;
     XapSlider lfoRateKnob;
+    XapSlider lfoDeformKnob;
+    XapSlider lfoShiftKnob;
+    XapSlider lfoWarpKnob;
     XapSlider lfoAmountKnob;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioPluginAudioProcessorEditor)
 };

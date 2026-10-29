@@ -152,7 +152,10 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
         PAR_FORMANT = 300,
         PAR_LFOSHAPE = 10000,
         PAR_LFORATE = 10100,
-        PAR_LFOAMOUNT = 10200
+        PAR_LFOAMOUNT = 10200,
+        PAR_LFODEFORM = 10300,
+        PAR_LFOSHIFT = 10400,
+        PAR_LFOWARP = 10500
     };
     std::vector<pmd> param_metadatas;
     std::unordered_map<uint32_t, pmd *> par_id_to_metadata;
@@ -163,14 +166,6 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
   private:
     double sinphase = 0.0;
     juce::AudioBuffer<float> workbuffer;
-    juce::AudioParameterFloat *par_pitch[numshifters] = {nullptr};
-
-    juce::AudioParameterFloat *par_lforate = nullptr;
-    juce::AudioParameterFloat *par_lfodeform = nullptr;
-    juce::AudioParameterFloat *par_lfowarp = nullptr;
-    juce::AudioParameterFloat *par_lfoshift = nullptr;
-    juce::AudioParameterChoice *par_lfoshape = nullptr;
-    juce::AudioParameterFloat *par_lfoamount = nullptr;
     int samplecount = 0;
     std::unordered_map<int, int> choicetolfoshapemap;
     //==============================================================================
