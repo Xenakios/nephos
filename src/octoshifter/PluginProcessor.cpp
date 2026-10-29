@@ -262,17 +262,21 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 juce::Decibels::decibelsToGain(msg.val));
         }
     }
-    
+    int shifterstouse = numshifters;
+#if JUCE_DEBUG
+    // we can barely manage 4 shifters in debug builds :-/
+    shifterstouse = 4;
+#endif
     for (int i = 0; i < buffer.getNumSamples(); ++i)
     {
         float insamples[2] = {writepointers[0][i], writepointers[1][i]};
         float outsamples[2] = {0.0f, 0.0f};
-        for (int j = 0; j < 4; ++j)
+        for (int j = 0; j < shifterstouse; ++j)
         {
             outsamples[j % 2] += shifters[j].process_sample(insamples[j % 2]);
         }
-        writepointers[0][i] = outsamples[0];
-        writepointers[1][i] = outsamples[1];
+        writepointers[0][i] = outsamples[0] * 0.5;
+        writepointers[1][i] = outsamples[1] * 0.5;
     }
 }
 
