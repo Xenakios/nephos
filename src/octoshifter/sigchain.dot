@@ -1,0 +1,8 @@
+digraph G {
+    bgcolor="gray"  
+    rankdir="TB" 
+  node [margin=0.1 fontcolor=blue fontsize=14 width=0.8 shape=box style=filled]
+    "Input Gain"->"Sum"->"SignalSmith Pitch Shifter"->"SST Filter"->"Delay"
+    "Delay"->"Output Gain"->"Ambisonic Encoder/Stereo Pan"
+    "Delay"->"FB Gain"->"Sum"
+}
