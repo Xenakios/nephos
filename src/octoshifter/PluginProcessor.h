@@ -2,12 +2,14 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <unordered_map>
+#include "clap/id.h"
 #include "juce_audio_basics/juce_audio_basics.h"
 #include "juce_audio_processors_headless/juce_audio_processors_headless.h"
 #include "signalsmith-stretch.h"
 #include "sst/basic-blocks/modulators/SimpleLFO.h"
-
+#include "sst/basic-blocks/dsp/EllipticBlepOscillators.h"
 #include "containers/choc_SingleReaderSingleWriterFIFO.h"
+#include "sst/basic-blocks/params/ParamMetadata.h"
 
 class PitchShifter
 {
@@ -25,6 +27,8 @@ class PitchShifter
     float lfowarp = 0.0f;
     float lfoshift = 0.0f;
     float lfoamount = 0.0f;
+    float ingain = 1.0f;
+    sst::basic_blocks::dsp::OnePoleLag<float, true> ingainlag;
     int lfoshape = 0;
     PitchShifter() : lfo(this)
     {
@@ -36,6 +40,8 @@ class PitchShifter
     void set_sample_rate(double hz)
     {
         samplerate = hz;
+        ingainlag.setRateInMilliseconds(50.0, hz, 1.0f);
+        ingainlag.snapTo(1.0);
         initTables();
     }
     void initTables()
@@ -61,7 +67,8 @@ class PitchShifter
     }
     float process_sample(float input)
     {
-        infifo.push(input);
+        infifo.push(input * ingainlag.getValue());
+        ingainlag.process();
         if (infifo.getUsedSlots() == BLOCKSIZE)
         {
             float x = 0.0f;
@@ -88,6 +95,14 @@ class PitchShifter
     }
     choc::fifo::SingleReaderSingleWriterFIFO<float> infifo;
     choc::fifo::SingleReaderSingleWriterFIFO<float> outfifo;
+};
+
+using pmd = sst::basic_blocks::params::ParamMetaData;
+
+struct ParamChangeMessage
+{
+    uint32_t id = CLAP_INVALID_ID;
+    float val = 0.0f;
 };
 
 class AudioPluginAudioProcessor final : public juce::AudioProcessor
@@ -130,8 +145,23 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     void setStateInformation(const void *data, int sizeInBytes) override;
     static constexpr size_t numshifters = 8;
     std::array<PitchShifter, numshifters> shifters;
+    enum PARAMS
+    {
+        PAR_INPUT_GAIN = 100,
+        PAR_PITCH = 200,
+        PAR_FORMANT = 300,
+        PAR_LFOSHAPE = 10000,
+        PAR_LFORATE = 10100,
+        PAR_LFOAMOUNT = 10200
+    };
+    std::vector<pmd> param_metadatas;
+    std::unordered_map<uint32_t, pmd *> par_id_to_metadata;
+    std::array<float, 256> param_values;
+    std::unordered_map<uint32_t, float *> par_id_to_value_pointer;
+    choc::fifo::SingleReaderSingleWriterFIFO<ParamChangeMessage> params_from_gui_fifo;
 
   private:
+    double sinphase = 0.0;
     juce::AudioBuffer<float> workbuffer;
     juce::AudioParameterFloat *par_pitch[numshifters] = {nullptr};
 

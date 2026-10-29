@@ -271,7 +271,7 @@ target_sources(OctoShifter
     PRIVATE
         src/octoshifter/PluginProcessor.cpp
         src/octoshifter/PluginEditor.cpp
-        
+        src/juceplugin/xap_slider.cpp
 )   
 
 # target_compile_options(NephosPlugin PRIVATE -mavx2 -mfma -Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Werror=return-type "$<$<COMPILE_LANGUAGE:CXX>:-fno-char8_t>")

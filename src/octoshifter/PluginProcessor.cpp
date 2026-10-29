@@ -1,8 +1,11 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "fmt/format.h"
+#include "juce_audio_basics/juce_audio_basics.h"
 #include "juce_audio_processors/juce_audio_processors.h"
 #include "juce_audio_processors_headless/juce_audio_processors_headless.h"
 #include "juce_core/juce_core.h"
+#include <unordered_map>
 
 //==============================================================================
 AudioPluginAudioProcessor::AudioPluginAudioProcessor()
@@ -15,14 +18,53 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
 #endif
       )
 {
+    params_from_gui_fifo.reset(2048);
     for (int i = 0; i < numshifters; ++i)
     {
+        param_metadatas.push_back(pmd()
+                                      .withName(fmt::format("Input Volume {}", i + 1))
+                                      .withRange(-48.0f, 0.0f)
+                                      .withDefault(-6.0)
+                                      .withLinearScaleFormatting("dB")
+                                      .withID(PAR_INPUT_GAIN + i));
+        param_metadatas.push_back(pmd()
+                                      .withName(fmt::format("Pitch {}", i + 1))
+                                      .withRange(-12.0f, 12.0f)
+                                      .withLinearScaleFormatting("SEMITONES")
+                                      .withID(PAR_PITCH + i));
+        param_metadatas.push_back(pmd()
+                                      .withName(fmt::format("Formant {}", i + 1))
+                                      .withRange(-12.0f, 12.0f)
+                                      .withLinearScaleFormatting("SEMITONES")
+                                      .withID(PAR_FORMANT + i));
         addParameter(par_pitch[i] = new juce::AudioParameterFloat(
                          juce::ParameterID{"pitch" + juce::String(i), 1},
                          "Pitch " + juce::String(i + 1),
                          juce::NormalisableRange<float>{-12.0f, 12.0f}, 0.0f));
     }
+    param_metadatas.push_back(pmd()
+                                  .withName("LFO RATE")
+                                  .withRange(-6.0f, 3.0f)
+                                  .withATwoToTheBFormatting(1.0f, 1.0f, "Hz")
+                                  .withID(PAR_LFORATE));
+    param_metadatas.push_back(pmd()
+                                  .withName("LFO AMOUNT")
+                                  .withRange(-1.0f, 1.0f)
+                                  .withLinearScaleFormatting("%", 100.0)
+                                  .withID(PAR_LFOAMOUNT));
+    param_metadatas.push_back(
+        pmd()
+            .withName("LFO SHAPE")
+            .withUnorderedMapFormatting({{0, "SINE"}, {1, "SIN<>SQR<>TRI"}, {2, "DOWN<>TRI<>UP"}},
+                                        true)
+            .withID(PAR_LFOSHAPE));
 
+    for (int i = 0; i < param_metadatas.size(); ++i)
+    {
+        par_id_to_metadata[param_metadatas[i].id] = &param_metadatas[i];
+        param_values[i] = param_metadatas[i].defaultVal;
+        par_id_to_value_pointer[param_metadatas[i].id] = &param_values[i];
+    }
     choicetolfoshapemap[0] = PitchShifter::lfo_t::SINE;
     choicetolfoshapemap[1] = PitchShifter::lfo_t::PULSE;
     choicetolfoshapemap[2] = PitchShifter::lfo_t::SAW_TRI_RAMP;
@@ -160,8 +202,52 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
     auto writepointers = buffer.getArrayOfWritePointers();
+    for (int i = 0; i < buffer.getNumSamples(); ++i)
+    {
+        float s = 0.5 * std::sin(sinphase);
+        writepointers[0][i] = s;
+        writepointers[1][i] = s;
+        sinphase += 2 * M_PI / getSampleRate() * 440.0;
+    }
     int shape = *par_lfoshape;
-    shape = choicetolfoshapemap[shape];
+
+    ParamChangeMessage msg;
+    while (params_from_gui_fifo.pop(msg))
+    {
+        // DBG(msg.id << " " << msg.val);
+        if (msg.id == PAR_LFOSHAPE)
+        {
+            shape = choicetolfoshapemap[msg.val];
+            for (int i = 0; i < numshifters; ++i)
+            {
+                shifters[i].lfoshape = shape;
+            }
+        }
+        if (msg.id == PAR_LFOAMOUNT)
+        {
+            for (int i = 0; i < numshifters; ++i)
+            {
+                shifters[i].lfoamount = msg.val * 12.0f;
+            }
+        }
+        if (msg.id == PAR_LFORATE)
+        {
+            for (int i = 0; i < numshifters; ++i)
+            {
+                shifters[i].lforate = msg.val;
+            }
+        }
+        if (msg.id >= PAR_PITCH && msg.id < PAR_PITCH + numshifters)
+        {
+            shifters[msg.id - PAR_PITCH].basepitch = msg.val;
+        }
+        if (msg.id >= PAR_INPUT_GAIN && msg.id < PAR_INPUT_GAIN + numshifters)
+        {
+            shifters[msg.id - PAR_INPUT_GAIN].ingainlag.setTarget(
+                juce::Decibels::decibelsToGain(msg.val));
+        }
+    }
+    /*
     for (int i = 0; i < shifters.size(); ++i)
     {
         shifters[i].lfoamount = *par_lfoamount;
@@ -173,17 +259,17 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         shifters[i].lfoshift = shift * *par_lfoshift;
         shifters[i].basepitch = *par_pitch[i];
     }
-
+    */
     for (int i = 0; i < buffer.getNumSamples(); ++i)
     {
         float insamples[2] = {writepointers[0][i], writepointers[1][i]};
         float outsamples[2] = {0.0f, 0.0f};
-        for (int j = 0; j < shifters.size(); ++j)
+        for (int j = 0; j < 4; ++j)
         {
             outsamples[j % 2] += shifters[j].process_sample(insamples[j % 2]);
         }
-        writepointers[0][i] = outsamples[0] * 0.5;
-        writepointers[1][i] = outsamples[1] * 0.5;
+        writepointers[0][i] = outsamples[0];
+        writepointers[1][i] = outsamples[1];
     }
 }
 
@@ -195,8 +281,8 @@ bool AudioPluginAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor *AudioPluginAudioProcessor::createEditor()
 {
-    return new juce::GenericAudioProcessorEditor(*this);
-    // return new AudioPluginAudioProcessorEditor(*this);
+    // return new juce::GenericAudioProcessorEditor(*this);
+    return new AudioPluginAudioProcessorEditor(*this);
 }
 
 //==============================================================================
