@@ -128,7 +128,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     //==============================================================================
     void getStateInformation(juce::MemoryBlock &destData) override;
     void setStateInformation(const void *data, int sizeInBytes) override;
-    static constexpr size_t numshifters = 2;
+    static constexpr size_t numshifters = 8;
     std::array<PitchShifter, numshifters> shifters;
 
   private:

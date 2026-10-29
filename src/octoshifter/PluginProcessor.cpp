@@ -15,12 +15,14 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
 #endif
       )
 {
-    addParameter(par_pitch[0] = new juce::AudioParameterFloat(
-                     juce::ParameterID{"pitch0", 1}, "Pitch 1",
-                     juce::NormalisableRange<float>{-12.0f, 12.0f}, 0.0f));
-    addParameter(par_pitch[1] = new juce::AudioParameterFloat(
-                     juce::ParameterID{"pitch1", 1}, "Pitch 2",
-                     juce::NormalisableRange<float>{-12.0f, 12.0f}, 0.0f));
+    for (int i = 0; i < numshifters; ++i)
+    {
+        addParameter(par_pitch[i] = new juce::AudioParameterFloat(
+                         juce::ParameterID{"pitch" + juce::String(i), 1},
+                         "Pitch " + juce::String(i + 1),
+                         juce::NormalisableRange<float>{-12.0f, 12.0f}, 0.0f));
+    }
+
     choicetolfoshapemap[0] = PitchShifter::lfo_t::SINE;
     choicetolfoshapemap[1] = PitchShifter::lfo_t::PULSE;
     choicetolfoshapemap[2] = PitchShifter::lfo_t::SAW_TRI_RAMP;
@@ -174,8 +176,14 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
 
     for (int i = 0; i < buffer.getNumSamples(); ++i)
     {
-        writepointers[0][i] = shifters[0].process_sample(writepointers[0][i]);
-        writepointers[1][i] = shifters[1].process_sample(writepointers[1][i]);
+        float insamples[2] = {writepointers[0][i], writepointers[1][i]};
+        float outsamples[2] = {0.0f, 0.0f};
+        for (int j = 0; j < shifters.size(); ++j)
+        {
+            outsamples[j % 2] += shifters[j].process_sample(insamples[j % 2]);
+        }
+        writepointers[0][i] = outsamples[0] * 0.5;
+        writepointers[1][i] = outsamples[1] * 0.5;
     }
 }
 
