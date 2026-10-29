@@ -22,15 +22,15 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                      juce::ParameterID{"pitch1", 1}, "Pitch 2",
                      juce::NormalisableRange<float>{-12.0f, 12.0f}, 0.0f));
     choicetolfoshapemap[0] = PitchShifter::lfo_t::SINE;
-    choicetolfoshapemap[1] = PitchShifter::lfo_t::TRI;
-    choicetolfoshapemap[2] = PitchShifter::lfo_t::RAMP;
-    choicetolfoshapemap[3] = PitchShifter::lfo_t::PULSE;
+    choicetolfoshapemap[1] = PitchShifter::lfo_t::PULSE;
+    choicetolfoshapemap[2] = PitchShifter::lfo_t::SAW_TRI_RAMP;
+    choicetolfoshapemap[3] = PitchShifter::lfo_t::SMOOTH_NOISE;
     choicetolfoshapemap[4] = PitchShifter::lfo_t::SH_NOISE;
-    choicetolfoshapemap[5] = PitchShifter::lfo_t::SMOOTH_NOISE;
     addParameter(
         par_lfoshape = new juce::AudioParameterChoice(
             juce::ParameterID{"lfoshape0", 1}, "LFO Shape",
-            juce::StringArray{"SINE", "TRIANGLE", "RAMP", "SQUARE", "RANDOM", "SMOOTH RANDOM"}, 2));
+            juce::StringArray{"SINE", "SIN<>SQR<>TRI", "DOWN<>TRI<>UP", "SMOOTH RANDOM", "RANDOM"},
+            2));
     addParameter(par_lfoshift = new juce::AudioParameterFloat(
                      juce::ParameterID{"lfoshift0", 1}, "LFO Phase Shift",
                      juce::NormalisableRange<float>{0.0f, 1.0f}, 0.0f));
@@ -167,7 +167,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         shifters[i].lfodeform = *par_lfodeform;
         shifters[i].lfowarp = *par_lfowarp;
         shifters[i].lforate = *par_lforate;
-        float shift = 1.0 / (numshifters - 1) * i;
+        float shift = 0.5 / (numshifters - 1) * i;
         shifters[i].lfoshift = shift * *par_lfoshift;
         shifters[i].basepitch = *par_pitch[i];
     }
