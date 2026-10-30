@@ -51,6 +51,12 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                                       .withDefault(0.1)
                                       .withLinearScaleFormatting("SECONDS")
                                       .withID(PAR_DELAYTIME + i));
+        param_metadatas.push_back(pmd()
+                                      .withName(fmt::format("Filter Cutoff {}", i + 1))
+                                      .withRange(-36.0f, 48.0f)
+                                      .withDefault(48.0)
+                                      .withLinearScaleFormatting("")
+                                      .withID(PAR_FILTERCUTOFF + i));
     }
     param_metadatas.push_back(pmd()
                                   .withName("LFO RATE")
@@ -214,7 +220,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
     auto writepointers = buffer.getArrayOfWritePointers();
-    const double sininc = 2 * M_PI / getSampleRate() * 440.0;
+    const double sininc = 2 * M_PI / getSampleRate() * 110.0;
     for (int i = 0; i < buffer.getNumSamples(); ++i)
     {
         float s = 0.5 * std::tanh(std::sin(sinphase) * 2);
@@ -324,6 +330,10 @@ void AudioPluginAudioProcessor::set_parameter_value(uint32_t id, float value)
     if (id >= PAR_PITCH && id < PAR_PITCH + numshifters)
     {
         shifters[id - PAR_PITCH].basepitch = value;
+    }
+    if (id >= PAR_FILTERCUTOFF && id < PAR_FILTERCUTOFF + numshifters)
+    {
+        shifters[id - PAR_FILTERCUTOFF].basefiltercutoff = value;
     }
     if (id >= PAR_INPUT_GAIN && id < PAR_INPUT_GAIN + numshifters)
     {

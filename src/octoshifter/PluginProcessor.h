@@ -11,8 +11,11 @@
 #include "sst/basic-blocks/dsp/EllipticBlepOscillators.h"
 #include "containers/choc_SingleReaderSingleWriterFIFO.h"
 #include "sst/basic-blocks/params/ParamMetadata.h"
+#include "sst/filters++.h"
 #include <span>
 #include "../../Common/xap_utils.h"
+#include "sst/filters++/api.h"
+#include "sst/filters++/enums.h"
 
 class PitchShifter
 {
@@ -26,6 +29,7 @@ class PitchShifter
     lfo_t lfo;
     bool enabled = true;
     float basepitch = 0.0f;
+    float basefiltercutoff = 36.0f;
     float lforate = 0.0f;
     float lfodeform = 0.0f;
     float lfowarp = 0.0f;
@@ -36,6 +40,7 @@ class PitchShifter
     float feedbackamt = 0.55f;
     float azimuth = 0.0f;
     alignas(16) std::array<float, 64> spatcoeffs = {0.0f};
+    alignas(16) sst::filtersplusplus::Filter sstfilter;
     int numchs = 0;
     sst::basic_blocks::dsp::OnePoleLag<float, true> ingainlag;
     std::vector<float> delaybuffer;
@@ -57,6 +62,17 @@ class PitchShifter
         samplerate = hz;
         ingainlag.setRateInMilliseconds(50.0, hz, 1.0f);
         ingainlag.snapTo(0.0);
+
+        sstfilter.setFilterModel(sst::filtersplusplus::FilterModel::CytomicSVF);
+        sstfilter.setModelConfiguration(
+            sst::filtersplusplus::ModelConfig(sst::filtersplusplus::Passband::LP));
+        sstfilter.setSampleRateAndBlockSize(hz, BLOCKSIZE);
+        sstfilter.setMono();
+        // sstfilter.provideAllDelayLines(delaylinememory.data());
+        if (!sstfilter.prepareInstance())
+        {
+            assert(false);
+        }
         delaybuffer.resize(hz * 5.0);
         initTables();
     }
@@ -112,16 +128,24 @@ class PitchShifter
             float finalpitch = basepitch + lfoamount * lfo.outputBlock[0];
             stretch->setTransposeSemitones(finalpitch);
             stretch->process(processinbuffer, BLOCKSIZE, processoutbuffer, BLOCKSIZE);
+            sstfilter.makeCoefficients(0, basefiltercutoff, 0.0f);
+            sstfilter.prepareBlock();
             for (int i = 0; i < BLOCKSIZE; ++i)
             {
-                outfifo.push(processoutbuffer[0][i]);
+                float filtered = sstfilter.processMonoSample(processoutbuffer[0][i]);
+                push_to_delay(filtered);
+                float delayed = pop_from_delay();
+                
+                outfifo.push(delayed);
             }
+            sstfilter.concludeBlock();
         }
         float x = 0.0f;
         outfifo.pop(x);
-        push_to_delay(x);
-        x = pop_from_delay();
         feedbackaudio = std::tanh(x);
+        // push_to_delay(x);
+        // x = pop_from_delay();
+        // feedbackaudio = std::tanh(x);
         audio_inout[0] = x * spatcoeffs[0];
         audio_inout[1] = x * spatcoeffs[1];
     }
@@ -205,6 +229,8 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
         PAR_PITCH = 200,
         PAR_FORMANT = 300,
         PAR_DELAYTIME = 400,
+        PAR_FILTERCUTOFF = 500,
+        PAR_FILTERRESON = 600,
         PAR_LFOSHAPE = 10000,
         PAR_LFORATE = 10100,
         PAR_LFOAMOUNT = 10200,

@@ -35,8 +35,12 @@ class ShifterComponent : public juce::Component
               *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_DELAYTIME + shifter_index]),
           pitchKnob(XapSlider::SS_Knob,
                     *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_PITCH + shifter_index]),
-          formantKnob(XapSlider::SS_Knob,
-                      *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_FORMANT + shifter_index])
+          formantKnob(
+              XapSlider::SS_Knob,
+              *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_FORMANT + shifter_index]),
+          cutoffKnob(
+              XapSlider::SS_Knob,
+              *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_FILTERCUTOFF + shifter_index])
     {
         addAndMakeVisible(lab);
         lab.setText(juce::String(shifter_index + 1), juce::dontSendNotification);
@@ -45,17 +49,19 @@ class ShifterComponent : public juce::Component
         add_xapslider(p, *this, inputGainKnob);
         add_xapslider(p, *this, pitchKnob);
         add_xapslider(p, *this, formantKnob);
+        add_xapslider(p, *this, cutoffKnob);
     }
     void resized() override
     {
         juce::FlexBox flex;
         flex.flexDirection = juce::FlexBox::Direction::row;
-        flex.items.add(juce::FlexItem(lab).withFlex(0.1));
+        // flex.items.add(juce::FlexItem(lab).withFlex(0.1));
         flex.items.add(juce::FlexItem(enabledButton).withFlex(0.5).withMaxHeight(25));
         flex.items.add(juce::FlexItem(inputGainKnob).withFlex(1));
         flex.items.add(juce::FlexItem(delayKnob).withFlex(1));
         flex.items.add(juce::FlexItem(pitchKnob).withFlex(1));
         flex.items.add(juce::FlexItem(formantKnob).withFlex(1));
+        flex.items.add(juce::FlexItem(cutoffKnob).withFlex(1));
         for (auto &i : flex.items)
         {
             i = i.withMargin(2.0f);
@@ -68,6 +74,7 @@ class ShifterComponent : public juce::Component
     XapSlider pitchKnob;
     XapSlider formantKnob;
     XapSlider delayKnob;
+    XapSlider cutoffKnob;
     // XapSlider spatKnob;
 };
 
