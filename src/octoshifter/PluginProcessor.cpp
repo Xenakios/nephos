@@ -38,7 +38,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         param_metadatas.push_back(pmd()
                                       .withName(fmt::format("Pitch {}", i + 1))
                                       .withRange(-12.0f, 12.0f)
-                                      .withLinearScaleFormatting("SEMITONES")
+                                      .withLinearScaleFormatting("st")
                                       .withID(PAR_PITCH + i));
         param_metadatas.push_back(pmd()
                                       .withName(fmt::format("Formant {}", i + 1))

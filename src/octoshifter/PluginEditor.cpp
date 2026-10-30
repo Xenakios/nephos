@@ -29,9 +29,12 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
       lfoWarpKnob(XapSlider::SS_Knob,
                   *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_LFOWARP]),
       lfoAmountKnob(XapSlider::SS_Knob,
-                    *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_LFOAMOUNT])
+                    *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_LFOAMOUNT]),
+      pitchMulti(p, "PITCH", AudioPluginAudioProcessor::PAR_PITCH, 8),
+      inVolumeMulti(p, "INPUT VOLUME", AudioPluginAudioProcessor::PAR_INPUT_GAIN, 8)
 {
-    juce::ignoreUnused(processorRef);
+    addAndMakeVisible(pitchMulti);
+    addAndMakeVisible(inVolumeMulti);
     for (int i = 0; i < p.numshifters; ++i)
     {
         auto c = std::make_unique<ShifterComponent>(p, i);
@@ -48,7 +51,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
         paridtoslidermap[slid->getParameterMetaData().id] = slid;
     });
     startTimerHz(10);
-    setSize(600, 500);
+    setSize(800, 600);
 }
 
 AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor() {}
@@ -62,6 +65,11 @@ void AudioPluginAudioProcessorEditor::timerCallback()
         if (it != paridtoslidermap.end())
         {
             it->second->setValue(msg.val);
+        }
+        if (msg.id >= AudioPluginAudioProcessor::PAR_PITCH &&
+            msg.id < AudioPluginAudioProcessor::PAR_PITCH + 8)
+        {
+            pitchMulti.update();
         }
     }
 }
@@ -80,6 +88,8 @@ void AudioPluginAudioProcessorEditor::resized()
 {
     juce::FlexBox flex;
     flex.flexDirection = juce::FlexBox::Direction::column;
+    flex.items.add(juce::FlexItem(pitchMulti).withFlex(2.0).withMargin(3));
+    flex.items.add(juce::FlexItem(inVolumeMulti).withFlex(2.0).withMargin(3));
     for (int i = 0; i < shiftercomps.size(); ++i)
     {
         flex.items.add(juce::FlexItem(*shiftercomps[i]).withFlex(1.0));
