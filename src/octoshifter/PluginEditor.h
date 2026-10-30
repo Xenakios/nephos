@@ -29,6 +29,7 @@ class MultiSlider : public juce::Component
     uint32_t numparams = 0;
     float parminval = 0.0f;
     float parmaxval = 1.0f;
+    float pardefaultval = 0.0f;
     int draggedindex = -1;
     juce::String groupname;
     std::array<float, 256> values = {0.0f};
@@ -45,6 +46,7 @@ class MultiSlider : public juce::Component
                 ++numvalidated;
                 parminval = it->second->minVal;
                 parmaxval = it->second->maxVal;
+                pardefaultval = it->second->defaultVal;
                 values[i] = *pref.par_id_to_value_pointer[it->first];
             }
         }
@@ -66,19 +68,26 @@ class MultiSlider : public juce::Component
             if (partxt)
             {
                 g.setColour(juce::Colours::white);
-                g.drawText(*partxt, xcor, getHeight() - 20, barw, 20,
-                           juce::Justification::centred);
+                g.drawText(*partxt, xcor, getHeight() - 20, barw, 20, juce::Justification::centred);
             }
             float ycor = juce::jmap<float>(v, parminval, parmaxval, getHeight(), 0.0);
             g.setColour(juce::Colours::yellow);
             g.drawLine(xcor, ycor, xcor + barw - 1.0, ycor, 2.0);
         }
     }
+    void mouseDoubleClick(const juce::MouseEvent &ev) override
+    {
+        int shifterindex = (float)numparams / getWidth() * ev.x;
+        if (shifterindex >= 0 && shifterindex < numparams)
+        {
+            post_param_event(shifterindex, pardefaultval);
+            repaint();
+        }
+    }
     void mouseDown(const juce::MouseEvent &ev) override
     {
         draggedindex = -1;
         int shifterindex = (float)numparams / getWidth() * ev.x;
-        DBG(shifterindex);
         if (shifterindex >= 0 && shifterindex < numparams)
         {
             draggedindex = shifterindex;
@@ -196,6 +205,7 @@ class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor,
     XapSlider lfoAmountKnob;
     MultiSlider pitchMulti;
     MultiSlider inVolumeMulti;
+    MultiSlider cutoffMulti;
     std::unordered_map<uint32_t, XapSlider *> paridtoslidermap;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioPluginAudioProcessorEditor)
 };

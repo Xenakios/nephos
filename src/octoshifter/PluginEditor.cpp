@@ -31,10 +31,12 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
       lfoAmountKnob(XapSlider::SS_Knob,
                     *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_LFOAMOUNT]),
       pitchMulti(p, "PITCH", AudioPluginAudioProcessor::PAR_PITCH, 8),
-      inVolumeMulti(p, "INPUT VOLUME", AudioPluginAudioProcessor::PAR_INPUT_GAIN, 8)
+      inVolumeMulti(p, "INPUT VOLUME", AudioPluginAudioProcessor::PAR_INPUT_GAIN, 8),
+      cutoffMulti(p, "FILTER CUTOFF", AudioPluginAudioProcessor::PAR_FILTERCUTOFF, 8)
 {
     addAndMakeVisible(pitchMulti);
     addAndMakeVisible(inVolumeMulti);
+    addAndMakeVisible(cutoffMulti);
     for (int i = 0; i < p.numshifters; ++i)
     {
         auto c = std::make_unique<ShifterComponent>(p, i);
@@ -76,12 +78,7 @@ void AudioPluginAudioProcessorEditor::timerCallback()
 
 void AudioPluginAudioProcessorEditor::paint(juce::Graphics &g)
 {
-    // (Our component is opaque, so we must completely fill the background with a solid colour)
     g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
-    return;
-    g.setColour(juce::Colours::white);
-    g.setFont(15.0f);
-    g.drawFittedText("Hello World!", getLocalBounds(), juce::Justification::centred, 1);
 }
 
 void AudioPluginAudioProcessorEditor::resized()
@@ -90,6 +87,7 @@ void AudioPluginAudioProcessorEditor::resized()
     flex.flexDirection = juce::FlexBox::Direction::column;
     flex.items.add(juce::FlexItem(pitchMulti).withFlex(2.0).withMargin(3));
     flex.items.add(juce::FlexItem(inVolumeMulti).withFlex(2.0).withMargin(3));
+    flex.items.add(juce::FlexItem(cutoffMulti).withFlex(2.0).withMargin(3));
     for (int i = 0; i < shiftercomps.size(); ++i)
     {
         flex.items.add(juce::FlexItem(*shiftercomps[i]).withFlex(1.0));
