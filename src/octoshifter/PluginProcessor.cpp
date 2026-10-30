@@ -25,7 +25,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     {
 
         param_metadatas.push_back(pmd()
-                                      .withName(fmt::format("Enabled {}", i + 1))
+                                      .withName(fmt::format("{}", i + 1))
                                       .asOnOffBool()
                                       .withDefault(true)
                                       .withID(PAR_ENABLED + i));
@@ -223,7 +223,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     const double sininc = 2 * M_PI / getSampleRate() * 110.0;
     for (int i = 0; i < buffer.getNumSamples(); ++i)
     {
-        float s = 0.5 * std::tanh(std::sin(sinphase) * 2);
+        float s = 0.5 * std::tanh(std::sin(sinphase) * 5);
         writepointers[0][i] = s;
         writepointers[1][i] = s;
         sinphase += sininc;

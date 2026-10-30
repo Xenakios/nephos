@@ -275,6 +275,7 @@ void XapSlider::paint(juce::Graphics &g)
         g.drawText(m_err_msg, 0, 0, getWidth(), getHeight(), juce::Justification::centred);
         return;
     }
+    // on/off mode
     if (m_pardesc.displayScale == ParamDesc::UNORDERED_MAP && m_pardesc.discreteValues.size() == 2)
     {
         if (m_value >= 0.5)
@@ -286,7 +287,7 @@ void XapSlider::paint(juce::Graphics &g)
         g.drawRect(2, 0, getWidth() - 4, getHeight());
         g.setColour(juce::Colours::white);
         g.drawText(m_labeltxt, 5, 0, getWidth() - 10, getHeight(),
-                   juce::Justification::centredLeft);
+                   juce::Justification::centred);
         return;
     }
     double xforvalue = juce::jmap<double>(m_value, m_min_value, m_max_value, 2.0, getWidth() - 4.0);
@@ -323,7 +324,7 @@ void XapSlider::paint(juce::Graphics &g)
             else
                 g.setColour(juce::Colours::white);
             g.drawText(partext, midx + 2, 0, getWidth() - midx - 2, getHeight(),
-                       juce::Justification::centredLeft);
+                       juce::Justification::centred);
         }
     }
 }

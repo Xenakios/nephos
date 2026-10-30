@@ -61,8 +61,7 @@ class PitchShifter
         numchs = chans;
         samplerate = hz;
         ingainlag.setRateInMilliseconds(50.0, hz, 1.0f);
-        ingainlag.snapTo(0.0);
-
+        
         sstfilter.setFilterModel(sst::filtersplusplus::FilterModel::CytomicSVF);
         sstfilter.setModelConfiguration(
             sst::filtersplusplus::ModelConfig(sst::filtersplusplus::Passband::LP));
