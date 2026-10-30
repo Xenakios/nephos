@@ -30,7 +30,12 @@ class PitchShifter
     float lfoshift = 0.0f;
     float lfoamount = 0.0f;
     float ingain = 1.0f;
+    float delaytime = 0.25f;
+    float feedbackamt = 0.55f;
     sst::basic_blocks::dsp::OnePoleLag<float, true> ingainlag;
+    std::vector<float> delaybuffer;
+    alignas(16) int delaywritepos = 0;
+    alignas(16) float feedbackaudio = 0.0f;
     int lfoshape = 0;
     PitchShifter() : lfo(this)
     {
@@ -44,34 +49,31 @@ class PitchShifter
         samplerate = hz;
         ingainlag.setRateInMilliseconds(50.0, hz, 1.0f);
         ingainlag.snapTo(1.0);
+        delaybuffer.resize(hz * 5.0);
         initTables();
     }
-    void initTables()
+    void push_to_delay(float x)
     {
-        double dsamplerate_os = samplerate * 2;
-        for (int i = 0; i < 512; ++i)
-        {
-            double k =
-                dsamplerate_os * pow(2.0, (((double)i - 256.0) / 16.0)) / (double)BLOCK_SIZE_OS;
-            table_envrate_linear[i] = (float)(1.f / k);
-        }
+        delaybuffer[delaywritepos] = x;
+        ++delaywritepos;
+        if (delaywritepos == delaybuffer.size())
+            delaywritepos = 0;
     }
-    float envelope_rate_linear_nowrap(float x)
+    float pop_from_delay()
     {
-        x *= 16.f;
-        x += 256.f;
-        int e = std::clamp<int>((int)x, 0, 0x1ff - 1);
-
-        float a = x - (float)e;
-
-        return (1 - a) * table_envrate_linear[e & 0x1ff] +
-               a * table_envrate_linear[(e + 1) & 0x1ff];
+        int readpos = delaywritepos - delaytime * samplerate;
+        if (readpos < 0)
+            readpos += delaybuffer.size();
+        assert(readpos >= 0 && readpos < delaybuffer.size());
+        return delaybuffer[readpos];
     }
     float process_sample(float input)
     {
         if (!enabled)
             return 0.0f;
-        infifo.push(input * ingainlag.getValue());
+        float insample = input * ingainlag.getValue();
+        insample += feedbackaudio * feedbackamt;
+        infifo.push(insample);
         ingainlag.process();
         if (infifo.getUsedSlots() == BLOCKSIZE)
         {
@@ -95,10 +97,34 @@ class PitchShifter
         }
         float x = 0.0f;
         outfifo.pop(x);
+        push_to_delay(x);
+        x = pop_from_delay();
+        feedbackaudio = x;
         return x;
     }
     choc::fifo::SingleReaderSingleWriterFIFO<float> infifo;
     choc::fifo::SingleReaderSingleWriterFIFO<float> outfifo;
+    void initTables()
+    {
+        double dsamplerate_os = samplerate * 2;
+        for (int i = 0; i < 512; ++i)
+        {
+            double k =
+                dsamplerate_os * pow(2.0, (((double)i - 256.0) / 16.0)) / (double)BLOCK_SIZE_OS;
+            table_envrate_linear[i] = (float)(1.f / k);
+        }
+    }
+    float envelope_rate_linear_nowrap(float x)
+    {
+        x *= 16.f;
+        x += 256.f;
+        int e = std::clamp<int>((int)x, 0, 0x1ff - 1);
+
+        float a = x - (float)e;
+
+        return (1 - a) * table_envrate_linear[e & 0x1ff] +
+               a * table_envrate_linear[(e + 1) & 0x1ff];
+    }
 };
 
 using pmd = sst::basic_blocks::params::ParamMetaData;

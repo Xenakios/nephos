@@ -217,10 +217,6 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         set_parameter_value(msg.id, msg.val);
     }
     int shifterstouse = numshifters;
-#if JUCE_DEBUG
-    // we can barely manage 4 shifters in debug builds :-/
-    shifterstouse = 4;
-#endif
     for (int i = 0; i < buffer.getNumSamples(); ++i)
     {
         float insamples[2] = {writepointers[0][i], writepointers[1][i]};
