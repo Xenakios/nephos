@@ -58,7 +58,7 @@ class MultiSlider : public juce::Component
         g.setColour(juce::Colours::lightgrey);
         g.setFont(40.0);
         g.drawText(groupname, 0, 0, getWidth(), getHeight(), juce::Justification::centred);
-        g.setFont(15.0);
+        g.setFont(12.0);
         float barw = (float)getWidth() / numparams;
         for (int i = 0; i < numparams; ++i)
         {
@@ -206,6 +206,7 @@ class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor,
     MultiSlider pitchMulti;
     MultiSlider inVolumeMulti;
     MultiSlider cutoffMulti;
+    MultiSlider aziMulti;
     std::unordered_map<uint32_t, XapSlider *> paridtoslidermap;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioPluginAudioProcessorEditor)
 };

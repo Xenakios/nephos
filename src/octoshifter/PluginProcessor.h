@@ -230,6 +230,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
         PAR_DELAYTIME = 400,
         PAR_FILTERCUTOFF = 500,
         PAR_FILTERRESON = 600,
+        PAR_AZIMUTH = 700,
         PAR_LFOSHAPE = 10000,
         PAR_LFORATE = 10100,
         PAR_LFOAMOUNT = 10200,

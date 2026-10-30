@@ -32,11 +32,13 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
                     *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_LFOAMOUNT]),
       pitchMulti(p, "PITCH", AudioPluginAudioProcessor::PAR_PITCH, 8),
       inVolumeMulti(p, "INPUT VOLUME", AudioPluginAudioProcessor::PAR_INPUT_GAIN, 8),
-      cutoffMulti(p, "FILTER CUTOFF", AudioPluginAudioProcessor::PAR_FILTERCUTOFF, 8)
+      cutoffMulti(p, "FILTER CUTOFF", AudioPluginAudioProcessor::PAR_FILTERCUTOFF, 8),
+      aziMulti(p, "AZIMUTH", AudioPluginAudioProcessor::PAR_AZIMUTH, 8)
 {
     addAndMakeVisible(pitchMulti);
     addAndMakeVisible(inVolumeMulti);
     addAndMakeVisible(cutoffMulti);
+    addAndMakeVisible(aziMulti);
     for (int i = 0; i < p.numshifters; ++i)
     {
         auto c = std::make_unique<ShifterComponent>(p, i);
@@ -53,7 +55,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
         paridtoslidermap[slid->getParameterMetaData().id] = slid;
     });
     startTimerHz(10);
-    setSize(800, 600);
+    setSize(1100, 700);
 }
 
 AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor() {}
@@ -85,9 +87,18 @@ void AudioPluginAudioProcessorEditor::resized()
 {
     juce::FlexBox flex;
     flex.flexDirection = juce::FlexBox::Direction::column;
-    flex.items.add(juce::FlexItem(pitchMulti).withFlex(2.0).withMargin(3));
-    flex.items.add(juce::FlexItem(inVolumeMulti).withFlex(2.0).withMargin(3));
-    flex.items.add(juce::FlexItem(cutoffMulti).withFlex(2.0).withMargin(3));
+    juce::FlexBox multiflex;
+    multiflex.flexDirection = juce::FlexBox::Direction::row;
+    multiflex.flexWrap = juce::FlexBox::Wrap::wrap;
+    multiflex.items.add(juce::FlexItem(pitchMulti).withFlex(1.0).withMargin(3));
+    multiflex.items.add(juce::FlexItem(inVolumeMulti).withFlex(1.0).withMargin(3));
+    multiflex.items.add(juce::FlexItem(cutoffMulti).withFlex(1.0).withMargin(3));
+    multiflex.items.add(juce::FlexItem(aziMulti).withFlex(1.0).withMargin(3));
+    for (auto &e : multiflex.items)
+    {
+        e = e.withMinWidth(500);
+    }
+    flex.items.add(juce::FlexItem(multiflex).withFlex(4));
     for (int i = 0; i < shiftercomps.size(); ++i)
     {
         flex.items.add(juce::FlexItem(*shiftercomps[i]).withFlex(1.0));

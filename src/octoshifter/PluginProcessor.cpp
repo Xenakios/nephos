@@ -53,10 +53,14 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                                       .withID(PAR_DELAYTIME + i));
         param_metadatas.push_back(pmd()
                                       .withName(fmt::format("Filter Cutoff {}", i + 1))
-                                      .withRange(-36.0f, 48.0f)
-                                      .withDefault(48.0)
-                                      .withLinearScaleFormatting("")
+                                      .asAudibleFrequency()
                                       .withID(PAR_FILTERCUTOFF + i));
+        param_metadatas.push_back(pmd()
+                                      .withName(fmt::format("Azimuth {}", i + 1))
+                                      .withRange(-1.0f, 1.0f)
+                                      .withDefault(0.0)
+                                      .withLinearScaleFormatting("%", 100.0)
+                                      .withID(PAR_AZIMUTH + i));
     }
     param_metadatas.push_back(pmd()
                                   .withName("LFO RATE")
@@ -338,6 +342,10 @@ void AudioPluginAudioProcessor::set_parameter_value(uint32_t id, float value)
     if (id >= PAR_INPUT_GAIN && id < PAR_INPUT_GAIN + numshifters)
     {
         shifters[id - PAR_INPUT_GAIN].ingainlag.setTarget(juce::Decibels::decibelsToGain(value));
+    }
+    if (id >= PAR_AZIMUTH && id < PAR_AZIMUTH + numshifters)
+    {
+        shifters[id - PAR_AZIMUTH].set_spatial_parameters(value, 0.0);
     }
     if (id >= PAR_DELAYTIME && id < PAR_DELAYTIME + numshifters)
     {
