@@ -28,11 +28,10 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
                    *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_LFOSHIFT]),
       lfoWarpKnob(XapSlider::SS_Knob,
                   *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_LFOWARP]),
-      lfoAmountKnob(XapSlider::SS_Knob,
-                    *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_PITCHLFO0AMOUNT]),
       enableMulti(p, "ENABLED", AudioPluginAudioProcessor::PAR_ENABLED, 8),
       pitchMulti(p, "PITCH", MyProcessor::PAR_PITCH, 8, MyProcessor::PAR_PITCHLFO0AMOUNT),
-      formantMulti(p, "FORMANT", AudioPluginAudioProcessor::PAR_FORMANT, 8),
+      formantMulti(p, "FORMANT", AudioPluginAudioProcessor::PAR_FORMANT, 8,
+                   MyProcessor::PAR_FORMANT_LFO0AMOUNT),
       delayTimeMulti(p, "DELAY TIME", AudioPluginAudioProcessor::PAR_DELAYTIME, 8),
       delayFeedbackMulti(p, "DELAY FEEDBACK", AudioPluginAudioProcessor::PAR_DELAYFEEDBACK, 8),
       inVolumeMulti(p, "INPUT VOLUME", AudioPluginAudioProcessor::PAR_INPUT_GAIN, 8),
@@ -59,7 +58,6 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
     }
     add_xapslider(p, *this, lfoShapeKnob);
     add_xapslider(p, *this, lfoRateKnob);
-    add_xapslider(p, *this, lfoAmountKnob);
     add_xapslider(p, *this, lfoDeformKnob);
     add_xapslider(p, *this, lfoShiftKnob);
     add_xapslider(p, *this, lfoWarpKnob);
@@ -128,7 +126,7 @@ void AudioPluginAudioProcessorEditor::resized()
     lfoflex.items.add(juce::FlexItem(lfoDeformKnob).withFlex(1));
     lfoflex.items.add(juce::FlexItem(lfoShiftKnob).withFlex(1));
     lfoflex.items.add(juce::FlexItem(lfoWarpKnob).withFlex(1));
-    lfoflex.items.add(juce::FlexItem(lfoAmountKnob).withFlex(1));
+
     for (auto &e : lfoflex.items)
     {
         e = e.withMargin(2.0);

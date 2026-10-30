@@ -112,10 +112,13 @@ class MultiSlider : public juce::Component
     }
     void mouseDoubleClick(const juce::MouseEvent &ev) override
     {
-        int shifterindex = (float)numparams / getWidth() * ev.x;
-        if (shifterindex >= 0 && shifterindex < numparams)
+        int shifterindex = (float)num_all_params() / getWidth() * ev.x;
+        if (shifterindex >= 0 && shifterindex < num_all_params())
         {
-            post_param_event(shifterindex, pardefaultval);
+            if (shifterindex < numparams)
+                post_param_event(shifterindex, pardefaultval);
+            else
+                post_param_event(shifterindex, 0.0);
             repaint();
         }
     }
@@ -259,7 +262,7 @@ class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor,
     XapSlider lfoDeformKnob;
     XapSlider lfoShiftKnob;
     XapSlider lfoWarpKnob;
-    XapSlider lfoAmountKnob;
+
     MultiSlider enableMulti;
     MultiSlider pitchMulti;
     MultiSlider formantMulti;

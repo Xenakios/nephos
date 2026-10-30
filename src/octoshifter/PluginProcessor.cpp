@@ -91,6 +91,11 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                                   .withName("LFO AMOUNT")
                                   .withRange(-1.0f, 1.0f)
                                   .withLinearScaleFormatting("%", 100.0)
+                                  .withID(PAR_FORMANT_LFO0AMOUNT));
+    param_metadatas.push_back(pmd()
+                                  .withName("LFO AMOUNT")
+                                  .withRange(-1.0f, 1.0f)
+                                  .withLinearScaleFormatting("%", 100.0)
                                   .withID(PAR_AZIMUTHLFO0AMOUNT));
     param_metadatas.push_back(pmd()
                                   .withName("LFO AMOUNT")
@@ -253,8 +258,8 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     // sound input otherwise...
     if (wrapperType == wrapperType_Standalone)
     {
-        const double oscinc0 = 2 * M_PI / getSampleRate() * 110.0;
-        const double oscinc1 = 2 * M_PI / getSampleRate() * 110.0 * 1.5;
+        const double oscinc0 = 2 * M_PI / getSampleRate() * 256.0;
+        const double oscinc1 = 2 * M_PI / getSampleRate() * 256.0 * 1.5;
         for (int i = 0; i < buffer.getNumSamples(); ++i)
         {
             float s = 0.5 * std::tanh(std::sin(osc0phase) * 2.0);
@@ -345,7 +350,11 @@ void AudioPluginAudioProcessor::set_parameter_value(uint32_t id, float value)
         }
         if (id == PAR_PITCHLFO0AMOUNT)
         {
-            shifters[i].lfoamount = value * 12.0f;
+            shifters[i].lfoamount = value;
+        }
+        if (id == PAR_FORMANT_LFO0AMOUNT)
+        {
+            shifters[i].formantmodamount = value;
         }
         if (id == PAR_AZIMUTHLFO0AMOUNT)
         {

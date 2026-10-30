@@ -102,6 +102,7 @@ class PitchShifter
     bool enabled = true;
     float basepitch = 0.0f;
     float baseformant = 0.0f;
+    float formantmodamount = 0.0f;
     float basefiltercutoff = 36.0f;
     float filtercutoff_lfo_amount = 0.0;
     float filter_reson = 0.0f;
@@ -126,7 +127,7 @@ class PitchShifter
     PitchShifter() : lfo(this)
     {
         stretch = std::make_unique<signalsmith::stretch::SignalsmithStretch<>>();
-        
+
         ingainlag.setRateInMilliseconds(50.0, 44100.0, 1.0f);
         ingainlag.snapTo(0.0);
     }
@@ -142,7 +143,7 @@ class PitchShifter
             sst::filtersplusplus::ModelConfig(sst::filtersplusplus::Passband::LP));
         sstfilter.setSampleRateAndBlockSize(hz, BLOCKSIZE);
         sstfilter.setMono();
-        // without the delay lines Comb filter modes will explode, 
+        // without the delay lines Comb filter modes will explode,
         // so don't allow the user to choose those yet...
         // sstfilter.provideAllDelayLines(delaylinememory.data());
         if (!sstfilter.prepareInstance())
@@ -202,9 +203,12 @@ class PitchShifter
             }
             lfo.applyPhaseOffset(lfoshift);
             lfo.process_block(lforate, lfodeform, lfoshape, false, 1.0, lfowarp);
-            float finalpitch = basepitch + lfoamount * lfo.outputBlock[0];
+            // we might want to clamp the applied pitch and formant,
+            // but at the moment the maximums would be at -24 to 24 semitones...
+            float finalpitch = basepitch + lfoamount * lfo.outputBlock[0] * 12.0;
             stretch->setTransposeSemitones(finalpitch);
-            stretch->setFormantSemitones(baseformant);
+            float modulatedformant = baseformant + formantmodamount * lfo.outputBlock[0] * 12.0;
+            stretch->setFormantSemitones(modulatedformant);
             stretch->process(processinbuffer, BLOCKSIZE, processoutbuffer, BLOCKSIZE);
             float modulatedcutoff =
                 basefiltercutoff + lfo.outputBlock[0] * filtercutoff_lfo_amount * 24.0;
@@ -233,7 +237,7 @@ class PitchShifter
     }
     SingleThreadedFifo<float> infifo{BLOCKSIZE};
     SingleThreadedFifo<float> outfifo{BLOCKSIZE};
-    
+
     void initTables()
     {
         double dsamplerate_os = samplerate * 2;
@@ -321,6 +325,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
         PAR_PITCHLFO0AMOUNT = 10200,
         PAR_AZIMUTHLFO0AMOUNT = 10201,
         PAR_CUTOFF0LFO0AMOUNT = 10202,
+        PAR_FORMANT_LFO0AMOUNT = 10203,
         PAR_LFODEFORM = 10300,
         PAR_LFOSHIFT = 10400,
         PAR_LFOWARP = 10500
