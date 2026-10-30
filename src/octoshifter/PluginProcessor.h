@@ -74,8 +74,6 @@ class PitchShifter
     }
     float process_sample(float input)
     {
-        if (!enabled)
-            return 0.0f;
         float insample = input * ingainlag.getValue();
         insample += feedbackaudio * feedbackamt;
         infifo.push(insample);

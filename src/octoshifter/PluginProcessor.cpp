@@ -224,16 +224,22 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         set_parameter_value(msg.id, msg.val);
     }
     int shifterstouse = numshifters;
+    auto sumpointers = workbuffer.getArrayOfWritePointers();
+    workbuffer.clear();
+    for (int j = 0; j < shifterstouse; ++j)
+    {
+        if (!shifters[j].enabled)
+            continue;
+        for (int i = 0; i < buffer.getNumSamples(); ++i)
+        {
+            float insamples[2] = {writepointers[0][i], writepointers[1][i]};
+            sumpointers[j % 2][i] += shifters[j].process_sample(insamples[j % 2]);
+        }
+    }
     for (int i = 0; i < buffer.getNumSamples(); ++i)
     {
-        float insamples[2] = {writepointers[0][i], writepointers[1][i]};
-        float outsamples[2] = {0.0f, 0.0f};
-        for (int j = 0; j < shifterstouse; ++j)
-        {
-            outsamples[j % 2] += shifters[j].process_sample(insamples[j % 2]);
-        }
-        writepointers[0][i] = outsamples[0] * 0.5;
-        writepointers[1][i] = outsamples[1] * 0.5;
+        writepointers[0][i] = std::clamp(sumpointers[0][i] * 0.5f, -1.0f, 1.0f);
+        writepointers[1][i] = std::clamp(sumpointers[1][i] * 0.5f, -1.0f, 1.0f);
     }
 }
 
