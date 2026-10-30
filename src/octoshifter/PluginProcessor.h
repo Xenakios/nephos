@@ -256,6 +256,11 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     void set_state(choc::value::ValueView view);
     void set_parameter_value(uint32_t id, float value);
     void send_param_updates_to_gui();
+    // since we are not crazy enough to allow separate modulation amounts for each parameter
+    // of each shifter, we have these patterns that can still produce different modulation
+    // amounts per shifter
+    const float modulation_patterns[2][8] = {{1, 1, 1, 1, 1, 1, 1, 1},
+                                                 {1, -1, 1, -1, 1, -1, 1, -1}};
 
   private:
     double sinphase = 0.0;

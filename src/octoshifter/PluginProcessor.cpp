@@ -341,7 +341,7 @@ void AudioPluginAudioProcessor::set_parameter_value(uint32_t id, float value)
         }
         if (id == PAR_AZIMUTHLFO0AMOUNT)
         {
-            shifters[i].azimuth_lfo_amount = value;
+            shifters[i].azimuth_lfo_amount = value * modulation_patterns[1][i];
         }
         if (id == PAR_LFODEFORM)
         {
@@ -383,7 +383,7 @@ void AudioPluginAudioProcessor::set_parameter_value(uint32_t id, float value)
     }
     if (id >= PAR_AZIMUTH && id < PAR_AZIMUTH + numshifters)
     {
-        shifters[id - PAR_AZIMUTH].set_spatial_parameters(value, 0.0);
+        shifters[id - PAR_AZIMUTH].baseazimuth = value;
     }
     if (id >= PAR_DELAYFEEDBACK && id < PAR_DELAYFEEDBACK + numshifters)
     {
