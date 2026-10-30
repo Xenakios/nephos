@@ -24,6 +24,9 @@ class ShifterComponent : public juce::Component
     AudioPluginAudioProcessor &procRef;
     ShifterComponent(AudioPluginAudioProcessor &p, int shifter_index)
         : procRef(p),
+          enabledButton(
+              XapSlider::SS_HorizontalSlider,
+              *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_ENABLED + shifter_index]),
           inputGainKnob(
               XapSlider::SS_Knob,
               *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_INPUT_GAIN + shifter_index]),
@@ -34,6 +37,7 @@ class ShifterComponent : public juce::Component
     {
         addAndMakeVisible(lab);
         lab.setText(juce::String(shifter_index + 1), juce::dontSendNotification);
+        add_xapslider(p, *this, enabledButton);
         add_xapslider(p, *this, inputGainKnob);
         add_xapslider(p, *this, pitchKnob);
         add_xapslider(p, *this, formantKnob);
@@ -43,6 +47,7 @@ class ShifterComponent : public juce::Component
         juce::FlexBox flex;
         flex.flexDirection = juce::FlexBox::Direction::row;
         flex.items.add(juce::FlexItem(lab).withFlex(0.1));
+        flex.items.add(juce::FlexItem(enabledButton).withFlex(0.5).withMaxHeight(25));
         flex.items.add(juce::FlexItem(inputGainKnob).withFlex(1));
         flex.items.add(juce::FlexItem(pitchKnob).withFlex(1));
         flex.items.add(juce::FlexItem(formantKnob).withFlex(1));
@@ -53,6 +58,7 @@ class ShifterComponent : public juce::Component
         flex.performLayout(getLocalBounds());
     }
     juce::Label lab;
+    XapSlider enabledButton;
     XapSlider inputGainKnob;
     XapSlider pitchKnob;
     XapSlider formantKnob;

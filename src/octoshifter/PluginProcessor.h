@@ -22,6 +22,7 @@ class PitchShifter
     alignas(32) float table_envrate_linear[512];
     using lfo_t = sst::basic_blocks::modulators::SimpleLFO<PitchShifter, BLOCKSIZE>;
     lfo_t lfo;
+    bool enabled = true;
     float basepitch = 0.0f;
     float lforate = 0.0f;
     float lfodeform = 0.0f;
@@ -68,6 +69,8 @@ class PitchShifter
     }
     float process_sample(float input)
     {
+        if (!enabled)
+            return 0.0f;
         infifo.push(input * ingainlag.getValue());
         ingainlag.process();
         if (infifo.getUsedSlots() == BLOCKSIZE)
@@ -148,6 +151,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     std::array<PitchShifter, numshifters> shifters;
     enum PARAMS
     {
+        PAR_ENABLED = 50,
         PAR_INPUT_GAIN = 100,
         PAR_PITCH = 200,
         PAR_FORMANT = 300,
@@ -167,6 +171,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     void set_state(choc::value::ValueView view);
     void set_parameter_value(uint32_t id, float value);
     void send_param_updates_to_gui();
+
   private:
     double sinphase = 0.0;
     juce::AudioBuffer<float> workbuffer;

@@ -24,6 +24,11 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     for (int i = 0; i < numshifters; ++i)
     {
         param_metadatas.push_back(pmd()
+                                      .withName(fmt::format("Enabled {}", i + 1))
+                                      .asOnOffBool()
+                                      .withDefault(true)
+                                      .withID(PAR_ENABLED + i));
+        param_metadatas.push_back(pmd()
                                       .withName(fmt::format("Input Volume {}", i + 1))
                                       .withRange(-48.0f, 0.0f)
                                       .withDefault(-6.0)
@@ -200,7 +205,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     auto writepointers = buffer.getArrayOfWritePointers();
     for (int i = 0; i < buffer.getNumSamples(); ++i)
     {
-        float s = 0.5 * std::sin(sinphase);
+        float s = 0.5 * std::tanh(std::sin(sinphase));
         writepointers[0][i] = s;
         writepointers[1][i] = s;
         sinphase += 2 * M_PI / getSampleRate() * 440.0;
@@ -258,7 +263,7 @@ void AudioPluginAudioProcessor::getStateInformation(juce::MemoryBlock &destData)
 
 void AudioPluginAudioProcessor::send_param_updates_to_gui()
 {
-    for(auto& e : par_id_to_value_pointer)
+    for (auto &e : par_id_to_value_pointer)
     {
         ParamChangeMessage msg;
         msg.id = e.first;
@@ -270,47 +275,32 @@ void AudioPluginAudioProcessor::send_param_updates_to_gui()
 void AudioPluginAudioProcessor::set_parameter_value(uint32_t id, float value)
 {
     *par_id_to_value_pointer[id] = value;
-    if (id == PAR_LFOSHAPE)
+    for (int i = 0; i < numshifters; ++i)
     {
-        int shape = choicetolfoshapemap[(int)value];
-        for (int i = 0; i < numshifters; ++i)
+        if (id == PAR_LFOSHAPE)
         {
+            int shape = choicetolfoshapemap[(int)value];
             shifters[i].lfoshape = shape;
         }
-    }
-    if (id == PAR_LFOAMOUNT)
-    {
-        for (int i = 0; i < numshifters; ++i)
+        if (id == PAR_LFOAMOUNT)
         {
             shifters[i].lfoamount = value * 12.0f;
         }
-    }
-    if (id == PAR_LFODEFORM)
-    {
-        for (int i = 0; i < numshifters; ++i)
+        if (id == PAR_LFODEFORM)
         {
+
             shifters[i].lfodeform = value;
         }
-    }
-    if (id == PAR_LFOWARP)
-    {
-        for (int i = 0; i < numshifters; ++i)
+        if (id == PAR_LFOWARP)
         {
             shifters[i].lfowarp = value;
         }
-    }
-    if (id == PAR_LFOSHIFT)
-    {
-        for (int i = 0; i < numshifters; ++i)
+        if (id == PAR_LFOSHIFT)
         {
             float shift = 0.5 / (numshifters - 1) * i;
             shifters[i].lfoshift = value * shift;
         }
-    }
-
-    if (id == PAR_LFORATE)
-    {
-        for (int i = 0; i < numshifters; ++i)
+        if (id == PAR_LFORATE)
         {
             shifters[i].lforate = value;
         }
@@ -322,6 +312,10 @@ void AudioPluginAudioProcessor::set_parameter_value(uint32_t id, float value)
     if (id >= PAR_INPUT_GAIN && id < PAR_INPUT_GAIN + numshifters)
     {
         shifters[id - PAR_INPUT_GAIN].ingainlag.setTarget(juce::Decibels::decibelsToGain(value));
+    }
+    if (id >= PAR_ENABLED && id < PAR_ENABLED + numshifters)
+    {
+        shifters[id - PAR_ENABLED].enabled = value >= 0.5;
     }
 }
 
