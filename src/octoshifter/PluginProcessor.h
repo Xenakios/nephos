@@ -11,6 +11,7 @@
 #include "sst/basic-blocks/dsp/EllipticBlepOscillators.h"
 #include "containers/choc_SingleReaderSingleWriterFIFO.h"
 #include "sst/basic-blocks/params/ParamMetadata.h"
+#include "sst/basic-blocks/dsp/PanLaws.h"
 #include "sst/filters++.h"
 #include <span>
 #include "../../Common/xap_utils.h"
@@ -43,7 +44,7 @@ class PitchShifter
     float azimuth = 0.0f;
     alignas(16) std::array<float, 64> spatcoeffs = {0.0f};
     alignas(16) sst::filtersplusplus::Filter sstfilter;
-    int numchs = 0;
+    int numchs = 2;
     sst::basic_blocks::dsp::OnePoleLag<float, true> ingainlag;
     std::vector<float> delaybuffer;
     alignas(16) int delaywritepos = 0;
@@ -76,16 +77,17 @@ class PitchShifter
         }
         delaybuffer.resize(hz * 5.0);
         initTables();
-        set_spatial_parameters(0.0, 0.0);
+        
     }
     void set_spatial_parameters(float azimuth, float elevation)
     {
-        std::fill(spatcoeffs.begin(), spatcoeffs.end(), 0.0f);
         if (numchs == 2)
         {
             float panpos = xenakios::mapvalue(azimuth, -1.0f, 1.0f, 0.0f, 1.0f);
-            spatcoeffs[0] = 1.0f - panpos;
-            spatcoeffs[1] = panpos;
+            sst::basic_blocks::dsp::pan_laws::panmatrix_t mat;
+            sst::basic_blocks::dsp::pan_laws::monoEqualPower(panpos, mat);
+            spatcoeffs[0] = mat[0];
+            spatcoeffs[1] = mat[3];
         }
     }
     void push_to_delay(float x)

@@ -57,7 +57,11 @@ class MultiSlider : public juce::Component
         g.fillAll(juce::Colours::black);
         g.setColour(juce::Colours::lightgrey);
         g.setFont(40.0);
-        g.drawText(groupname, 0, 0, getWidth(), getHeight(), juce::Justification::centred);
+        auto polar = pref.par_id_to_metadata[firstpar]->getPolarity();
+        juce::String txt = groupname;
+        // if (polar == pmd::Polarity::BIPOLAR)
+        //     txt += " (BIPOLAR)";
+        g.drawText(txt, 0, 0, getWidth(), getHeight(), juce::Justification::centred);
         g.setFont(12.0);
         float barw = (float)getWidth() / numparams;
         for (int i = 0; i < numparams; ++i)
@@ -99,6 +103,7 @@ class MultiSlider : public juce::Component
     {
         float v = juce::jmap<float>(y, 0.0, getHeight(), parmaxval, parminval);
         v = std::clamp(v, parminval, parmaxval);
+        v = pref.par_id_to_metadata[firstpar]->quantize(v);
         return v;
     }
     // our own index, not the clap id!
@@ -112,9 +117,10 @@ class MultiSlider : public juce::Component
     }
     void mouseDrag(const juce::MouseEvent &ev) override
     {
-        if (draggedindex >= 0 && draggedindex < numparams)
+        int shifterindex = (float)numparams / getWidth() * ev.x;
+        if (shifterindex >= 0 && shifterindex < numparams)
         {
-            post_param_event(draggedindex, parval_from_mouse_y(ev.y));
+            post_param_event(shifterindex, parval_from_mouse_y(ev.y));
             repaint();
         }
     }

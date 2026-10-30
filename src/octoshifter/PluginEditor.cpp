@@ -38,7 +38,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
       inVolumeMulti(p, "INPUT VOLUME", AudioPluginAudioProcessor::PAR_INPUT_GAIN, 8),
       cutoffMulti(p, "FILTER CUTOFF", AudioPluginAudioProcessor::PAR_FILTERCUTOFF, 8),
       resonMulti(p, "FILTER RESONANCE", AudioPluginAudioProcessor::PAR_FILTERRESON, 8),
-      aziMulti(p, "AZIMUTH", AudioPluginAudioProcessor::PAR_AZIMUTH, 8)
+      aziMulti(p, "AZIMUTH/PAN", AudioPluginAudioProcessor::PAR_AZIMUTH, 8)
 {
     addAndMakeVisible(enableMulti);
     addAndMakeVisible(pitchMulti);
@@ -109,6 +109,7 @@ void AudioPluginAudioProcessorEditor::resized()
     multiflex.items.add(juce::FlexItem(cutoffMulti).withFlex(1.0).withMargin(3));
     multiflex.items.add(juce::FlexItem(resonMulti).withFlex(1.0).withMargin(3));
     multiflex.items.add(juce::FlexItem(aziMulti).withFlex(1.0).withMargin(3));
+    multiflex.items.add(juce::FlexItem().withFlex(1.0).withMargin(3));
     for (auto &e : multiflex.items)
     {
         e = e.withMinWidth(500);

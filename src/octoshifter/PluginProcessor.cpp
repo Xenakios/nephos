@@ -38,6 +38,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         param_metadatas.push_back(pmd()
                                       .withName(fmt::format("Pitch {}", i + 1))
                                       .withRange(-12.0f, 12.0f)
+                                      .withQuantizedInterval(0.5)
                                       .withLinearScaleFormatting("st")
                                       .withID(PAR_PITCH + i));
         param_metadatas.push_back(pmd()
@@ -184,6 +185,7 @@ void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerB
     {
         shifters[i].stretch->presetDefault(1, sampleRate);
         shifters[i].set_sample_rate(sampleRate, 2);
+        shifters[i].set_spatial_parameters(*par_id_to_value_pointer[i + PAR_AZIMUTH], 0.0);
     }
 
     workbuffer.setSize(getTotalNumOutputChannels(), samplesPerBlock);
