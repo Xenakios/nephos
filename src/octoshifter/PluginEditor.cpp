@@ -14,31 +14,31 @@ inline void visitAll(juce::Component &c, std::function<void(CompType *)> fn)
         visitAll(*child, fn);
     }
 }
-using MyProcessor = AudioPluginAudioProcessor;
+using MyProcessor = OctoShifterProcessor;
 //==============================================================================
-AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudioProcessor &p)
+OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
     : AudioProcessorEditor(&p), processorRef(p),
       lfoShapeKnob(XapSlider::SS_HorizontalSlider,
-                   *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_LFOSHAPE]),
+                   *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFOSHAPE]),
       lfoRateKnob(XapSlider::SS_Knob,
-                  *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_LFORATE]),
+                  *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFORATE]),
       lfoDeformKnob(XapSlider::SS_Knob,
-                    *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_LFODEFORM]),
+                    *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFODEFORM]),
       lfoShiftKnob(XapSlider::SS_Knob,
-                   *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_LFOSHIFT]),
+                   *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFOSHIFT]),
       lfoWarpKnob(XapSlider::SS_Knob,
-                  *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_LFOWARP]),
-      enableMulti(p, "ENABLED", AudioPluginAudioProcessor::PAR_ENABLED, 8),
+                  *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFOWARP]),
+      enableMulti(p, "ENABLED", OctoShifterProcessor::PAR_ENABLED, 8),
       pitchMulti(p, "PITCH", MyProcessor::PAR_PITCH, 8, MyProcessor::PAR_PITCHLFO0AMOUNT),
-      formantMulti(p, "FORMANT", AudioPluginAudioProcessor::PAR_FORMANT, 8,
+      formantMulti(p, "FORMANT", OctoShifterProcessor::PAR_FORMANT, 8,
                    MyProcessor::PAR_FORMANT_LFO0AMOUNT),
-      delayTimeMulti(p, "DELAY TIME", AudioPluginAudioProcessor::PAR_DELAYTIME, 8),
-      delayFeedbackMulti(p, "DELAY FEEDBACK", AudioPluginAudioProcessor::PAR_DELAYFEEDBACK, 8),
-      inVolumeMulti(p, "INPUT VOLUME", AudioPluginAudioProcessor::PAR_INPUT_GAIN, 8),
-      cutoffMulti(p, "FILTER CUTOFF", AudioPluginAudioProcessor::PAR_FILTERCUTOFF, 8,
+      delayTimeMulti(p, "DELAY TIME", OctoShifterProcessor::PAR_DELAYTIME, 8),
+      delayFeedbackMulti(p, "DELAY FEEDBACK", OctoShifterProcessor::PAR_DELAYFEEDBACK, 8),
+      inVolumeMulti(p, "INPUT VOLUME", OctoShifterProcessor::PAR_INPUT_GAIN, 8),
+      cutoffMulti(p, "FILTER CUTOFF", OctoShifterProcessor::PAR_FILTERCUTOFF, 8,
                   MyProcessor::PAR_CUTOFF0LFO0AMOUNT),
-      resonMulti(p, "FILTER RESONANCE", AudioPluginAudioProcessor::PAR_FILTERRESON, 8),
-      aziMulti(p, "AZIMUTH/PAN", AudioPluginAudioProcessor::PAR_AZIMUTH, 8,
+      resonMulti(p, "FILTER RESONANCE", OctoShifterProcessor::PAR_FILTERRESON, 8),
+      aziMulti(p, "AZIMUTH/PAN", OctoShifterProcessor::PAR_AZIMUTH, 8,
                MyProcessor::PAR_AZIMUTHLFO0AMOUNT)
 {
     addAndMakeVisible(enableMulti);
@@ -68,9 +68,9 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
     setSize(1100, 700);
 }
 
-AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor() {}
+OctoShifterProcessorEditor::~OctoShifterProcessorEditor() {}
 
-void AudioPluginAudioProcessorEditor::timerCallback()
+void OctoShifterProcessorEditor::timerCallback()
 {
     ParamChangeMessage msg;
     while (processorRef.params_to_gui_fifo.pop(msg))
@@ -80,20 +80,20 @@ void AudioPluginAudioProcessorEditor::timerCallback()
         {
             it->second->setValue(msg.val);
         }
-        if (msg.id >= AudioPluginAudioProcessor::PAR_PITCH &&
-            msg.id < AudioPluginAudioProcessor::PAR_PITCH + 8)
+        if (msg.id >= OctoShifterProcessor::PAR_PITCH &&
+            msg.id < OctoShifterProcessor::PAR_PITCH + 8)
         {
             pitchMulti.update();
         }
     }
 }
 
-void AudioPluginAudioProcessorEditor::paint(juce::Graphics &g)
+void OctoShifterProcessorEditor::paint(juce::Graphics &g)
 {
     g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
 }
 
-void AudioPluginAudioProcessorEditor::resized()
+void OctoShifterProcessorEditor::resized()
 {
     juce::FlexBox flex;
     flex.flexDirection = juce::FlexBox::Direction::column;

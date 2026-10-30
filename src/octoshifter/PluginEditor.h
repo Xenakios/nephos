@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <unordered_map>
 
-inline void add_xapslider(AudioPluginAudioProcessor &proc, juce::Component &parentcomp,
+inline void add_xapslider(OctoShifterProcessor &proc, juce::Component &parentcomp,
                           XapSlider &slid)
 {
     parentcomp.addAndMakeVisible(slid);
@@ -24,7 +24,7 @@ inline void add_xapslider(AudioPluginAudioProcessor &proc, juce::Component &pare
 class MultiSlider : public juce::Component
 {
   public:
-    AudioPluginAudioProcessor &pref;
+    OctoShifterProcessor &pref;
     uint32_t firstpar = CLAP_INVALID_ID;
     uint32_t numparams = 0;
     uint32_t lfo0_amt_par = CLAP_INVALID_ID;
@@ -34,7 +34,7 @@ class MultiSlider : public juce::Component
     int draggedindex = -1;
     juce::String groupname;
     std::array<float, 256> values = {0.0f};
-    MultiSlider(AudioPluginAudioProcessor &p, juce::String name, uint32_t parstartid,
+    MultiSlider(OctoShifterProcessor &p, juce::String name, uint32_t parstartid,
                 uint32_t numpars, uint32_t lfo0par = CLAP_INVALID_ID)
         : pref(p), firstpar(parstartid), numparams(numpars), lfo0_amt_par(lfo0par), groupname(name)
     {
@@ -184,26 +184,26 @@ class MultiSlider : public juce::Component
 class ShifterComponent : public juce::Component
 {
   public:
-    AudioPluginAudioProcessor &procRef;
-    ShifterComponent(AudioPluginAudioProcessor &p, int shifter_index)
+    OctoShifterProcessor &procRef;
+    ShifterComponent(OctoShifterProcessor &p, int shifter_index)
         : procRef(p),
           enabledButton(
               XapSlider::SS_HorizontalSlider,
-              *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_ENABLED + shifter_index]),
+              *p.par_id_to_metadata[OctoShifterProcessor::PAR_ENABLED + shifter_index]),
           inputGainKnob(
               XapSlider::SS_Knob,
-              *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_INPUT_GAIN + shifter_index]),
+              *p.par_id_to_metadata[OctoShifterProcessor::PAR_INPUT_GAIN + shifter_index]),
           delayKnob(
               XapSlider::SS_Knob,
-              *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_DELAYTIME + shifter_index]),
+              *p.par_id_to_metadata[OctoShifterProcessor::PAR_DELAYTIME + shifter_index]),
           pitchKnob(XapSlider::SS_Knob,
-                    *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_PITCH + shifter_index]),
+                    *p.par_id_to_metadata[OctoShifterProcessor::PAR_PITCH + shifter_index]),
           formantKnob(
               XapSlider::SS_Knob,
-              *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_FORMANT + shifter_index]),
+              *p.par_id_to_metadata[OctoShifterProcessor::PAR_FORMANT + shifter_index]),
           cutoffKnob(
               XapSlider::SS_Knob,
-              *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_FILTERCUTOFF + shifter_index])
+              *p.par_id_to_metadata[OctoShifterProcessor::PAR_FILTERCUTOFF + shifter_index])
     {
         addAndMakeVisible(lab);
         lab.setText(juce::String(shifter_index + 1), juce::dontSendNotification);
@@ -241,11 +241,11 @@ class ShifterComponent : public juce::Component
     // XapSlider spatKnob;
 };
 
-class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor, public juce::Timer
+class OctoShifterProcessorEditor final : public juce::AudioProcessorEditor, public juce::Timer
 {
   public:
-    explicit AudioPluginAudioProcessorEditor(AudioPluginAudioProcessor &);
-    ~AudioPluginAudioProcessorEditor() override;
+    explicit OctoShifterProcessorEditor(OctoShifterProcessor &);
+    ~OctoShifterProcessorEditor() override;
 
     //==============================================================================
     void paint(juce::Graphics &) override;
@@ -255,7 +255,7 @@ class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor,
   private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
-    AudioPluginAudioProcessor &processorRef;
+    OctoShifterProcessor &processorRef;
     std::vector<std::unique_ptr<ShifterComponent>> shiftercomps;
     XapSlider lfoShapeKnob;
     XapSlider lfoRateKnob;
@@ -273,5 +273,5 @@ class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor,
     MultiSlider resonMulti;
     MultiSlider aziMulti;
     std::unordered_map<uint32_t, XapSlider *> paridtoslidermap;
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioPluginAudioProcessorEditor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OctoShifterProcessorEditor)
 };

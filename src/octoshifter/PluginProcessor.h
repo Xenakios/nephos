@@ -269,12 +269,12 @@ struct ParamChangeMessage
     float val = 0.0f;
 };
 
-class AudioPluginAudioProcessor final : public juce::AudioProcessor
+class OctoShifterProcessor final : public juce::AudioProcessor
 {
   public:
     //==============================================================================
-    AudioPluginAudioProcessor();
-    ~AudioPluginAudioProcessor() override;
+    OctoShifterProcessor();
+    ~OctoShifterProcessor() override;
 
     //==============================================================================
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;
@@ -353,5 +353,5 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     int samplecount = 0;
     std::unordered_map<int, int> choicetolfoshapemap;
     //==============================================================================
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioPluginAudioProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OctoShifterProcessor)
 };

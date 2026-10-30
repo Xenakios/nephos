@@ -9,7 +9,7 @@
 #include <unordered_map>
 
 //==============================================================================
-AudioPluginAudioProcessor::AudioPluginAudioProcessor()
+OctoShifterProcessor::OctoShifterProcessor()
     : AudioProcessor(BusesProperties()
 #if !JucePlugin_IsMidiEffect
 #if !JucePlugin_IsSynth
@@ -142,12 +142,12 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     choicetolfoshapemap[4] = PitchShifter::lfo_t::SH_NOISE;
 }
 
-AudioPluginAudioProcessor::~AudioPluginAudioProcessor() {}
+OctoShifterProcessor::~OctoShifterProcessor() {}
 
 //==============================================================================
-const juce::String AudioPluginAudioProcessor::getName() const { return JucePlugin_Name; }
+const juce::String OctoShifterProcessor::getName() const { return JucePlugin_Name; }
 
-bool AudioPluginAudioProcessor::acceptsMidi() const
+bool OctoShifterProcessor::acceptsMidi() const
 {
 #if JucePlugin_WantsMidiInput
     return true;
@@ -156,7 +156,7 @@ bool AudioPluginAudioProcessor::acceptsMidi() const
 #endif
 }
 
-bool AudioPluginAudioProcessor::producesMidi() const
+bool OctoShifterProcessor::producesMidi() const
 {
 #if JucePlugin_ProducesMidiOutput
     return true;
@@ -165,7 +165,7 @@ bool AudioPluginAudioProcessor::producesMidi() const
 #endif
 }
 
-bool AudioPluginAudioProcessor::isMidiEffect() const
+bool OctoShifterProcessor::isMidiEffect() const
 {
 #if JucePlugin_IsMidiEffect
     return true;
@@ -174,31 +174,31 @@ bool AudioPluginAudioProcessor::isMidiEffect() const
 #endif
 }
 
-double AudioPluginAudioProcessor::getTailLengthSeconds() const { return 0.0; }
+double OctoShifterProcessor::getTailLengthSeconds() const { return 0.0; }
 
-int AudioPluginAudioProcessor::getNumPrograms()
+int OctoShifterProcessor::getNumPrograms()
 {
     return 1; // NB: some hosts don't cope very well if you tell them there are 0 programs,
               // so this should be at least 1, even if you're not really implementing programs.
 }
 
-int AudioPluginAudioProcessor::getCurrentProgram() { return 0; }
+int OctoShifterProcessor::getCurrentProgram() { return 0; }
 
-void AudioPluginAudioProcessor::setCurrentProgram(int index) { juce::ignoreUnused(index); }
+void OctoShifterProcessor::setCurrentProgram(int index) { juce::ignoreUnused(index); }
 
-const juce::String AudioPluginAudioProcessor::getProgramName(int index)
+const juce::String OctoShifterProcessor::getProgramName(int index)
 {
     juce::ignoreUnused(index);
     return {};
 }
 
-void AudioPluginAudioProcessor::changeProgramName(int index, const juce::String &newName)
+void OctoShifterProcessor::changeProgramName(int index, const juce::String &newName)
 {
     juce::ignoreUnused(index, newName);
 }
 
 //==============================================================================
-void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
+void OctoShifterProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     DBG("prepareToPlay");
     for (int i = 0; i < shifters.size(); ++i)
@@ -212,13 +212,13 @@ void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerB
     workbuffer.clear();
 }
 
-void AudioPluginAudioProcessor::releaseResources()
+void OctoShifterProcessor::releaseResources()
 {
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
 }
 
-bool AudioPluginAudioProcessor::isBusesLayoutSupported(const BusesLayout &layouts) const
+bool OctoShifterProcessor::isBusesLayoutSupported(const BusesLayout &layouts) const
 {
 #if JucePlugin_IsMidiEffect
     juce::ignoreUnused(layouts);
@@ -242,7 +242,7 @@ bool AudioPluginAudioProcessor::isBusesLayoutSupported(const BusesLayout &layout
 #endif
 }
 
-void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
+void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                                              juce::MidiBuffer &midiMessages)
 {
     juce::ignoreUnused(midiMessages);
@@ -300,19 +300,19 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
 }
 
 //==============================================================================
-bool AudioPluginAudioProcessor::hasEditor() const
+bool OctoShifterProcessor::hasEditor() const
 {
     return true; // (change this to false if you choose to not supply an editor)
 }
 
-juce::AudioProcessorEditor *AudioPluginAudioProcessor::createEditor()
+juce::AudioProcessorEditor *OctoShifterProcessor::createEditor()
 {
     // return new juce::GenericAudioProcessorEditor(*this);
-    return new AudioPluginAudioProcessorEditor(*this);
+    return new OctoShifterProcessorEditor(*this);
 }
 
 //==============================================================================
-void AudioPluginAudioProcessor::getStateInformation(juce::MemoryBlock &destData)
+void OctoShifterProcessor::getStateInformation(juce::MemoryBlock &destData)
 {
     auto state = choc::value::createObject("state");
     state.setMember("version", 1);
@@ -327,7 +327,7 @@ void AudioPluginAudioProcessor::getStateInformation(juce::MemoryBlock &destData)
     destData.append(sdata.data.data(), sdata.data.size());
 }
 
-void AudioPluginAudioProcessor::send_param_updates_to_gui()
+void OctoShifterProcessor::send_param_updates_to_gui()
 {
     for (auto &e : par_id_to_value_pointer)
     {
@@ -338,7 +338,7 @@ void AudioPluginAudioProcessor::send_param_updates_to_gui()
     }
 }
 
-void AudioPluginAudioProcessor::set_parameter_value(uint32_t id, float value)
+void OctoShifterProcessor::set_parameter_value(uint32_t id, float value)
 {
     *par_id_to_value_pointer[id] = value;
     for (int i = 0; i < numshifters; ++i)
@@ -421,7 +421,7 @@ void AudioPluginAudioProcessor::set_parameter_value(uint32_t id, float value)
     }
 }
 
-void AudioPluginAudioProcessor::set_state(choc::value::ValueView view)
+void OctoShifterProcessor::set_state(choc::value::ValueView view)
 {
     if (view.hasObjectMember("parameters"))
     {
@@ -440,7 +440,7 @@ void AudioPluginAudioProcessor::set_state(choc::value::ValueView view)
     }
 }
 
-void AudioPluginAudioProcessor::setStateInformation(const void *data, int sizeInBytes)
+void OctoShifterProcessor::setStateInformation(const void *data, int sizeInBytes)
 {
     DBG("setStateInformation");
     try
@@ -459,4 +459,4 @@ void AudioPluginAudioProcessor::setStateInformation(const void *data, int sizeIn
 
 //==============================================================================
 // This creates new instances of the plugin..
-juce::AudioProcessor *JUCE_CALLTYPE createPluginFilter() { return new AudioPluginAudioProcessor(); }
+juce::AudioProcessor *JUCE_CALLTYPE createPluginFilter() { return new OctoShifterProcessor(); }
