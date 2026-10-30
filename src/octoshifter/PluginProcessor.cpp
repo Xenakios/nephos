@@ -44,6 +44,12 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                                       .withRange(-12.0f, 12.0f)
                                       .withLinearScaleFormatting("SEMITONES")
                                       .withID(PAR_FORMANT + i));
+        param_metadatas.push_back(pmd()
+                                      .withName(fmt::format("Delay time {}", i + 1))
+                                      .withRange(0.0f, 5.0f)
+                                      .withDefault(0.1)
+                                      .withLinearScaleFormatting("SECONDS")
+                                      .withID(PAR_DELAYTIME + i));
     }
     param_metadatas.push_back(pmd()
                                   .withName("LFO RATE")
@@ -203,12 +209,13 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
     auto writepointers = buffer.getArrayOfWritePointers();
+    const double sininc = 2 * M_PI / getSampleRate() * 440.0;
     for (int i = 0; i < buffer.getNumSamples(); ++i)
     {
-        float s = 0.5 * std::tanh(std::sin(sinphase));
+        float s = 0.5 * std::tanh(std::sin(sinphase) * 2);
         writepointers[0][i] = s;
         writepointers[1][i] = s;
-        sinphase += 2 * M_PI / getSampleRate() * 440.0;
+        sinphase += sininc;
     }
     ParamChangeMessage msg;
     while (params_from_gui_fifo.pop(msg))
@@ -284,7 +291,6 @@ void AudioPluginAudioProcessor::set_parameter_value(uint32_t id, float value)
         }
         if (id == PAR_LFODEFORM)
         {
-
             shifters[i].lfodeform = value;
         }
         if (id == PAR_LFOWARP)
@@ -308,6 +314,10 @@ void AudioPluginAudioProcessor::set_parameter_value(uint32_t id, float value)
     if (id >= PAR_INPUT_GAIN && id < PAR_INPUT_GAIN + numshifters)
     {
         shifters[id - PAR_INPUT_GAIN].ingainlag.setTarget(juce::Decibels::decibelsToGain(value));
+    }
+    if (id >= PAR_DELAYTIME && id < PAR_DELAYTIME + numshifters)
+    {
+        shifters[id - PAR_DELAYTIME].delaytime = std::clamp(value, 0.0f, 5.0f);
     }
     if (id >= PAR_ENABLED && id < PAR_ENABLED + numshifters)
     {

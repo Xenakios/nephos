@@ -42,13 +42,15 @@ class PitchShifter
         stretch = std::make_unique<signalsmith::stretch::SignalsmithStretch<>>();
         infifo.reset(BLOCKSIZE);
         outfifo.reset(BLOCKSIZE);
+        ingainlag.setRateInMilliseconds(50.0, 44100.0, 1.0f);
+        ingainlag.snapTo(0.0);
     }
 
     void set_sample_rate(double hz)
     {
         samplerate = hz;
         ingainlag.setRateInMilliseconds(50.0, hz, 1.0f);
-        ingainlag.snapTo(1.0);
+        ingainlag.snapTo(0.0);
         delaybuffer.resize(hz * 5.0);
         initTables();
     }
@@ -61,7 +63,10 @@ class PitchShifter
     }
     float pop_from_delay()
     {
-        int readpos = delaywritepos - delaytime * samplerate;
+        int deltimesamples = delaytime * samplerate;
+        if (deltimesamples < 8)
+            deltimesamples = 8;
+        int readpos = delaywritepos - deltimesamples;
         if (readpos < 0)
             readpos += delaybuffer.size();
         assert(readpos >= 0 && readpos < delaybuffer.size());
@@ -99,7 +104,7 @@ class PitchShifter
         outfifo.pop(x);
         push_to_delay(x);
         x = pop_from_delay();
-        feedbackaudio = x;
+        feedbackaudio = std::tanh(x);
         return x;
     }
     choc::fifo::SingleReaderSingleWriterFIFO<float> infifo;
@@ -181,6 +186,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
         PAR_INPUT_GAIN = 100,
         PAR_PITCH = 200,
         PAR_FORMANT = 300,
+        PAR_DELAYTIME = 400,
         PAR_LFOSHAPE = 10000,
         PAR_LFORATE = 10100,
         PAR_LFOAMOUNT = 10200,
