@@ -36,7 +36,8 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
       delayTimeMulti(p, "DELAY TIME", AudioPluginAudioProcessor::PAR_DELAYTIME, 8),
       delayFeedbackMulti(p, "DELAY FEEDBACK", AudioPluginAudioProcessor::PAR_DELAYFEEDBACK, 8),
       inVolumeMulti(p, "INPUT VOLUME", AudioPluginAudioProcessor::PAR_INPUT_GAIN, 8),
-      cutoffMulti(p, "FILTER CUTOFF", AudioPluginAudioProcessor::PAR_FILTERCUTOFF, 8),
+      cutoffMulti(p, "FILTER CUTOFF", AudioPluginAudioProcessor::PAR_FILTERCUTOFF, 8,
+                  MyProcessor::PAR_CUTOFF0LFO0AMOUNT),
       resonMulti(p, "FILTER RESONANCE", AudioPluginAudioProcessor::PAR_FILTERRESON, 8),
       aziMulti(p, "AZIMUTH/PAN", AudioPluginAudioProcessor::PAR_AZIMUTH, 8,
                MyProcessor::PAR_AZIMUTHLFO0AMOUNT)

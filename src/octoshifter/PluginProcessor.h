@@ -32,6 +32,7 @@ class PitchShifter
     float basepitch = 0.0f;
     float baseformant = 0.0f;
     float basefiltercutoff = 36.0f;
+    float filtercutoff_lfo_amount = 0.0;
     float filter_reson = 0.0f;
     float lforate = 0.0f;
     float lfodeform = 0.0f;
@@ -133,7 +134,9 @@ class PitchShifter
             stretch->setTransposeSemitones(finalpitch);
             stretch->setFormantSemitones(baseformant);
             stretch->process(processinbuffer, BLOCKSIZE, processoutbuffer, BLOCKSIZE);
-            sstfilter.makeCoefficients(0, basefiltercutoff, filter_reson);
+            float modulatedcutoff = basefiltercutoff + lfo.outputBlock[0] * filtercutoff_lfo_amount * 24.0;
+            modulatedcutoff = std::clamp(modulatedcutoff, -48.0f, 65.0f);
+            sstfilter.makeCoefficients(0, modulatedcutoff, filter_reson);
             sstfilter.prepareBlock();
             for (int i = 0; i < BLOCKSIZE; ++i)
             {
@@ -243,6 +246,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
         PAR_LFORATE = 10100,
         PAR_PITCHLFO0AMOUNT = 10200,
         PAR_AZIMUTHLFO0AMOUNT = 10201,
+        PAR_CUTOFF0LFO0AMOUNT = 10202,
         PAR_LFODEFORM = 10300,
         PAR_LFOSHIFT = 10400,
         PAR_LFOWARP = 10500
@@ -260,8 +264,8 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     // of each shifter, we have these patterns that can still produce different modulation
     // amounts per shifter
     const float modulation_patterns[2][8] = {{1, 1, 1, 1, 1, 1, 1, 1},
-                                                 {1, -1, 1, -1, 1, -1, 1, -1}};
-
+                                             {1, -1, 1, -1, 1, -1, 1, -1}};
+    xenakios::Xoroshiro128Plus rng;
   private:
     double sinphase = 0.0;
     juce::AudioBuffer<float> workbuffer;
