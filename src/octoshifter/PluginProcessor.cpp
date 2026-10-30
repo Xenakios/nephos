@@ -60,7 +60,9 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                                       .withID(PAR_DELAYFEEDBACK + i));
         param_metadatas.push_back(pmd()
                                       .withName(fmt::format("Filter Cutoff {}", i + 1))
-                                      .asAudibleFrequency()
+                                      .withRange(-48, 65)
+                                      .withDefault(0)
+                                      .withSemitoneZeroAt440Formatting()
                                       .withID(PAR_FILTERCUTOFF + i));
         param_metadatas.push_back(pmd()
                                       .withName(fmt::format("Filter Resonance {}", i + 1))
@@ -112,9 +114,11 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
 
     for (int i = 0; i < param_metadatas.size(); ++i)
     {
-        par_id_to_metadata[param_metadatas[i].id] = &param_metadatas[i];
+        auto id = param_metadatas[i].id;
+        par_id_to_metadata[id] = &param_metadatas[i];
         param_values[i] = param_metadatas[i].defaultVal;
-        par_id_to_value_pointer[param_metadatas[i].id] = &param_values[i];
+        par_id_to_value_pointer[id] = &param_values[i];
+        set_parameter_value(id, param_metadatas[i].defaultVal);
     }
     choicetolfoshapemap[0] = PitchShifter::lfo_t::SINE;
     choicetolfoshapemap[1] = PitchShifter::lfo_t::PULSE;
@@ -181,6 +185,7 @@ void AudioPluginAudioProcessor::changeProgramName(int index, const juce::String 
 //==============================================================================
 void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
+    DBG("prepareToPlay");
     for (int i = 0; i < shifters.size(); ++i)
     {
         shifters[i].stretch->presetDefault(1, sampleRate);
@@ -234,13 +239,18 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
     auto writepointers = buffer.getArrayOfWritePointers();
-    const double sininc = 2 * M_PI / getSampleRate() * 110.0;
-    for (int i = 0; i < buffer.getNumSamples(); ++i)
+    // test with a synth tone in standalone mode as it's painful to get any proper
+    // sound input otherwise...
+    if (wrapperType == wrapperType_Standalone)
     {
-        float s = 0.5 * std::tanh(std::sin(sinphase) * 5);
-        writepointers[0][i] = s;
-        writepointers[1][i] = s;
-        sinphase += sininc;
+        const double sininc = 2 * M_PI / getSampleRate() * 110.0;
+        for (int i = 0; i < buffer.getNumSamples(); ++i)
+        {
+            float s = 0.5 * std::tanh(std::sin(sinphase) * 5);
+            writepointers[0][i] = s;
+            writepointers[1][i] = s;
+            sinphase += sininc;
+        }
     }
     ParamChangeMessage msg;
     while (params_from_gui_fifo.pop(msg))
