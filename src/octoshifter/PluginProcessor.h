@@ -18,6 +18,77 @@
 #include "sst/filters++/api.h"
 #include "sst/filters++/enums.h"
 
+#include <vector>
+#include <cstddef>
+#include <optional>
+#include <utility>
+
+template <typename T> class SingleThreadedFifo
+{
+  public:
+    explicit SingleThreadedFifo(std::size_t capacity) : buf_(capacity), capacity_(capacity) {}
+
+    // Push a copy. Returns false if the FIFO is full.
+    bool push(const T &value)
+    {
+        if (full())
+            return false;
+        buf_[head_] = value;
+        head_ = (head_ + 1) % capacity_;
+        ++size_;
+        return true;
+    }
+
+    // Push by move. Returns false if the FIFO is full.
+    bool push(T &&value)
+    {
+        if (full())
+            return false;
+        buf_[head_] = std::move(value);
+        head_ = (head_ + 1) % capacity_;
+        ++size_;
+        return true;
+    }
+
+    // Pop into out. Returns false if the FIFO is empty.
+    bool pop(T &out)
+    {
+        if (empty())
+            return false;
+        out = std::move(buf_[tail_]);
+        tail_ = (tail_ + 1) % capacity_;
+        --size_;
+        return true;
+    }
+
+    // Pop returning optional. std::nullopt if empty.
+    std::optional<T> pop()
+    {
+        if (empty())
+            return std::nullopt;
+        T out = std::move(buf_[tail_]);
+        tail_ = (tail_ + 1) % capacity_;
+        --size_;
+        return out;
+    }
+
+    // Clear contents; restores all slots as free.
+    void reset() { head_ = tail_ = size_ = 0; }
+
+    std::size_t freeSlots() const { return capacity_ - size_; }
+    std::size_t usedSlots() const { return size_; }
+    std::size_t capacity() const { return capacity_; }
+    bool empty() const { return size_ == 0; }
+    bool full() const { return size_ == capacity_; }
+
+  private:
+    std::vector<T> buf_;
+    std::size_t capacity_;
+    std::size_t head_ = 0; // next write position
+    std::size_t tail_ = 0; // next read position
+    std::size_t size_ = 0; // current element count
+};
+
 class PitchShifter
 {
   public:
@@ -55,8 +126,7 @@ class PitchShifter
     PitchShifter() : lfo(this)
     {
         stretch = std::make_unique<signalsmith::stretch::SignalsmithStretch<>>();
-        infifo.reset(BLOCKSIZE);
-        outfifo.reset(BLOCKSIZE);
+        
         ingainlag.setRateInMilliseconds(50.0, 44100.0, 1.0f);
         ingainlag.snapTo(0.0);
     }
@@ -72,6 +142,8 @@ class PitchShifter
             sst::filtersplusplus::ModelConfig(sst::filtersplusplus::Passband::LP));
         sstfilter.setSampleRateAndBlockSize(hz, BLOCKSIZE);
         sstfilter.setMono();
+        // without the delay lines Comb filter modes will explode, 
+        // so don't allow the user to choose those yet...
         // sstfilter.provideAllDelayLines(delaylinememory.data());
         if (!sstfilter.prepareInstance())
         {
@@ -118,7 +190,7 @@ class PitchShifter
         insample += feedbackaudio * feedbackamt;
         infifo.push(insample);
         ingainlag.process();
-        if (infifo.getUsedSlots() == BLOCKSIZE)
+        if (infifo.usedSlots() == BLOCKSIZE)
         {
             float x = 0.0f;
             float processinbuffer[1][BLOCKSIZE];
@@ -134,7 +206,8 @@ class PitchShifter
             stretch->setTransposeSemitones(finalpitch);
             stretch->setFormantSemitones(baseformant);
             stretch->process(processinbuffer, BLOCKSIZE, processoutbuffer, BLOCKSIZE);
-            float modulatedcutoff = basefiltercutoff + lfo.outputBlock[0] * filtercutoff_lfo_amount * 24.0;
+            float modulatedcutoff =
+                basefiltercutoff + lfo.outputBlock[0] * filtercutoff_lfo_amount * 24.0;
             modulatedcutoff = std::clamp(modulatedcutoff, -48.0f, 65.0f);
             sstfilter.makeCoefficients(0, modulatedcutoff, filter_reson);
             sstfilter.prepareBlock();
@@ -158,8 +231,9 @@ class PitchShifter
         audio_inout[0] = x * spatcoeffs[0];
         audio_inout[1] = x * spatcoeffs[1];
     }
-    choc::fifo::SingleReaderSingleWriterFIFO<float> infifo;
-    choc::fifo::SingleReaderSingleWriterFIFO<float> outfifo;
+    SingleThreadedFifo<float> infifo{BLOCKSIZE};
+    SingleThreadedFifo<float> outfifo{BLOCKSIZE};
+    
     void initTables()
     {
         double dsamplerate_os = samplerate * 2;
@@ -266,8 +340,10 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     const float modulation_patterns[2][8] = {{1, 1, 1, 1, 1, 1, 1, 1},
                                              {1, -1, 1, -1, 1, -1, 1, -1}};
     xenakios::Xoroshiro128Plus rng;
+
   private:
-    double sinphase = 0.0;
+    double osc0phase = 0.0;
+    double osc1phase = 0.0;
     juce::AudioBuffer<float> workbuffer;
     int samplecount = 0;
     std::unordered_map<int, int> choicetolfoshapemap;

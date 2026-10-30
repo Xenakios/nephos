@@ -253,14 +253,16 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     // sound input otherwise...
     if (wrapperType == wrapperType_Standalone)
     {
-        const double sininc = 2 * M_PI / getSampleRate() * 110.0;
+        const double oscinc0 = 2 * M_PI / getSampleRate() * 110.0;
+        const double oscinc1 = 2 * M_PI / getSampleRate() * 110.0 * 1.5;
         for (int i = 0; i < buffer.getNumSamples(); ++i)
         {
-            // float s = 0.5 * std::tanh(std::sin(sinphase) * 7.0);
-            float s = rng.nextFloatInRange(-0.5, 0.5);
+            float s = 0.5 * std::tanh(std::sin(osc0phase) * 2.0);
             writepointers[0][i] = s;
+            osc0phase += oscinc0;
+            s = 0.5 * std::tanh(std::sin(osc1phase) * 2.0);
             writepointers[1][i] = s;
-            sinphase += sininc;
+            osc1phase += oscinc1;
         }
     }
     ParamChangeMessage msg;
