@@ -30,20 +30,30 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
                   *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_LFOWARP]),
       lfoAmountKnob(XapSlider::SS_Knob,
                     *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_LFOAMOUNT]),
+      enableMulti(p, "ENABLED", AudioPluginAudioProcessor::PAR_ENABLED, 8),
       pitchMulti(p, "PITCH", AudioPluginAudioProcessor::PAR_PITCH, 8),
+      formantMulti(p, "FORMANT", AudioPluginAudioProcessor::PAR_FORMANT, 8),
+      delayTimeMulti(p, "DELAY TIME", AudioPluginAudioProcessor::PAR_DELAYTIME, 8),
+      delayFeedbackMulti(p, "DELAY FEEDBACK", AudioPluginAudioProcessor::PAR_DELAYFEEDBACK, 8),
       inVolumeMulti(p, "INPUT VOLUME", AudioPluginAudioProcessor::PAR_INPUT_GAIN, 8),
       cutoffMulti(p, "FILTER CUTOFF", AudioPluginAudioProcessor::PAR_FILTERCUTOFF, 8),
+      resonMulti(p, "FILTER RESONANCE", AudioPluginAudioProcessor::PAR_FILTERRESON, 8),
       aziMulti(p, "AZIMUTH", AudioPluginAudioProcessor::PAR_AZIMUTH, 8)
 {
+    addAndMakeVisible(enableMulti);
     addAndMakeVisible(pitchMulti);
+    addAndMakeVisible(formantMulti);
+    addAndMakeVisible(delayTimeMulti);
+    addAndMakeVisible(delayFeedbackMulti);
     addAndMakeVisible(inVolumeMulti);
     addAndMakeVisible(cutoffMulti);
+    addAndMakeVisible(resonMulti);
     addAndMakeVisible(aziMulti);
     for (int i = 0; i < p.numshifters; ++i)
     {
-        auto c = std::make_unique<ShifterComponent>(p, i);
-        addAndMakeVisible(*c);
-        shiftercomps.push_back(std::move(c));
+        // auto c = std::make_unique<ShifterComponent>(p, i);
+        // addAndMakeVisible(*c);
+        // shiftercomps.push_back(std::move(c));
     }
     add_xapslider(p, *this, lfoShapeKnob);
     add_xapslider(p, *this, lfoRateKnob);
@@ -90,15 +100,20 @@ void AudioPluginAudioProcessorEditor::resized()
     juce::FlexBox multiflex;
     multiflex.flexDirection = juce::FlexBox::Direction::row;
     multiflex.flexWrap = juce::FlexBox::Wrap::wrap;
-    multiflex.items.add(juce::FlexItem(pitchMulti).withFlex(1.0).withMargin(3));
+    multiflex.items.add(juce::FlexItem(enableMulti).withFlex(1.0).withMargin(3));
     multiflex.items.add(juce::FlexItem(inVolumeMulti).withFlex(1.0).withMargin(3));
+    multiflex.items.add(juce::FlexItem(pitchMulti).withFlex(1.0).withMargin(3));
+    multiflex.items.add(juce::FlexItem(formantMulti).withFlex(1.0).withMargin(3));
+    multiflex.items.add(juce::FlexItem(delayTimeMulti).withFlex(1.0).withMargin(3));
+    multiflex.items.add(juce::FlexItem(delayFeedbackMulti).withFlex(1.0).withMargin(3));
     multiflex.items.add(juce::FlexItem(cutoffMulti).withFlex(1.0).withMargin(3));
+    multiflex.items.add(juce::FlexItem(resonMulti).withFlex(1.0).withMargin(3));
     multiflex.items.add(juce::FlexItem(aziMulti).withFlex(1.0).withMargin(3));
     for (auto &e : multiflex.items)
     {
         e = e.withMinWidth(500);
     }
-    flex.items.add(juce::FlexItem(multiflex).withFlex(4));
+    flex.items.add(juce::FlexItem(multiflex).withFlex(8));
     for (int i = 0; i < shiftercomps.size(); ++i)
     {
         flex.items.add(juce::FlexItem(*shiftercomps[i]).withFlex(1.0));

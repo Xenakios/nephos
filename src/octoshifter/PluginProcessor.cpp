@@ -43,18 +43,30 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         param_metadatas.push_back(pmd()
                                       .withName(fmt::format("Formant {}", i + 1))
                                       .withRange(-12.0f, 12.0f)
-                                      .withLinearScaleFormatting("SEMITONES")
+                                      .withLinearScaleFormatting("st")
                                       .withID(PAR_FORMANT + i));
         param_metadatas.push_back(pmd()
                                       .withName(fmt::format("Delay time {}", i + 1))
-                                      .withRange(0.0f, 5.0f)
+                                      .withRange(0.0f, 1.0f)
                                       .withDefault(0.1)
-                                      .withLinearScaleFormatting("SECONDS")
+                                      .withOffsetPowerFormatting("ms", 0.0, 5.0, 3.0, 1000.0)
                                       .withID(PAR_DELAYTIME + i));
+        param_metadatas.push_back(pmd()
+                                      .withName(fmt::format("Delay Feedback {}", i + 1))
+                                      .withRange(0.0, 1.0)
+                                      .withDefault(0.0)
+                                      .withLinearScaleFormatting("%", 100.0)
+                                      .withID(PAR_DELAYFEEDBACK + i));
         param_metadatas.push_back(pmd()
                                       .withName(fmt::format("Filter Cutoff {}", i + 1))
                                       .asAudibleFrequency()
                                       .withID(PAR_FILTERCUTOFF + i));
+        param_metadatas.push_back(pmd()
+                                      .withName(fmt::format("Filter Resonance {}", i + 1))
+                                      .withRange(0.0, 1.0)
+                                      .withDefault(0.0)
+                                      .withLinearScaleFormatting("%", 100.0)
+                                      .withID(PAR_FILTERRESON + i));
         param_metadatas.push_back(pmd()
                                       .withName(fmt::format("Azimuth {}", i + 1))
                                       .withRange(-1.0f, 1.0f)
@@ -172,10 +184,6 @@ void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerB
     {
         shifters[i].stretch->presetDefault(1, sampleRate);
         shifters[i].set_sample_rate(sampleRate, 2);
-        float panpos = -1.0f;
-        if (i % 2 == 1)
-            panpos = 1.0f;
-        shifters[i].set_spatial_parameters(panpos, 0.0f);
     }
 
     workbuffer.setSize(getTotalNumOutputChannels(), samplesPerBlock);
@@ -277,6 +285,7 @@ juce::AudioProcessorEditor *AudioPluginAudioProcessor::createEditor()
 void AudioPluginAudioProcessor::getStateInformation(juce::MemoryBlock &destData)
 {
     auto state = choc::value::createObject("state");
+    state.setMember("version", 1);
     auto params_state = choc::value::createObject("params");
     for (auto &e : param_metadatas)
     {
@@ -335,9 +344,17 @@ void AudioPluginAudioProcessor::set_parameter_value(uint32_t id, float value)
     {
         shifters[id - PAR_PITCH].basepitch = value;
     }
+    if (id >= PAR_FORMANT && id < PAR_FORMANT + numshifters)
+    {
+        shifters[id - PAR_FORMANT].baseformant = value;
+    }
     if (id >= PAR_FILTERCUTOFF && id < PAR_FILTERCUTOFF + numshifters)
     {
         shifters[id - PAR_FILTERCUTOFF].basefiltercutoff = value;
+    }
+    if (id >= PAR_FILTERRESON && id < PAR_FILTERRESON + numshifters)
+    {
+        shifters[id - PAR_FILTERRESON].filter_reson = value;
     }
     if (id >= PAR_INPUT_GAIN && id < PAR_INPUT_GAIN + numshifters)
     {
@@ -347,8 +364,13 @@ void AudioPluginAudioProcessor::set_parameter_value(uint32_t id, float value)
     {
         shifters[id - PAR_AZIMUTH].set_spatial_parameters(value, 0.0);
     }
+    if (id >= PAR_DELAYFEEDBACK && id < PAR_DELAYFEEDBACK + numshifters)
+    {
+        shifters[id - PAR_DELAYFEEDBACK].feedbackamt = value;
+    }
     if (id >= PAR_DELAYTIME && id < PAR_DELAYTIME + numshifters)
     {
+        value = (value * value * value) * 5.0;
         shifters[id - PAR_DELAYTIME].delaytime = std::clamp(value, 0.0f, 5.0f);
     }
     if (id >= PAR_ENABLED && id < PAR_ENABLED + numshifters)

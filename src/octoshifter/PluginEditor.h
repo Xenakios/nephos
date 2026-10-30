@@ -203,9 +203,14 @@ class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor,
     XapSlider lfoShiftKnob;
     XapSlider lfoWarpKnob;
     XapSlider lfoAmountKnob;
+    MultiSlider enableMulti;
     MultiSlider pitchMulti;
+    MultiSlider formantMulti;
+    MultiSlider delayTimeMulti;
+    MultiSlider delayFeedbackMulti;
     MultiSlider inVolumeMulti;
     MultiSlider cutoffMulti;
+    MultiSlider resonMulti;
     MultiSlider aziMulti;
     std::unordered_map<uint32_t, XapSlider *> paridtoslidermap;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioPluginAudioProcessorEditor)

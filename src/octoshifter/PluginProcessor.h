@@ -29,7 +29,9 @@ class PitchShifter
     lfo_t lfo;
     bool enabled = true;
     float basepitch = 0.0f;
+    float baseformant = 0.0f;
     float basefiltercutoff = 36.0f;
+    float filter_reson = 0.0f;
     float lforate = 0.0f;
     float lfodeform = 0.0f;
     float lfowarp = 0.0f;
@@ -37,7 +39,7 @@ class PitchShifter
     float lfoamount = 0.0f;
     float ingain = 1.0f;
     float delaytime = 0.25f;
-    float feedbackamt = 0.55f;
+    float feedbackamt = 0.0f;
     float azimuth = 0.0f;
     alignas(16) std::array<float, 64> spatcoeffs = {0.0f};
     alignas(16) sst::filtersplusplus::Filter sstfilter;
@@ -61,7 +63,7 @@ class PitchShifter
         numchs = chans;
         samplerate = hz;
         ingainlag.setRateInMilliseconds(50.0, hz, 1.0f);
-        
+
         sstfilter.setFilterModel(sst::filtersplusplus::FilterModel::CytomicSVF);
         sstfilter.setModelConfiguration(
             sst::filtersplusplus::ModelConfig(sst::filtersplusplus::Passband::LP));
@@ -74,6 +76,7 @@ class PitchShifter
         }
         delaybuffer.resize(hz * 5.0);
         initTables();
+        set_spatial_parameters(0.0, 0.0);
     }
     void set_spatial_parameters(float azimuth, float elevation)
     {
@@ -126,15 +129,16 @@ class PitchShifter
             lfo.process_block(lforate, lfodeform, lfoshape, false, 1.0, lfowarp);
             float finalpitch = basepitch + lfoamount * lfo.outputBlock[0];
             stretch->setTransposeSemitones(finalpitch);
+            stretch->setFormantSemitones(baseformant);
             stretch->process(processinbuffer, BLOCKSIZE, processoutbuffer, BLOCKSIZE);
-            sstfilter.makeCoefficients(0, basefiltercutoff, 0.0f);
+            sstfilter.makeCoefficients(0, basefiltercutoff, filter_reson);
             sstfilter.prepareBlock();
             for (int i = 0; i < BLOCKSIZE; ++i)
             {
                 float filtered = sstfilter.processMonoSample(processoutbuffer[0][i]);
                 push_to_delay(filtered);
                 float delayed = pop_from_delay();
-                
+
                 outfifo.push(delayed);
             }
             sstfilter.concludeBlock();
@@ -228,6 +232,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
         PAR_PITCH = 200,
         PAR_FORMANT = 300,
         PAR_DELAYTIME = 400,
+        PAR_DELAYFEEDBACK = 450,
         PAR_FILTERCUTOFF = 500,
         PAR_FILTERRESON = 600,
         PAR_AZIMUTH = 700,
