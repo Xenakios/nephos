@@ -11,6 +11,8 @@
 #include "sst/basic-blocks/dsp/EllipticBlepOscillators.h"
 #include "containers/choc_SingleReaderSingleWriterFIFO.h"
 #include "sst/basic-blocks/params/ParamMetadata.h"
+#include <span>
+#include "../../Common/xap_utils.h"
 
 class PitchShifter
 {
@@ -32,6 +34,9 @@ class PitchShifter
     float ingain = 1.0f;
     float delaytime = 0.25f;
     float feedbackamt = 0.55f;
+    float azimuth = 0.0f;
+    alignas(16) std::array<float, 64> spatcoeffs = {0.0f};
+    int numchs = 0;
     sst::basic_blocks::dsp::OnePoleLag<float, true> ingainlag;
     std::vector<float> delaybuffer;
     alignas(16) int delaywritepos = 0;
@@ -46,13 +51,24 @@ class PitchShifter
         ingainlag.snapTo(0.0);
     }
 
-    void set_sample_rate(double hz)
+    void set_sample_rate(double hz, int chans)
     {
+        numchs = chans;
         samplerate = hz;
         ingainlag.setRateInMilliseconds(50.0, hz, 1.0f);
         ingainlag.snapTo(0.0);
         delaybuffer.resize(hz * 5.0);
         initTables();
+    }
+    void set_spatial_parameters(float azimuth, float elevation)
+    {
+        std::fill(spatcoeffs.begin(), spatcoeffs.end(), 0.0f);
+        if (numchs == 2)
+        {
+            float panpos = xenakios::mapvalue(azimuth, -1.0f, 1.0f, 0.0f, 1.0f);
+            spatcoeffs[0] = 1.0f - panpos;
+            spatcoeffs[1] = panpos;
+        }
     }
     void push_to_delay(float x)
     {
@@ -72,9 +88,12 @@ class PitchShifter
         assert(readpos >= 0 && readpos < delaybuffer.size());
         return delaybuffer[readpos];
     }
-    float process_sample(float input)
+    // uses only first channel as input, outputs stereo or ambisonics
+    void process_frame(std::span<float> audio_inout)
     {
-        float insample = input * ingainlag.getValue();
+        assert(numchs > 1);
+        assert(audio_inout.size() >= numchs);
+        float insample = audio_inout[0] * ingainlag.getValue();
         insample += feedbackaudio * feedbackamt;
         infifo.push(insample);
         ingainlag.process();
@@ -103,7 +122,8 @@ class PitchShifter
         push_to_delay(x);
         x = pop_from_delay();
         feedbackaudio = std::tanh(x);
-        return x;
+        audio_inout[0] = x * spatcoeffs[0];
+        audio_inout[1] = x * spatcoeffs[1];
     }
     choc::fifo::SingleReaderSingleWriterFIFO<float> infifo;
     choc::fifo::SingleReaderSingleWriterFIFO<float> outfifo;

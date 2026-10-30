@@ -23,6 +23,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     params_to_gui_fifo.reset(2048);
     for (int i = 0; i < numshifters; ++i)
     {
+
         param_metadatas.push_back(pmd()
                                       .withName(fmt::format("Enabled {}", i + 1))
                                       .asOnOffBool()
@@ -160,10 +161,14 @@ void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerB
     for (int i = 0; i < shifters.size(); ++i)
     {
         shifters[i].stretch->presetDefault(1, sampleRate);
-        shifters[i].set_sample_rate(sampleRate);
+        shifters[i].set_sample_rate(sampleRate, 2);
+        float panpos = -1.0f;
+        if (i % 2 == 1)
+            panpos = 1.0f;
+        shifters[i].set_spatial_parameters(panpos, 0.0f);
     }
 
-    workbuffer.setSize(getTotalNumInputChannels(), samplesPerBlock);
+    workbuffer.setSize(getTotalNumOutputChannels(), samplesPerBlock);
     workbuffer.clear();
 }
 
@@ -232,8 +237,11 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             continue;
         for (int i = 0; i < buffer.getNumSamples(); ++i)
         {
-            float insamples[2] = {writepointers[0][i], writepointers[1][i]};
-            sumpointers[j % 2][i] += shifters[j].process_sample(insamples[j % 2]);
+            alignas(16) float procbuf[64];
+            procbuf[0] = writepointers[j % 2][i];
+            shifters[j].process_frame(procbuf);
+            sumpointers[0][i] += procbuf[0];
+            sumpointers[1][i] += procbuf[1];
         }
     }
     for (int i = 0; i < buffer.getNumSamples(); ++i)
