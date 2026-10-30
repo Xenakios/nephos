@@ -41,7 +41,8 @@ class PitchShifter
     float ingain = 1.0f;
     float delaytime = 0.25f;
     float feedbackamt = 0.0f;
-    float azimuth = 0.0f;
+    float baseazimuth = 0.0f;
+    float azimuth_lfo_amount = 0.0;
     alignas(16) std::array<float, 64> spatcoeffs = {0.0f};
     alignas(16) sst::filtersplusplus::Filter sstfilter;
     int numchs = 2;
@@ -77,7 +78,6 @@ class PitchShifter
         }
         delaybuffer.resize(hz * 5.0);
         initTables();
-        
     }
     void set_spatial_parameters(float azimuth, float elevation)
     {
@@ -144,13 +144,14 @@ class PitchShifter
                 outfifo.push(delayed);
             }
             sstfilter.concludeBlock();
+            float modulated_azi = baseazimuth + azimuth_lfo_amount * lfo.outputBlock[0];
+            modulated_azi = std::clamp(modulated_azi, -1.0f, 1.0f);
+            set_spatial_parameters(modulated_azi, 0.0);
         }
         float x = 0.0f;
         outfifo.pop(x);
         feedbackaudio = std::tanh(x);
-        // push_to_delay(x);
-        // x = pop_from_delay();
-        // feedbackaudio = std::tanh(x);
+
         audio_inout[0] = x * spatcoeffs[0];
         audio_inout[1] = x * spatcoeffs[1];
     }
@@ -240,7 +241,8 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
         PAR_AZIMUTH = 700,
         PAR_LFOSHAPE = 10000,
         PAR_LFORATE = 10100,
-        PAR_LFOAMOUNT = 10200,
+        PAR_PITCHLFO0AMOUNT = 10200,
+        PAR_AZIMUTHLFO0AMOUNT = 10201,
         PAR_LFODEFORM = 10300,
         PAR_LFOSHIFT = 10400,
         PAR_LFOWARP = 10500

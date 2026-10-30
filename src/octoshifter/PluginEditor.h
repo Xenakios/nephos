@@ -27,6 +27,7 @@ class MultiSlider : public juce::Component
     AudioPluginAudioProcessor &pref;
     uint32_t firstpar = CLAP_INVALID_ID;
     uint32_t numparams = 0;
+    uint32_t lfo0_amt_par = CLAP_INVALID_ID;
     float parminval = 0.0f;
     float parmaxval = 1.0f;
     float pardefaultval = 0.0f;
@@ -34,8 +35,8 @@ class MultiSlider : public juce::Component
     juce::String groupname;
     std::array<float, 256> values = {0.0f};
     MultiSlider(AudioPluginAudioProcessor &p, juce::String name, uint32_t parstartid,
-                uint32_t numpars)
-        : pref(p), firstpar(parstartid), numparams(numpars), groupname(name)
+                uint32_t numpars, uint32_t lfo0par = CLAP_INVALID_ID)
+        : pref(p), firstpar(parstartid), numparams(numpars), lfo0_amt_par(lfo0par), groupname(name)
     {
         int numvalidated = 0;
         for (int i = 0; i < numpars; ++i)
@@ -50,7 +51,22 @@ class MultiSlider : public juce::Component
                 values[i] = *pref.par_id_to_value_pointer[it->first];
             }
         }
+        if (lfo0_amt_par != CLAP_INVALID_ID)
+        {
+            values[numpars] = *pref.par_id_to_value_pointer[lfo0_amt_par];
+        }
         assert(numvalidated == numpars);
+    }
+    uint32_t param_id_from_index(int index)
+    {
+        if (index < 0 || index >= num_all_params())
+            return CLAP_INVALID_ID;
+        uint32_t pid = firstpar + index;
+        if (index == numparams)
+        {
+            pid = lfo0_amt_par;
+        }
+        return pid;
     }
     void paint(juce::Graphics &g) override
     {
@@ -63,18 +79,33 @@ class MultiSlider : public juce::Component
         //     txt += " (BIPOLAR)";
         g.drawText(txt, 0, 0, getWidth(), getHeight(), juce::Justification::centred);
         g.setFont(12.0);
-        float barw = (float)getWidth() / numparams;
-        for (int i = 0; i < numparams; ++i)
+        int parstodraw = num_all_params();
+        float barw = (float)getWidth() / parstodraw;
+        for (int i = 0; i < parstodraw; ++i)
         {
             float xcor = barw * i;
             float v = values[i];
-            auto partxt = pref.par_id_to_metadata[firstpar + i]->valueToString(v);
-            if (partxt)
+            uint32_t pid = param_id_from_index(i);
+            if (pid != CLAP_INVALID_ID)
             {
-                g.setColour(juce::Colours::white);
-                g.drawText(*partxt, xcor, getHeight() - 20, barw, 20, juce::Justification::centred);
+                auto partxt = pref.par_id_to_metadata[pid]->valueToString(v);
+                if (partxt)
+                {
+                    g.setColour(juce::Colours::white);
+                    g.drawText(*partxt, xcor, getHeight() - 20, barw, 20,
+                               juce::Justification::centred);
+                }
             }
-            float ycor = juce::jmap<float>(v, parminval, parmaxval, getHeight(), 0.0);
+            float pmin = parminval;
+            float pmax = parmaxval;
+            if (i == numparams)
+            {
+                pmin = -1.0;
+                pmax = 1.0;
+                g.setColour(juce::Colours::white);
+                g.drawText("LFO1 AMT", xcor, 1, barw, 20, juce::Justification::centred);
+            }
+            float ycor = juce::jmap<float>(v, pmin, pmax, getHeight(), 0.0);
             g.setColour(juce::Colours::yellow);
             g.drawLine(xcor, ycor, xcor + barw - 1.0, ycor, 2.0);
         }
@@ -88,22 +119,38 @@ class MultiSlider : public juce::Component
             repaint();
         }
     }
+    int num_all_params()
+    {
+        if (lfo0_amt_par != CLAP_INVALID_ID)
+            return numparams + 1;
+        return numparams;
+    }
     void mouseDown(const juce::MouseEvent &ev) override
     {
         draggedindex = -1;
-        int shifterindex = (float)numparams / getWidth() * ev.x;
-        if (shifterindex >= 0 && shifterindex < numparams)
+        int shifterindex = (float)(num_all_params()) / getWidth() * ev.x;
+        if (shifterindex >= 0 && shifterindex < num_all_params())
         {
             draggedindex = shifterindex;
-            post_param_event(draggedindex, parval_from_mouse_y(ev.y));
+            post_param_event(draggedindex, parval_from_mouse_y(draggedindex, ev.y));
             repaint();
         }
     }
-    float parval_from_mouse_y(float y)
+    float parval_from_mouse_y(int i, float y)
     {
-        float v = juce::jmap<float>(y, 0.0, getHeight(), parmaxval, parminval);
-        v = std::clamp(v, parminval, parmaxval);
-        v = pref.par_id_to_metadata[firstpar]->quantize(v);
+        float pmin = parminval;
+        float pmax = parmaxval;
+        bool quan = true;
+        if (i == numparams)
+        {
+            pmin = -1.0;
+            pmax = 1.0;
+            quan = false;
+        }
+        float v = juce::jmap<float>(y, 0.0, getHeight(), pmax, pmin);
+        v = std::clamp(v, pmin, pmax);
+        if (quan)
+            v = pref.par_id_to_metadata[firstpar]->quantize(v);
         return v;
     }
     // our own index, not the clap id!
@@ -111,16 +158,20 @@ class MultiSlider : public juce::Component
     {
         ParamChangeMessage msg;
         msg.id = firstpar + parindex;
+        if (parindex == numparams)
+        {
+            msg.id = lfo0_amt_par;
+        }
         msg.val = val;
         pref.params_from_gui_fifo.push(msg);
         values[parindex] = val;
     }
     void mouseDrag(const juce::MouseEvent &ev) override
     {
-        int shifterindex = (float)numparams / getWidth() * ev.x;
-        if (shifterindex >= 0 && shifterindex < numparams)
+        int shifterindex = (float)num_all_params() / getWidth() * ev.x;
+        if (shifterindex >= 0 && shifterindex < num_all_params())
         {
-            post_param_event(shifterindex, parval_from_mouse_y(ev.y));
+            post_param_event(shifterindex, parval_from_mouse_y(shifterindex, ev.y));
             repaint();
         }
     }

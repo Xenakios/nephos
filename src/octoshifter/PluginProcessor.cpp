@@ -86,7 +86,12 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                                   .withName("LFO AMOUNT")
                                   .withRange(-1.0f, 1.0f)
                                   .withLinearScaleFormatting("%", 100.0)
-                                  .withID(PAR_LFOAMOUNT));
+                                  .withID(PAR_PITCHLFO0AMOUNT));
+    param_metadatas.push_back(pmd()
+                                  .withName("LFO AMOUNT")
+                                  .withRange(-1.0f, 1.0f)
+                                  .withLinearScaleFormatting("%", 100.0)
+                                  .withID(PAR_AZIMUTHLFO0AMOUNT));
     param_metadatas.push_back(pmd()
                                   .withName("LFO DEFORM")
                                   .withRange(-1.0f, 1.0f)
@@ -246,7 +251,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         const double sininc = 2 * M_PI / getSampleRate() * 110.0;
         for (int i = 0; i < buffer.getNumSamples(); ++i)
         {
-            float s = 0.5 * std::tanh(std::sin(sinphase) * 5);
+            float s = 0.5 * std::tanh(std::sin(sinphase) * 8.0);
             writepointers[0][i] = s;
             writepointers[1][i] = s;
             sinphase += sininc;
@@ -330,9 +335,13 @@ void AudioPluginAudioProcessor::set_parameter_value(uint32_t id, float value)
             int shape = choicetolfoshapemap[(int)value];
             shifters[i].lfoshape = shape;
         }
-        if (id == PAR_LFOAMOUNT)
+        if (id == PAR_PITCHLFO0AMOUNT)
         {
             shifters[i].lfoamount = value * 12.0f;
+        }
+        if (id == PAR_AZIMUTHLFO0AMOUNT)
+        {
+            shifters[i].azimuth_lfo_amount = value;
         }
         if (id == PAR_LFODEFORM)
         {

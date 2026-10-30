@@ -14,7 +14,7 @@ inline void visitAll(juce::Component &c, std::function<void(CompType *)> fn)
         visitAll(*child, fn);
     }
 }
-
+using MyProcessor = AudioPluginAudioProcessor;
 //==============================================================================
 AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudioProcessor &p)
     : AudioProcessorEditor(&p), processorRef(p),
@@ -29,16 +29,17 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
       lfoWarpKnob(XapSlider::SS_Knob,
                   *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_LFOWARP]),
       lfoAmountKnob(XapSlider::SS_Knob,
-                    *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_LFOAMOUNT]),
+                    *p.par_id_to_metadata[AudioPluginAudioProcessor::PAR_PITCHLFO0AMOUNT]),
       enableMulti(p, "ENABLED", AudioPluginAudioProcessor::PAR_ENABLED, 8),
-      pitchMulti(p, "PITCH", AudioPluginAudioProcessor::PAR_PITCH, 8),
+      pitchMulti(p, "PITCH", MyProcessor::PAR_PITCH, 8, MyProcessor::PAR_PITCHLFO0AMOUNT),
       formantMulti(p, "FORMANT", AudioPluginAudioProcessor::PAR_FORMANT, 8),
       delayTimeMulti(p, "DELAY TIME", AudioPluginAudioProcessor::PAR_DELAYTIME, 8),
       delayFeedbackMulti(p, "DELAY FEEDBACK", AudioPluginAudioProcessor::PAR_DELAYFEEDBACK, 8),
       inVolumeMulti(p, "INPUT VOLUME", AudioPluginAudioProcessor::PAR_INPUT_GAIN, 8),
       cutoffMulti(p, "FILTER CUTOFF", AudioPluginAudioProcessor::PAR_FILTERCUTOFF, 8),
       resonMulti(p, "FILTER RESONANCE", AudioPluginAudioProcessor::PAR_FILTERRESON, 8),
-      aziMulti(p, "AZIMUTH/PAN", AudioPluginAudioProcessor::PAR_AZIMUTH, 8)
+      aziMulti(p, "AZIMUTH/PAN", AudioPluginAudioProcessor::PAR_AZIMUTH, 8,
+               MyProcessor::PAR_AZIMUTHLFO0AMOUNT)
 {
     addAndMakeVisible(enableMulti);
     addAndMakeVisible(pitchMulti);
