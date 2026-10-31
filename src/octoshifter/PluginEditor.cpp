@@ -73,6 +73,8 @@ void OctoShifterProcessorEditor::timerCallback()
     juce::String txt;
     txt += juce::String(processorRef.infifoavail) + " " + juce::String(processorRef.outfifoavail);
     txt += " " + juce::String(processorRef.outsilencecount);
+    txt += " " + juce::String(processorRef.shifters[0].latency_in);
+    txt += " " + juce::String(processorRef.shifters[0].latency_out);
     infoLabel.setText(txt, juce::dontSendNotification);
     ParamChangeMessage msg;
     while (processorRef.params_to_gui_fifo.pop(msg))

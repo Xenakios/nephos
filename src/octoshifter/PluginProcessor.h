@@ -75,6 +75,8 @@ class PitchShifter
 
     alignas(16) float modmatrix[MS_COUNT][MT_COUNT];
     std::atomic<int> pending_quality_change{-1};
+    std::atomic<int> latency_in;
+    std::atomic<int> latency_out;
     PitchShifter()
     {
         for (int i = 0; i < MS_COUNT; ++i)
@@ -180,6 +182,8 @@ class PitchShifter
                 stretch->presetCheaper(1, samplerate);
             pending_quality_change = -1;
         }
+        latency_in = stretch->inputLatency();
+        latency_out = stretch->outputLatency();
         alignas(16) float processinbuffer[1][BLOCKSIZE];
         alignas(16) float processoutbuffer[1][BLOCKSIZE];
         alignas(16) float modsums[MT_COUNT] = {0.0f};
