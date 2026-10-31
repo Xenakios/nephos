@@ -54,7 +54,7 @@ class PitchShifter
     float baseformant = 0.0f;
     float basefiltercutoff = 36.0f;
     float baseazimuth = 0.0f;
-    float filter_reson = 0.0f;
+    float base_filter_reson = 0.0f;
 
     float base_in_volume = 0.0f;
     float delaytime = 0.25f;
@@ -164,6 +164,10 @@ class PitchShifter
         alignas(16) float processinbuffer[1][BLOCKSIZE];
         alignas(16) float processoutbuffer[1][BLOCKSIZE];
         alignas(16) float modsums[MT_COUNT] = {0.0f};
+        // 16 multiplies and adds at the momemt, so not completely terrible...
+        // but if we add substantially more modulation sources and targets,
+        // i guess we have to look into implementing the mod matrix in
+        // some other way...
         for (int i = 0; i < MS_COUNT; ++i)
         {
             for (int j = 0; j < MT_COUNT; ++j)
@@ -189,15 +193,17 @@ class PitchShifter
         float modulatedformant = baseformant + modsums[MT_FORMANT] * 12.0;
         stretch->setFormantSemitones(modulatedformant);
         stretch->process(processinbuffer, BLOCKSIZE, processoutbuffer, BLOCKSIZE);
+
         float modulatedcutoff = basefiltercutoff + modsums[MT_F0CUTOFF] * 24.0;
         modulatedcutoff = std::clamp(modulatedcutoff, -48.0f, 65.0f);
+        float modulatedreson = base_filter_reson + modsums[MT_F0RESON];
+        modulatedreson = std::clamp(modulatedreson, 0.0f, 1.0f);
+        sstfilter.makeCoefficients(0, modulatedcutoff, modulatedreson);
 
+        sstfilter.prepareBlock();
         float modulated_azi = baseazimuth + modsums[MT_AZI];
         modulated_azi = std::clamp(modulated_azi, -1.0f, 1.0f);
         set_spatial_parameters(modulated_azi, 0.0);
-
-        sstfilter.makeCoefficients(0, modulatedcutoff, filter_reson);
-        sstfilter.prepareBlock();
         for (int i = 0; i < BLOCKSIZE; ++i)
         {
             float filtered = sstfilter.processMonoSample(processoutbuffer[0][i]);
@@ -306,6 +312,7 @@ class OctoShifterProcessor final : public juce::AudioProcessor
         PAR_FORMANT_LFOAMOUNTS = 53000,
         PAR_DELAYFB_LFOAMOUNTS = 54000,
         PAR_INVOLUME_LFOAMOUNTS = 55000,
+        PAR_RESON0_LFOAMOUNTS = 56000,
     };
     void set_initialpatch();
     std::vector<pmd> param_metadatas;

@@ -34,7 +34,8 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
                     OctoShifterProcessor::PAR_INVOLUME_LFOAMOUNTS),
       cutoffMulti(p, "FILTER CUTOFF", OctoShifterProcessor::PAR_FILTERCUTOFF, 8,
                   MyProcessor::PAR_CUTOFF0LFOAMOUNTS),
-      resonMulti(p, "FILTER RESONANCE", OctoShifterProcessor::PAR_FILTERRESON, 8),
+      resonMulti(p, "FILTER RESONANCE", OctoShifterProcessor::PAR_FILTERRESON, 8,
+                 OctoShifterProcessor::PAR_RESON0_LFOAMOUNTS),
       aziMulti(p, "AZIMUTH/PAN", OctoShifterProcessor::PAR_AZIMUTH, 8,
                MyProcessor::PAR_AZIMUTHLFOAMOUNTS)
 {
