@@ -21,27 +21,21 @@ using MyProcessor = OctoShifterProcessor;
 //==============================================================================
 OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
     : AudioProcessorEditor(&p), processorRef(p),
-      lfoShapeKnob(XapSlider::SS_HorizontalSlider,
-                   *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFOSHAPES]),
-      lfoRateKnob(XapSlider::SS_Knob, *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFORATES]),
-      lfoDeformKnob(XapSlider::SS_Knob,
-                    *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFODEFORMS]),
-      lfoShiftKnob(XapSlider::SS_Knob, *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFOSHIFTS]),
-      lfoWarpKnob(XapSlider::SS_Knob, *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFOWARPS]),
+
       enableMulti(p, "ENABLED", OctoShifterProcessor::PAR_ENABLED, 8),
-      pitchMulti(p, "PITCH", MyProcessor::PAR_PITCH, 8, MyProcessor::PAR_PITCHLFO0AMOUNT),
+      pitchMulti(p, "PITCH", MyProcessor::PAR_PITCH, 8, MyProcessor::PAR_PITCHLFOAMOUNTS),
       formantMulti(p, "FORMANT", OctoShifterProcessor::PAR_FORMANT, 8,
-                   MyProcessor::PAR_FORMANT_LFO0AMOUNT),
+                   MyProcessor::PAR_FORMANT_LFOAMOUNTS),
       delayTimeMulti(p, "DELAY TIME", OctoShifterProcessor::PAR_DELAYTIME, 8, CLAP_INVALID_ID,
                      true),
       delayFeedbackMulti(p, "DELAY FEEDBACK", OctoShifterProcessor::PAR_DELAYFEEDBACK, 8,
-                         OctoShifterProcessor::PAR_DELAYFB_LFO0AMOUNT),
+                         OctoShifterProcessor::PAR_DELAYFB_LFOAMOUNTS),
       inVolumeMulti(p, "INPUT VOLUME", OctoShifterProcessor::PAR_INPUT_GAIN, 8),
       cutoffMulti(p, "FILTER CUTOFF", OctoShifterProcessor::PAR_FILTERCUTOFF, 8,
-                  MyProcessor::PAR_CUTOFF0LFO0AMOUNT),
+                  MyProcessor::PAR_CUTOFF0LFOAMOUNTS),
       resonMulti(p, "FILTER RESONANCE", OctoShifterProcessor::PAR_FILTERRESON, 8),
       aziMulti(p, "AZIMUTH/PAN", OctoShifterProcessor::PAR_AZIMUTH, 8,
-               MyProcessor::PAR_AZIMUTHLFO0AMOUNT)
+               MyProcessor::PAR_AZIMUTHLFOAMOUNTS)
 {
     addAndMakeVisible(enableMulti);
     addAndMakeVisible(pitchMulti);
@@ -53,17 +47,14 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
     addAndMakeVisible(resonMulti);
     addAndMakeVisible(aziMulti);
     addAndMakeVisible(infoLabel);
-    for (int i = 0; i < p.numshifters; ++i)
+
+    for (int i = 0; i < OctoShifterProcessor::numLFOs; ++i)
     {
-        // auto c = std::make_unique<ShifterComponent>(p, i);
-        // addAndMakeVisible(*c);
-        // shiftercomps.push_back(std::move(c));
+        auto c = std::make_unique<LFOComponent>(p, i);
+        addAndMakeVisible(*c);
+        lfo_comps.push_back(std::move(c));
     }
-    add_xapslider(p, *this, lfoShapeKnob);
-    add_xapslider(p, *this, lfoRateKnob);
-    add_xapslider(p, *this, lfoDeformKnob);
-    add_xapslider(p, *this, lfoShiftKnob);
-    add_xapslider(p, *this, lfoWarpKnob);
+
     visitAll<XapSlider>(*this, [this](XapSlider *slid) {
         paridtoslidermap[slid->getParameterMetaData().id] = slid;
     });
@@ -122,22 +113,9 @@ void OctoShifterProcessorEditor::resized()
         e = e.withMinWidth(500);
     }
     flex.items.add(juce::FlexItem(multiflex).withFlex(8));
-    for (int i = 0; i < shiftercomps.size(); ++i)
+    for (auto &c : lfo_comps)
     {
-        flex.items.add(juce::FlexItem(*shiftercomps[i]).withFlex(1.0));
+        flex.items.add(juce::FlexItem(*c).withFlex(0.7).withMargin(2));
     }
-    juce::FlexBox lfoflex;
-    lfoflex.flexDirection = juce::FlexBox::Direction::row;
-    lfoflex.items.add(juce::FlexItem(lfoShapeKnob).withFlex(3).withMaxHeight(25));
-    lfoflex.items.add(juce::FlexItem(lfoRateKnob).withFlex(1));
-    lfoflex.items.add(juce::FlexItem(lfoDeformKnob).withFlex(1));
-    lfoflex.items.add(juce::FlexItem(lfoShiftKnob).withFlex(1));
-    lfoflex.items.add(juce::FlexItem(lfoWarpKnob).withFlex(1));
-
-    for (auto &e : lfoflex.items)
-    {
-        e = e.withMargin(2.0);
-    }
-    flex.items.add(juce::FlexItem(lfoflex).withFlex(1.0));
     flex.performLayout(getLocalBounds());
 }

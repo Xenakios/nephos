@@ -107,33 +107,32 @@ OctoShifterProcessor::OctoShifterProcessor()
                                       .withRange(-6.0f, 3.0f)
                                       .withATwoToTheBFormatting(1.0f, 1.0f, "Hz")
                                       .withID(PAR_LFORATES + i));
+        param_metadatas.push_back(pmd()
+                                      .withName(fmt::format("LFO {} AMOUNT", i + 1))
+                                      .withRange(-1.0f, 1.0f)
+                                      .withLinearScaleFormatting("%", 100.0)
+                                      .withID(PAR_PITCHLFOAMOUNTS + i));
+        param_metadatas.push_back(pmd()
+                                      .withName(fmt::format("LFO {} AMOUNT", i + 1))
+                                      .withRange(-1.0f, 1.0f)
+                                      .withLinearScaleFormatting("%", 100.0)
+                                      .withID(PAR_FORMANT_LFOAMOUNTS + i));
+        param_metadatas.push_back(pmd()
+                                      .withName(fmt::format("LFO {} AMOUNT", i + 1))
+                                      .withRange(-1.0f, 1.0f)
+                                      .withLinearScaleFormatting("%", 100.0)
+                                      .withID(PAR_AZIMUTHLFOAMOUNTS + i));
+        param_metadatas.push_back(pmd()
+                                      .withName(fmt::format("LFO {} AMOUNT", i + 1))
+                                      .withRange(-1.0f, 1.0f)
+                                      .withLinearScaleFormatting("%", 100.0)
+                                      .withID(PAR_CUTOFF0LFOAMOUNTS + i));
+        param_metadatas.push_back(pmd()
+                                      .withName(fmt::format("LFO {} AMOUNT", i + 1))
+                                      .withRange(-1.0f, 1.0f)
+                                      .withLinearScaleFormatting("%", 100.0)
+                                      .withID(PAR_DELAYFB_LFOAMOUNTS + i));
     }
-
-    param_metadatas.push_back(pmd()
-                                  .withName("LFO AMOUNT")
-                                  .withRange(-1.0f, 1.0f)
-                                  .withLinearScaleFormatting("%", 100.0)
-                                  .withID(PAR_PITCHLFO0AMOUNT));
-    param_metadatas.push_back(pmd()
-                                  .withName("LFO AMOUNT")
-                                  .withRange(-1.0f, 1.0f)
-                                  .withLinearScaleFormatting("%", 100.0)
-                                  .withID(PAR_FORMANT_LFO0AMOUNT));
-    param_metadatas.push_back(pmd()
-                                  .withName("LFO AMOUNT")
-                                  .withRange(-1.0f, 1.0f)
-                                  .withLinearScaleFormatting("%", 100.0)
-                                  .withID(PAR_AZIMUTHLFO0AMOUNT));
-    param_metadatas.push_back(pmd()
-                                  .withName("LFO AMOUNT")
-                                  .withRange(-1.0f, 1.0f)
-                                  .withLinearScaleFormatting("%", 100.0)
-                                  .withID(PAR_CUTOFF0LFO0AMOUNT));
-    param_metadatas.push_back(pmd()
-                                  .withName("LFO AMOUNT")
-                                  .withRange(-1.0f, 1.0f)
-                                  .withLinearScaleFormatting("%", 100.0)
-                                  .withID(PAR_DELAYFB_LFO0AMOUNT));
 
     for (int i = 0; i < param_metadatas.size(); ++i)
     {
@@ -367,17 +366,21 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 continue;
             shifters[j].mod_source_values[PitchShifter::MS_LFO0] = lfos[0].outputBlock[0];
             shifters[j].mod_source_values[PitchShifter::MS_LFO1] = lfos[1].outputBlock[0];
-            shifters[j].modmatrix[PitchShifter::MS_LFO0][PitchShifter::MT_PITCH] =
-                *par_id_to_value_pointer[PAR_PITCHLFO0AMOUNT];
-            float azimod = *par_id_to_value_pointer[PAR_AZIMUTHLFO0AMOUNT];
-            azimod *= modulation_patterns[1][j];
-            shifters[j].modmatrix[PitchShifter::MS_LFO0][PitchShifter::MT_AZI] = azimod;
-            shifters[j].modmatrix[PitchShifter::MS_LFO0][PitchShifter::MT_FORMANT] =
-                *par_id_to_value_pointer[PAR_FORMANT_LFO0AMOUNT];
-            shifters[j].modmatrix[PitchShifter::MS_LFO0][PitchShifter::MT_F0CUTOFF] =
-                *par_id_to_value_pointer[PAR_CUTOFF0LFO0AMOUNT];
-            shifters[j].modmatrix[PitchShifter::MS_LFO0][PitchShifter::MT_DELAYFEEDBACK] =
-                *par_id_to_value_pointer[PAR_DELAYFB_LFO0AMOUNT];
+            for (int i = 0; i < numLFOs; ++i)
+            {
+                shifters[j].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_PITCH] =
+                    *par_id_to_value_pointer[PAR_PITCHLFOAMOUNTS + i];
+                float azimod = *par_id_to_value_pointer[PAR_AZIMUTHLFOAMOUNTS + i];
+                azimod *= modulation_patterns[1][j];
+                shifters[j].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_AZI] = azimod;
+                shifters[j].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_FORMANT] =
+                    *par_id_to_value_pointer[PAR_FORMANT_LFOAMOUNTS + i];
+                shifters[j].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_F0CUTOFF] =
+                    *par_id_to_value_pointer[PAR_CUTOFF0LFOAMOUNTS + i];
+                shifters[j].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_DELAYFEEDBACK] =
+                    *par_id_to_value_pointer[PAR_DELAYFB_LFOAMOUNTS + i];
+            }
+
             for (int i = 0; i < BLOCKSIZE; ++i)
             {
                 procbuf[i * max_output_channels] = inputbuffer[j % 2][i];

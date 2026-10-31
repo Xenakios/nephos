@@ -27,7 +27,7 @@ class MultiSlider : public juce::Component
     struct ParamInfo
     {
         uint32_t id = CLAP_INVALID_ID;
-        bool islfoamount = false;
+        int lfoindex = -1;
         float minval = 0.0f;
         float maxval = 1.0f;
         float defaultval = 0.0f;
@@ -61,8 +61,11 @@ class MultiSlider : public juce::Component
         assert(numvalidated == numpars);
         if (lfo0par != CLAP_INVALID_ID)
         {
-            ParamInfo pi{lfo0par, true, -1.0f, 1.0f, 0.0f, *pref.par_id_to_value_pointer[lfo0par]};
+            ParamInfo pi{lfo0par, 0, -1.0f, 1.0f, 0.0f, *pref.par_id_to_value_pointer[lfo0par]};
             paraminfos.push_back(pi);
+            ParamInfo pi2{lfo0par + 1, 1,    -1.0f,
+                          1.0f,        0.0f, *pref.par_id_to_value_pointer[lfo0par + 1]};
+            paraminfos.push_back(pi2);
         }
     }
 
@@ -96,10 +99,11 @@ class MultiSlider : public juce::Component
             }
             float pmin = paraminfos[i].minval;
             float pmax = paraminfos[i].maxval;
-            if (paraminfos[i].islfoamount)
+            if (paraminfos[i].lfoindex >= 0)
             {
                 g.setColour(juce::Colours::white);
-                g.drawText("LFO1 AMT", xcor, 1, barw, 20, juce::Justification::centred);
+                g.drawText("LFO" + juce::String(paraminfos[i].lfoindex+1) + " AMT", xcor, 1, barw,
+                           20, juce::Justification::centred);
             }
             float ycor = juce::jmap<float>(v, pmin, pmax, getHeight(), 0.0);
             g.setColour(juce::Colours::yellow);
@@ -133,7 +137,7 @@ class MultiSlider : public juce::Component
         float pmin = paraminfos[i].minval;
         float pmax = paraminfos[i].maxval;
         bool quan = true;
-        if (paraminfos[i].islfoamount)
+        if (paraminfos[i].lfoindex >= 0)
         {
             quan = false;
         }
@@ -182,20 +186,41 @@ class MultiSlider : public juce::Component
     void update() { repaint(); }
 };
 
-class LFOComponent
+class LFOComponent : public juce::Component
 {
   public:
     OctoShifterProcessor &procref;
     XapSlider shapeDrop;
-    // XapSlider rateKnob;
+    XapSlider rateKnob;
+    XapSlider deformKnob;
     // XapSlider deformKnob;
-    // XapSlider warpKnob;
+    XapSlider warpKnob;
     int index = -1;
     LFOComponent(OctoShifterProcessor &p, int lfoindex)
         : procref(p),
           shapeDrop(XapSlider::SS_HorizontalSlider,
-                    *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFOSHAPES + lfoindex])
+                    *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFOSHAPES + lfoindex]),
+          rateKnob(XapSlider::SS_Knob,
+                   *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFORATES + lfoindex]),
+          deformKnob(XapSlider::SS_Knob,
+                     *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFODEFORMS + lfoindex]),
+          warpKnob(XapSlider::SS_Knob,
+                   *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFOWARPS + lfoindex])
     {
+        add_xapslider(p, *this, shapeDrop);
+        add_xapslider(p, *this, rateKnob);
+        add_xapslider(p, *this, deformKnob);
+        add_xapslider(p, *this, warpKnob);
+    }
+    void resized() override
+    {
+        juce::FlexBox flex;
+        flex.flexDirection = juce::FlexBox::Direction::row;
+        flex.items.add(juce::FlexItem(shapeDrop).withFlex(1.0).withMaxHeight(25));
+        flex.items.add(juce::FlexItem(rateKnob).withFlex(1.0));
+        flex.items.add(juce::FlexItem(deformKnob).withFlex(1.0));
+        flex.items.add(juce::FlexItem(warpKnob).withFlex(1.0));
+        flex.performLayout(getLocalBounds());
     }
 };
 
@@ -271,11 +296,7 @@ class OctoShifterProcessorEditor final : public juce::AudioProcessorEditor, publ
     // access the processor object that created it.
     OctoShifterProcessor &processorRef;
     std::vector<std::unique_ptr<ShifterComponent>> shiftercomps;
-    XapSlider lfoShapeKnob;
-    XapSlider lfoRateKnob;
-    XapSlider lfoDeformKnob;
-    XapSlider lfoShiftKnob;
-    XapSlider lfoWarpKnob;
+    std::vector<std::unique_ptr<LFOComponent>> lfo_comps;
 
     MultiSlider enableMulti;
     MultiSlider pitchMulti;

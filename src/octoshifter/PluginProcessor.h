@@ -161,6 +161,14 @@ class PitchShifter
         }
         alignas(16) float processinbuffer[1][BLOCKSIZE];
         alignas(16) float processoutbuffer[1][BLOCKSIZE];
+        alignas(16) float modsums[MT_COUNT] = {0.0f};
+        for (int i = 0; i < MS_COUNT; ++i)
+        {
+            for (int j = 0; j < MT_COUNT; ++j)
+            {
+                modsums[j] += modmatrix[i][j] * mod_source_values[i];
+            }
+        }
         float modulatedfeedback =
             basefeedbackamt + modmatrix[MS_LFO0][MT_DELAYFEEDBACK] * mod_source_values[MS_LFO0];
         modulatedfeedback = std::clamp(modulatedfeedback, 0.0f, 0.999f);
@@ -171,18 +179,16 @@ class PitchShifter
             processinbuffer[0][i] = insample;
             ingainlag.process();
         }
-        float modulatedpitch =
-            basepitch + modmatrix[MS_LFO0][MT_PITCH] * mod_source_values[0] * 12.0;
+        float modulatedpitch = basepitch + modsums[MT_PITCH] * 12.0;
         stretch->setTransposeSemitones(modulatedpitch);
-        float modulatedformant =
-            baseformant + modmatrix[MS_LFO0][MT_FORMANT] * mod_source_values[0] * 12.0;
+        float modulatedformant = baseformant + modsums[MT_FORMANT] * 12.0;
         stretch->setFormantSemitones(modulatedformant);
         stretch->process(processinbuffer, BLOCKSIZE, processoutbuffer, BLOCKSIZE);
         float modulatedcutoff =
             basefiltercutoff + mod_source_values[0] * modmatrix[MS_LFO0][MT_F0CUTOFF] * 24.0;
         modulatedcutoff = std::clamp(modulatedcutoff, -48.0f, 65.0f);
 
-        float modulated_azi = baseazimuth + modmatrix[MS_LFO0][MT_AZI] * mod_source_values[0];
+        float modulated_azi = baseazimuth + modsums[MT_AZI];
         modulated_azi = std::clamp(modulated_azi, -1.0f, 1.0f);
         set_spatial_parameters(modulated_azi, 0.0);
 
@@ -292,12 +298,11 @@ class OctoShifterProcessor final : public juce::AudioProcessor
         PAR_LFODEFORMS = 10300,
         PAR_LFOSHIFTS = 10400,
         PAR_LFOWARPS = 10500,
-        PAR_PITCHLFO0AMOUNT = 50000,
-        PAR_AZIMUTHLFO0AMOUNT = 51000,
-        PAR_CUTOFF0LFO0AMOUNT = 52000,
-        PAR_FORMANT_LFO0AMOUNT = 53000,
-        PAR_DELAYFB_LFO0AMOUNT = 54000,
-        
+        PAR_PITCHLFOAMOUNTS = 50000,
+        PAR_AZIMUTHLFOAMOUNTS = 51000,
+        PAR_CUTOFF0LFOAMOUNTS = 52000,
+        PAR_FORMANT_LFOAMOUNTS = 53000,
+        PAR_DELAYFB_LFOAMOUNTS = 54000,
     };
     void set_initialpatch();
     std::vector<pmd> param_metadatas;
