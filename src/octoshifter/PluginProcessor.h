@@ -33,20 +33,14 @@ class PitchShifter
     bool enabled = true;
     float basepitch = 0.0f;
     float baseformant = 0.0f;
-    float formantmodamount = 0.0f;
     float basefiltercutoff = 36.0f;
-    float filtercutoff_lfo_amount = 0.0;
+    float baseazimuth = 0.0f;
     float filter_reson = 0.0f;
-    float lforate = 0.0f;
-    float lfodeform = 0.0f;
-    float lfowarp = 0.0f;
-    float lfoshift = 0.0f;
-    float lfoamount = 0.0f;
+    
     float ingain = 1.0f;
     float delaytime = 0.25f;
     float feedbackamt = 0.0f;
-    float baseazimuth = 0.0f;
-    float azimuth_lfo_amount = 0.0;
+    
     float mod_source_values[2] = {0.0f, 0.0f};
     double samplerate = 0.0;
     alignas(16) std::array<float, 64> spatcoeffs = {0.0f};
@@ -56,9 +50,27 @@ class PitchShifter
     std::vector<float> delaybuffer;
     alignas(16) int delaywritepos = 0;
     alignas(16) float feedbackaudio[BLOCKSIZE] = {0.0f};
-    int lfoshape = 0;
+    enum MODSOURCES
+    {
+        MS_LFO0,
+        MS_LFO1,
+        MS_COUNT
+    };
+    enum MODTARGETS
+    {
+        MT_PITCH,
+        MT_FORMANT,
+        MT_F0CUTOFF,
+        MT_F0RESON,
+        MT_AZI,
+        MT_COUNT
+    };
+    alignas(16) float modmatrix[MS_COUNT][MT_COUNT];
     PitchShifter()
     {
+        for (int i = 0; i < MS_COUNT; ++i)
+            for (int j = 0; j < MT_COUNT; ++j)
+                modmatrix[i][j] = 0.0f;
         stretch = std::make_unique<signalsmith::stretch::SignalsmithStretch<>>();
         ingainlag.setRateInMilliseconds(50.0, 44100.0, 1.0f);
         ingainlag.snapTo(0.0);
@@ -141,16 +153,18 @@ class PitchShifter
             processinbuffer[0][i] = insample;
             ingainlag.process();
         }
-        float finalpitch = basepitch + lfoamount * mod_source_values[0] * 12.0;
-        stretch->setTransposeSemitones(finalpitch);
-        float modulatedformant = baseformant + formantmodamount * mod_source_values[0] * 12.0;
+        float modulatedpitch =
+            basepitch + modmatrix[MS_LFO0][MT_PITCH] * mod_source_values[0] * 12.0;
+        stretch->setTransposeSemitones(modulatedpitch);
+        float modulatedformant =
+            baseformant + modmatrix[MS_LFO0][MT_FORMANT] * mod_source_values[0] * 12.0;
         stretch->setFormantSemitones(modulatedformant);
         stretch->process(processinbuffer, BLOCKSIZE, processoutbuffer, BLOCKSIZE);
         float modulatedcutoff =
-            basefiltercutoff + mod_source_values[0] * filtercutoff_lfo_amount * 24.0;
+            basefiltercutoff + mod_source_values[0] * modmatrix[MS_LFO0][MT_F0CUTOFF] * 24.0;
         modulatedcutoff = std::clamp(modulatedcutoff, -48.0f, 65.0f);
 
-        float modulated_azi = baseazimuth + azimuth_lfo_amount * mod_source_values[0];
+        float modulated_azi = baseazimuth + modmatrix[MS_LFO0][MT_AZI] * mod_source_values[0];
         modulated_azi = std::clamp(modulated_azi, -1.0f, 1.0f);
         set_spatial_parameters(modulated_azi, 0.0);
 

@@ -320,10 +320,26 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         }
         alignas(16) float procbuf[BLOCKSIZE * max_output_channels];
         memset(procbuf, 0, BLOCKSIZE * max_output_channels * sizeof(float));
+        int lfo0shape = *par_id_to_value_pointer[PAR_LFOSHAPE];
+        lfo0shape = choicetolfoshapemap[lfo0shape];
+        float lfo0rate = *par_id_to_value_pointer[PAR_LFORATE];
+        float lfo0deform = *par_id_to_value_pointer[PAR_LFODEFORM];
+        float lfo0warp = *par_id_to_value_pointer[PAR_LFOWARP];
+        lfos[0].process_block(lfo0rate, lfo0deform, lfo0shape, false, 1.0, lfo0warp);
         for (int j = 0; j < shifterstouse; ++j)
         {
             if (!shifters[j].enabled)
                 continue;
+            shifters[j].mod_source_values[PitchShifter::MS_LFO0] = lfos[0].outputBlock[0];
+            shifters[j].modmatrix[PitchShifter::MS_LFO0][PitchShifter::MT_PITCH] =
+                *par_id_to_value_pointer[PAR_PITCHLFO0AMOUNT];
+            float azimod = *par_id_to_value_pointer[PAR_AZIMUTHLFO0AMOUNT];
+            azimod *= modulation_patterns[1][j];
+            shifters[j].modmatrix[PitchShifter::MS_LFO0][PitchShifter::MT_AZI] = azimod;
+            shifters[j].modmatrix[PitchShifter::MS_LFO0][PitchShifter::MT_FORMANT] =
+                *par_id_to_value_pointer[PAR_FORMANT_LFO0AMOUNT];
+            shifters[j].modmatrix[PitchShifter::MS_LFO0][PitchShifter::MT_F0CUTOFF] =
+                *par_id_to_value_pointer[PAR_CUTOFF0LFO0AMOUNT];
             for (int i = 0; i < BLOCKSIZE; ++i)
             {
                 procbuf[i * max_output_channels] = inputbuffer[j % 2][i];
@@ -409,47 +425,7 @@ void OctoShifterProcessor::send_param_updates_to_gui()
 void OctoShifterProcessor::set_parameter_value(uint32_t id, float value)
 {
     *par_id_to_value_pointer[id] = value;
-    for (int i = 0; i < numshifters; ++i)
-    {
-        if (id == PAR_LFOSHAPE)
-        {
-            int shape = choicetolfoshapemap[(int)value];
-            shifters[i].lfoshape = shape;
-        }
-        if (id == PAR_PITCHLFO0AMOUNT)
-        {
-            shifters[i].lfoamount = value;
-        }
-        if (id == PAR_FORMANT_LFO0AMOUNT)
-        {
-            shifters[i].formantmodamount = value;
-        }
-        if (id == PAR_AZIMUTHLFO0AMOUNT)
-        {
-            shifters[i].azimuth_lfo_amount = value * modulation_patterns[1][i];
-        }
-        if (id == PAR_CUTOFF0LFO0AMOUNT)
-        {
-            shifters[i].filtercutoff_lfo_amount = value * modulation_patterns[0][i];
-        }
-        if (id == PAR_LFODEFORM)
-        {
-            shifters[i].lfodeform = value;
-        }
-        if (id == PAR_LFOWARP)
-        {
-            shifters[i].lfowarp = value;
-        }
-        if (id == PAR_LFOSHIFT)
-        {
-            float shift = 0.5 / (numshifters - 1) * i;
-            shifters[i].lfoshift = value * shift;
-        }
-        if (id == PAR_LFORATE)
-        {
-            shifters[i].lforate = value;
-        }
-    }
+
     if (id >= PAR_PITCH && id < PAR_PITCH + numshifters)
     {
         shifters[id - PAR_PITCH].basepitch = value;
