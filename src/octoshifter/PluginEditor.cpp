@@ -37,7 +37,9 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
       resonMulti(p, "FILTER RESONANCE", OctoShifterProcessor::PAR_FILTERRESON, 8,
                  OctoShifterProcessor::PAR_RESON0_LFOAMOUNTS),
       aziMulti(p, "AZIMUTH/PAN", OctoShifterProcessor::PAR_AZIMUTH, 8,
-               MyProcessor::PAR_AZIMUTHLFOAMOUNTS)
+               MyProcessor::PAR_AZIMUTHLFOAMOUNTS),
+      pitchQualityDrop(XapSlider::SS_HorizontalSlider,
+                       *p.par_id_to_metadata[OctoShifterProcessor::PAR_PITCHQUALITY])
 {
     addAndMakeVisible(enableMulti);
     addAndMakeVisible(pitchMulti);
@@ -49,7 +51,7 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
     addAndMakeVisible(resonMulti);
     addAndMakeVisible(aziMulti);
     addAndMakeVisible(infoLabel);
-
+    add_xapslider(p, *this, pitchQualityDrop);
     for (int i = 0; i < OctoShifterProcessor::numLFOs; ++i)
     {
         auto c = std::make_unique<LFOComponent>(p, i);
@@ -109,7 +111,11 @@ void OctoShifterProcessorEditor::resized()
     multiflex.items.add(juce::FlexItem(cutoffMulti).withFlex(1.0).withMargin(3));
     multiflex.items.add(juce::FlexItem(resonMulti).withFlex(1.0).withMargin(3));
     multiflex.items.add(juce::FlexItem(aziMulti).withFlex(1.0).withMargin(3));
-    multiflex.items.add(juce::FlexItem(infoLabel).withFlex(1.0).withMargin(3).withMaxHeight(25));
+    juce::FlexBox miscflex;
+    miscflex.flexDirection = juce::FlexBox::Direction::row;
+    miscflex.items.add(juce::FlexItem(pitchQualityDrop).withFlex(1).withMaxHeight(25));
+    miscflex.items.add(juce::FlexItem(infoLabel).withFlex(1).withMaxHeight(25));
+    multiflex.items.add(juce::FlexItem(miscflex).withFlex(1.0).withMargin(3));
     for (auto &e : multiflex.items)
     {
         e = e.withMinWidth(500);

@@ -76,6 +76,12 @@ OctoShifterProcessor::OctoShifterProcessor()
                                       .withLinearScaleFormatting("%", 100.0)
                                       .withID(PAR_AZIMUTH + i));
     }
+    param_metadatas.push_back(
+        pmd()
+            .withName("PITCH SHIFT MODE")
+            .withUnorderedMapFormatting({{0, "Default"}, {1, "Cheap"}, {2, "Reserved"}}, true)
+            .withDefault(0)
+            .withID(PAR_PITCHQUALITY));
     for (int i = 0; i < numLFOs; ++i)
     {
         param_metadatas.push_back(pmd()
@@ -302,7 +308,6 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                                         juce::MidiBuffer &midiMessages)
 {
     juce::ignoreUnused(midiMessages);
-
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
@@ -480,7 +485,14 @@ void OctoShifterProcessor::send_param_updates_to_gui()
 void OctoShifterProcessor::set_parameter_value(uint32_t id, float value)
 {
     *par_id_to_value_pointer[id] = value;
-
+    if (id == PAR_PITCHQUALITY)
+    {
+        int qual = *par_id_to_value_pointer[PAR_PITCHQUALITY];
+        for (auto &e : shifters)
+        {
+            e.pending_quality_change = qual;
+        }
+    }
     if (id >= PAR_PITCH && id < PAR_PITCH + numshifters)
     {
         shifters[id - PAR_PITCH].basepitch = value;

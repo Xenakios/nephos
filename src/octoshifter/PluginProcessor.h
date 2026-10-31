@@ -7,6 +7,7 @@
 #include "containers/choc_Value.h"
 #include "juce_audio_basics/juce_audio_basics.h"
 #include "juce_audio_processors_headless/juce_audio_processors_headless.h"
+#include "juce_core/juce_core.h"
 #include "signalsmith-stretch.h"
 #include "sst/basic-blocks/modulators/SimpleLFO.h"
 #include "sst/basic-blocks/dsp/EllipticBlepOscillators.h"
@@ -73,6 +74,7 @@ class PitchShifter
     alignas(16) float feedbackaudio[BLOCKSIZE] = {0.0f};
 
     alignas(16) float modmatrix[MS_COUNT][MT_COUNT];
+    std::atomic<int> pending_quality_change{-1};
     PitchShifter()
     {
         for (int i = 0; i < MS_COUNT; ++i)
@@ -168,6 +170,15 @@ class PitchShifter
                 audio_inout[i * 64 + 1] = audio_inout[i * 64 + 0];
             }
             return;
+        }
+        if (pending_quality_change >= 0)
+        {
+            int q = pending_quality_change.load();
+            if (q == 0)
+                stretch->presetDefault(1, samplerate);
+            if (q == 1)
+                stretch->presetCheaper(1, samplerate);
+            pending_quality_change = -1;
         }
         alignas(16) float processinbuffer[1][BLOCKSIZE];
         alignas(16) float processoutbuffer[1][BLOCKSIZE];
@@ -321,6 +332,7 @@ class OctoShifterProcessor final : public juce::AudioProcessor
         PAR_FILTERCUTOFF = 500,
         PAR_FILTERRESON = 600,
         PAR_AZIMUTH = 700,
+        PAR_PITCHQUALITY = 800,
         PAR_LFOSHAPES = 10000,
         PAR_LFORATES = 10100,
         PAR_LFODEFORMS = 10300,
@@ -357,6 +369,7 @@ class OctoShifterProcessor final : public juce::AudioProcessor
     std::atomic<int> outsilencecount = 0;
 
   private:
+    
     double osc0phase = 0.0;
     double osc1phase = 0.0;
     juce::AudioBuffer<float> workbuffer;
