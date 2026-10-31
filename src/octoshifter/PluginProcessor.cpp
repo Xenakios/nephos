@@ -132,6 +132,11 @@ OctoShifterProcessor::OctoShifterProcessor()
                                       .withRange(-1.0f, 1.0f)
                                       .withLinearScaleFormatting("%", 100.0)
                                       .withID(PAR_DELAYFB_LFOAMOUNTS + i));
+        param_metadatas.push_back(pmd()
+                                      .withName(fmt::format("LFO {} AMOUNT", i + 1))
+                                      .withRange(-1.0f, 1.0f)
+                                      .withLinearScaleFormatting("%", 100.0)
+                                      .withID(PAR_INVOLUME_LFOAMOUNTS + i));
     }
 
     for (int i = 0; i < param_metadatas.size(); ++i)
@@ -379,6 +384,8 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                     *par_id_to_value_pointer[PAR_CUTOFF0LFOAMOUNTS + i];
                 shifters[j].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_DELAYFEEDBACK] =
                     *par_id_to_value_pointer[PAR_DELAYFB_LFOAMOUNTS + i];
+                shifters[j].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_INVOLUME] =
+                    *par_id_to_value_pointer[PAR_INVOLUME_LFOAMOUNTS + i];
             }
 
             for (int i = 0; i < BLOCKSIZE; ++i)
@@ -485,7 +492,7 @@ void OctoShifterProcessor::set_parameter_value(uint32_t id, float value)
     }
     if (id >= PAR_INPUT_GAIN && id < PAR_INPUT_GAIN + numshifters)
     {
-        shifters[id - PAR_INPUT_GAIN].ingainlag.setTarget(juce::Decibels::decibelsToGain(value));
+        shifters[id - PAR_INPUT_GAIN].base_in_volume = value;
     }
     if (id >= PAR_AZIMUTH && id < PAR_AZIMUTH + numshifters)
     {

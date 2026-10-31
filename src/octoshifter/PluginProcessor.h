@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <unordered_map>
 #include "clap/id.h"
@@ -29,27 +30,6 @@ static constexpr size_t BLOCK_SIZE_OS = BLOCKSIZE * 2;
 class PitchShifter
 {
   public:
-    std::unique_ptr<signalsmith::stretch::SignalsmithStretch<>> stretch;
-    bool enabled = true;
-    float basepitch = 0.0f;
-    float baseformant = 0.0f;
-    float basefiltercutoff = 36.0f;
-    float baseazimuth = 0.0f;
-    float filter_reson = 0.0f;
-
-    float ingain = 1.0f;
-    float delaytime = 0.25f;
-    float basefeedbackamt = 0.0f;
-
-    float mod_source_values[2] = {0.0f, 0.0f};
-    double samplerate = 0.0;
-    alignas(16) std::array<float, 64> spatcoeffs = {0.0f};
-    alignas(16) sst::filtersplusplus::Filter sstfilter;
-    int numchs = 2;
-    sst::basic_blocks::dsp::OnePoleLag<float, true> ingainlag;
-    std::vector<float> delaybuffer;
-    alignas(16) int delaywritepos = 0;
-    alignas(16) float feedbackaudio[BLOCKSIZE] = {0.0f};
     enum MODSOURCES
     {
         MS_LFO0,
@@ -65,8 +45,31 @@ class PitchShifter
         MT_AZI,
         MT_ELEVATION,
         MT_DELAYFEEDBACK,
+        MT_INVOLUME,
         MT_COUNT
     };
+    std::unique_ptr<signalsmith::stretch::SignalsmithStretch<>> stretch;
+    bool enabled = true;
+    float basepitch = 0.0f;
+    float baseformant = 0.0f;
+    float basefiltercutoff = 36.0f;
+    float baseazimuth = 0.0f;
+    float filter_reson = 0.0f;
+
+    float base_in_volume = 0.0f;
+    float delaytime = 0.25f;
+    float basefeedbackamt = 0.0f;
+
+    float mod_source_values[MS_COUNT] = {0.0f, 0.0f};
+    double samplerate = 0.0;
+    alignas(16) std::array<float, 64> spatcoeffs = {0.0f};
+    alignas(16) sst::filtersplusplus::Filter sstfilter;
+    int numchs = 2;
+    sst::basic_blocks::dsp::OnePoleLag<float, true> ingainlag;
+    std::vector<float> delaybuffer;
+    alignas(16) int delaywritepos = 0;
+    alignas(16) float feedbackaudio[BLOCKSIZE] = {0.0f};
+
     alignas(16) float modmatrix[MS_COUNT][MT_COUNT];
     PitchShifter()
     {
@@ -95,7 +98,6 @@ class PitchShifter
     }
     void set_sample_rate(double hz, int chans)
     {
-
         numchs = chans;
         samplerate = hz;
         ingainlag.setRateInMilliseconds(50.0, hz, 1.0f);
@@ -169,9 +171,12 @@ class PitchShifter
                 modsums[j] += modmatrix[i][j] * mod_source_values[i];
             }
         }
-        float modulatedfeedback =
-            basefeedbackamt + modmatrix[MS_LFO0][MT_DELAYFEEDBACK] * mod_source_values[MS_LFO0];
+        float modulatedfeedback = basefeedbackamt + modsums[MT_DELAYFEEDBACK];
         modulatedfeedback = std::clamp(modulatedfeedback, 0.0f, 0.999f);
+        float modulated_in_volume = base_in_volume + modsums[MT_INVOLUME] * 12.0;
+        modulated_in_volume = std::clamp(modulated_in_volume, -48.0f, 0.0f);
+        modulated_in_volume = juce::Decibels::decibelsToGain(modulated_in_volume);
+        ingainlag.setTarget(modulated_in_volume);
         for (int i = 0; i < BLOCKSIZE; ++i)
         {
             float insample = audio_inout[i * 64] * ingainlag.getValue();
@@ -184,8 +189,7 @@ class PitchShifter
         float modulatedformant = baseformant + modsums[MT_FORMANT] * 12.0;
         stretch->setFormantSemitones(modulatedformant);
         stretch->process(processinbuffer, BLOCKSIZE, processoutbuffer, BLOCKSIZE);
-        float modulatedcutoff =
-            basefiltercutoff + mod_source_values[0] * modmatrix[MS_LFO0][MT_F0CUTOFF] * 24.0;
+        float modulatedcutoff = basefiltercutoff + modsums[MT_F0CUTOFF] * 24.0;
         modulatedcutoff = std::clamp(modulatedcutoff, -48.0f, 65.0f);
 
         float modulated_azi = baseazimuth + modsums[MT_AZI];
@@ -205,8 +209,6 @@ class PitchShifter
         }
         sstfilter.concludeBlock();
     }
-    SingleThreadedFifo<float> infifo{BLOCKSIZE};
-    SingleThreadedFifo<float> outfifo{BLOCKSIZE};
 };
 
 using pmd = sst::basic_blocks::params::ParamMetaData;
@@ -303,6 +305,7 @@ class OctoShifterProcessor final : public juce::AudioProcessor
         PAR_CUTOFF0LFOAMOUNTS = 52000,
         PAR_FORMANT_LFOAMOUNTS = 53000,
         PAR_DELAYFB_LFOAMOUNTS = 54000,
+        PAR_INVOLUME_LFOAMOUNTS = 55000,
     };
     void set_initialpatch();
     std::vector<pmd> param_metadatas;
