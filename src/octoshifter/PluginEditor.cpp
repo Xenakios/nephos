@@ -1,4 +1,5 @@
 #include "PluginProcessor.h"
+#include "clap/id.h"
 #include "juce_core/juce_core.h"
 #include "juce_events/juce_events.h"
 #include "juce_gui_basics/juce_gui_basics.h"
@@ -30,7 +31,8 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
       pitchMulti(p, "PITCH", MyProcessor::PAR_PITCH, 8, MyProcessor::PAR_PITCHLFO0AMOUNT),
       formantMulti(p, "FORMANT", OctoShifterProcessor::PAR_FORMANT, 8,
                    MyProcessor::PAR_FORMANT_LFO0AMOUNT),
-      delayTimeMulti(p, "DELAY TIME", OctoShifterProcessor::PAR_DELAYTIME, 8),
+      delayTimeMulti(p, "DELAY TIME", OctoShifterProcessor::PAR_DELAYTIME, 8, CLAP_INVALID_ID,
+                     true),
       delayFeedbackMulti(p, "DELAY FEEDBACK", OctoShifterProcessor::PAR_DELAYFEEDBACK, 8),
       inVolumeMulti(p, "INPUT VOLUME", OctoShifterProcessor::PAR_INPUT_GAIN, 8),
       cutoffMulti(p, "FILTER CUTOFF", OctoShifterProcessor::PAR_FILTERCUTOFF, 8,

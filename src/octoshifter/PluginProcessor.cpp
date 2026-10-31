@@ -279,8 +279,8 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         std::array<float, max_input_channels> fifoframe;
         for (int i = 0; i < buffer.getNumSamples(); ++i)
         {
-            fifoframe[0] = 0.5 * reflect_value_no_loop(-1.0, std::sin(osc0phase) * 4, 1.0);
-            fifoframe[1] = 0.5 * reflect_value_no_loop(-1.0, std::sin(osc1phase) * 4, 1.0);
+            fifoframe[0] = 0.5 * reflect_value_no_loop(-1.0, std::sin(osc0phase) * 8, 1.0);
+            fifoframe[1] = 0.5 * reflect_value_no_loop(-1.0, std::sin(osc1phase) * 8, 1.0);
             osc0phase += oscinc0;
             osc1phase += oscinc1;
             // if (input_fifo.usedSlots() <= BLOCKSIZE)

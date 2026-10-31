@@ -9,8 +9,7 @@
 #include <stdio.h>
 #include <unordered_map>
 
-inline void add_xapslider(OctoShifterProcessor &proc, juce::Component &parentcomp,
-                          XapSlider &slid)
+inline void add_xapslider(OctoShifterProcessor &proc, juce::Component &parentcomp, XapSlider &slid)
 {
     parentcomp.addAndMakeVisible(slid);
     slid.OnValueChanged = [&slid, &proc]() {
@@ -25,19 +24,25 @@ class MultiSlider : public juce::Component
 {
   public:
     OctoShifterProcessor &pref;
-    uint32_t firstpar = CLAP_INVALID_ID;
-    uint32_t numparams = 0;
-    uint32_t lfo0_amt_par = CLAP_INVALID_ID;
-    float parminval = 0.0f;
-    float parmaxval = 1.0f;
-    float pardefaultval = 0.0f;
+    struct ParamInfo
+    {
+        uint32_t id = CLAP_INVALID_ID;
+        bool islfoamount = false;
+        float minval = 0.0f;
+        float maxval = 1.0f;
+        float defaultval = 0.0f;
+        float value = 0.0f;
+        bool notify_only_on_mouse_up = false;
+    };
+    std::vector<ParamInfo> paraminfos;
     int draggedindex = -1;
     juce::String groupname;
-    std::array<float, 256> values = {0.0f};
-    MultiSlider(OctoShifterProcessor &p, juce::String name, uint32_t parstartid,
-                uint32_t numpars, uint32_t lfo0par = CLAP_INVALID_ID)
-        : pref(p), firstpar(parstartid), numparams(numpars), lfo0_amt_par(lfo0par), groupname(name)
+
+    MultiSlider(OctoShifterProcessor &p, juce::String name, uint32_t parstartid, uint32_t numpars,
+                uint32_t lfo0par = CLAP_INVALID_ID, bool notify_only_on_mouse_up = false)
+        : pref(p), groupname(name)
     {
+        paraminfos.resize(8);
         int numvalidated = 0;
         for (int i = 0; i < numpars; ++i)
         {
@@ -45,47 +50,40 @@ class MultiSlider : public juce::Component
             if (it != pref.par_id_to_metadata.end())
             {
                 ++numvalidated;
-                parminval = it->second->minVal;
-                parmaxval = it->second->maxVal;
-                pardefaultval = it->second->defaultVal;
-                values[i] = *pref.par_id_to_value_pointer[it->first];
+                paraminfos[i].id = it->first;
+                paraminfos[i].minval = it->second->minVal;
+                paraminfos[i].maxval = it->second->maxVal;
+                paraminfos[i].defaultval = it->second->defaultVal;
+                paraminfos[i].value = *pref.par_id_to_value_pointer[it->first];
+                paraminfos[i].notify_only_on_mouse_up = notify_only_on_mouse_up;
             }
         }
-        if (lfo0_amt_par != CLAP_INVALID_ID)
-        {
-            values[numpars] = *pref.par_id_to_value_pointer[lfo0_amt_par];
-        }
         assert(numvalidated == numpars);
-    }
-    uint32_t param_id_from_index(int index)
-    {
-        if (index < 0 || index >= num_all_params())
-            return CLAP_INVALID_ID;
-        uint32_t pid = firstpar + index;
-        if (index == numparams)
+        if (lfo0par != CLAP_INVALID_ID)
         {
-            pid = lfo0_amt_par;
+            ParamInfo pi{lfo0par, true, -1.0f, 1.0f, 0.0f, *pref.par_id_to_value_pointer[lfo0par]};
+            paraminfos.push_back(pi);
         }
-        return pid;
     }
+
     void paint(juce::Graphics &g) override
     {
         g.fillAll(juce::Colours::black);
         g.setColour(juce::Colours::lightgrey);
         g.setFont(40.0);
-        auto polar = pref.par_id_to_metadata[firstpar]->getPolarity();
+        // auto polar = pref.par_id_to_metadata[firstpar]->getPolarity();
         juce::String txt = groupname;
         // if (polar == pmd::Polarity::BIPOLAR)
         //     txt += " (BIPOLAR)";
         g.drawText(txt, 0, 0, getWidth(), getHeight(), juce::Justification::centred);
         g.setFont(12.0);
-        int parstodraw = num_all_params();
+        int parstodraw = paraminfos.size();
         float barw = (float)getWidth() / parstodraw;
         for (int i = 0; i < parstodraw; ++i)
         {
             float xcor = barw * i;
-            float v = values[i];
-            uint32_t pid = param_id_from_index(i);
+            float v = paraminfos[i].value;
+            uint32_t pid = paraminfos[i].id;
             if (pid != CLAP_INVALID_ID)
             {
                 auto partxt = pref.par_id_to_metadata[pid]->valueToString(v);
@@ -96,12 +94,10 @@ class MultiSlider : public juce::Component
                                juce::Justification::centred);
                 }
             }
-            float pmin = parminval;
-            float pmax = parmaxval;
-            if (i == numparams)
+            float pmin = paraminfos[i].minval;
+            float pmax = paraminfos[i].maxval;
+            if (paraminfos[i].islfoamount)
             {
-                pmin = -1.0;
-                pmax = 1.0;
                 g.setColour(juce::Colours::white);
                 g.drawText("LFO1 AMT", xcor, 1, barw, 20, juce::Justification::centred);
             }
@@ -112,69 +108,74 @@ class MultiSlider : public juce::Component
     }
     void mouseDoubleClick(const juce::MouseEvent &ev) override
     {
-        int shifterindex = (float)num_all_params() / getWidth() * ev.x;
-        if (shifterindex >= 0 && shifterindex < num_all_params())
+        int paramindex = (float)paraminfos.size() / getWidth() * ev.x;
+        if (paramindex >= 0 && paramindex < paraminfos.size())
         {
-            if (shifterindex < numparams)
-                post_param_event(shifterindex, pardefaultval);
-            else
-                post_param_event(shifterindex, 0.0);
+            post_param_event(paramindex, paraminfos[paramindex].defaultval);
             repaint();
         }
     }
-    int num_all_params()
-    {
-        if (lfo0_amt_par != CLAP_INVALID_ID)
-            return numparams + 1;
-        return numparams;
-    }
+
     void mouseDown(const juce::MouseEvent &ev) override
     {
         draggedindex = -1;
-        int shifterindex = (float)(num_all_params()) / getWidth() * ev.x;
-        if (shifterindex >= 0 && shifterindex < num_all_params())
+        int paramindex = (float)(paraminfos.size()) / getWidth() * ev.x;
+        if (paramindex >= 0 && paramindex < paraminfos.size())
         {
-            draggedindex = shifterindex;
-            post_param_event(draggedindex, parval_from_mouse_y(draggedindex, ev.y));
+            draggedindex = paramindex;
+            if (!paraminfos[paramindex].notify_only_on_mouse_up)
+                post_param_event(draggedindex, parval_from_mouse_y(draggedindex, ev.y));
             repaint();
         }
     }
     float parval_from_mouse_y(int i, float y)
     {
-        float pmin = parminval;
-        float pmax = parmaxval;
+        float pmin = paraminfos[i].minval;
+        float pmax = paraminfos[i].maxval;
         bool quan = true;
-        if (i == numparams)
+        if (paraminfos[i].islfoamount)
         {
-            pmin = -1.0;
-            pmax = 1.0;
             quan = false;
         }
         float v = juce::jmap<float>(y, 0.0, getHeight(), pmax, pmin);
         v = std::clamp(v, pmin, pmax);
         if (quan)
-            v = pref.par_id_to_metadata[firstpar]->quantize(v);
+            v = pref.par_id_to_metadata[paraminfos[i].id]->quantize(v);
         return v;
     }
     // our own index, not the clap id!
     void post_param_event(int parindex, float val)
     {
         ParamChangeMessage msg;
-        msg.id = firstpar + parindex;
-        if (parindex == numparams)
-        {
-            msg.id = lfo0_amt_par;
-        }
+        msg.id = paraminfos[parindex].id;
         msg.val = val;
         pref.params_from_gui_fifo.push(msg);
-        values[parindex] = val;
+        paraminfos[parindex].value = val;
+    }
+    void mouseUp(const juce::MouseEvent &ev) override
+    {
+        int paramindex = (float)paraminfos.size() / getWidth() * ev.x;
+        if (paramindex >= 0 && paramindex < paraminfos.size())
+        {
+            if (paraminfos[paramindex].notify_only_on_mouse_up)
+                post_param_event(paramindex, parval_from_mouse_y(paramindex, ev.y));
+            repaint();
+        }
     }
     void mouseDrag(const juce::MouseEvent &ev) override
     {
-        int shifterindex = (float)num_all_params() / getWidth() * ev.x;
-        if (shifterindex >= 0 && shifterindex < num_all_params())
+        int paramindex = (float)paraminfos.size() / getWidth() * ev.x;
+        if (paramindex >= 0 && paramindex < paraminfos.size())
         {
-            post_param_event(shifterindex, parval_from_mouse_y(shifterindex, ev.y));
+            float pval = parval_from_mouse_y(paramindex, ev.y);
+            if (!paraminfos[paramindex].notify_only_on_mouse_up)
+            {
+                post_param_event(paramindex, pval);
+            }
+            else
+            {
+                paraminfos[paramindex].value = pval;
+            }
             repaint();
         }
     }
@@ -187,23 +188,19 @@ class ShifterComponent : public juce::Component
     OctoShifterProcessor &procRef;
     ShifterComponent(OctoShifterProcessor &p, int shifter_index)
         : procRef(p),
-          enabledButton(
-              XapSlider::SS_HorizontalSlider,
-              *p.par_id_to_metadata[OctoShifterProcessor::PAR_ENABLED + shifter_index]),
+          enabledButton(XapSlider::SS_HorizontalSlider,
+                        *p.par_id_to_metadata[OctoShifterProcessor::PAR_ENABLED + shifter_index]),
           inputGainKnob(
               XapSlider::SS_Knob,
               *p.par_id_to_metadata[OctoShifterProcessor::PAR_INPUT_GAIN + shifter_index]),
-          delayKnob(
-              XapSlider::SS_Knob,
-              *p.par_id_to_metadata[OctoShifterProcessor::PAR_DELAYTIME + shifter_index]),
+          delayKnob(XapSlider::SS_Knob,
+                    *p.par_id_to_metadata[OctoShifterProcessor::PAR_DELAYTIME + shifter_index]),
           pitchKnob(XapSlider::SS_Knob,
                     *p.par_id_to_metadata[OctoShifterProcessor::PAR_PITCH + shifter_index]),
-          formantKnob(
-              XapSlider::SS_Knob,
-              *p.par_id_to_metadata[OctoShifterProcessor::PAR_FORMANT + shifter_index]),
-          cutoffKnob(
-              XapSlider::SS_Knob,
-              *p.par_id_to_metadata[OctoShifterProcessor::PAR_FILTERCUTOFF + shifter_index])
+          formantKnob(XapSlider::SS_Knob,
+                      *p.par_id_to_metadata[OctoShifterProcessor::PAR_FORMANT + shifter_index]),
+          cutoffKnob(XapSlider::SS_Knob,
+                     *p.par_id_to_metadata[OctoShifterProcessor::PAR_FILTERCUTOFF + shifter_index])
     {
         addAndMakeVisible(lab);
         lab.setText(juce::String(shifter_index + 1), juce::dontSendNotification);
