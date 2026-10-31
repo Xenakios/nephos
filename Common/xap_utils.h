@@ -608,6 +608,73 @@ inline clap_param_info makeParamInfo(clap_id paramId, std::string name, double m
     return result;
 }
 
+template <typename T> class SingleThreadedFifo
+{
+  public:
+    explicit SingleThreadedFifo(std::size_t capacity) : buf_(capacity), capacity_(capacity) {}
+
+    // Push a copy. Returns false if the FIFO is full.
+    bool push(const T &value)
+    {
+        if (full())
+            return false;
+        buf_[head_] = value;
+        head_ = (head_ + 1) % capacity_;
+        ++size_;
+        return true;
+    }
+
+    // Push by move. Returns false if the FIFO is full.
+    bool push(T &&value)
+    {
+        if (full())
+            return false;
+        buf_[head_] = std::move(value);
+        head_ = (head_ + 1) % capacity_;
+        ++size_;
+        return true;
+    }
+
+    // Pop into out. Returns false if the FIFO is empty.
+    bool pop(T &out)
+    {
+        if (empty())
+            return false;
+        out = std::move(buf_[tail_]);
+        tail_ = (tail_ + 1) % capacity_;
+        --size_;
+        return true;
+    }
+
+    // Pop returning optional. std::nullopt if empty.
+    std::optional<T> pop()
+    {
+        if (empty())
+            return std::nullopt;
+        T out = std::move(buf_[tail_]);
+        tail_ = (tail_ + 1) % capacity_;
+        --size_;
+        return out;
+    }
+
+    // Clear contents; restores all slots as free.
+    void reset() { head_ = tail_ = size_ = 0; }
+
+    std::size_t freeSlots() const { return capacity_ - size_; }
+    std::size_t usedSlots() const { return size_; }
+    std::size_t capacity() const { return capacity_; }
+    bool empty() const { return size_ == 0; }
+    bool full() const { return size_ == capacity_; }
+
+  private:
+    std::vector<T> buf_;
+    std::size_t capacity_;
+    std::size_t head_ = 0; // next write position
+    std::size_t tail_ = 0; // next read position
+    std::size_t size_ = 0; // current element count
+};
+
+
 class VecToStreamAdapter
 {
     std::vector<unsigned char> &m_src;

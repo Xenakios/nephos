@@ -135,11 +135,11 @@ OctoShifterProcessor::OctoShifterProcessor()
         par_id_to_value_pointer[id] = &param_values[i];
         set_parameter_value(id, param_metadatas[i].defaultVal);
     }
-    choicetolfoshapemap[0] = PitchShifter::lfo_t::SINE;
-    choicetolfoshapemap[1] = PitchShifter::lfo_t::PULSE;
-    choicetolfoshapemap[2] = PitchShifter::lfo_t::SAW_TRI_RAMP;
-    choicetolfoshapemap[3] = PitchShifter::lfo_t::SMOOTH_NOISE;
-    choicetolfoshapemap[4] = PitchShifter::lfo_t::SH_NOISE;
+    choicetolfoshapemap[0] = lfo_t::SINE;
+    choicetolfoshapemap[1] = lfo_t::PULSE;
+    choicetolfoshapemap[2] = lfo_t::SAW_TRI_RAMP;
+    choicetolfoshapemap[3] = lfo_t::SMOOTH_NOISE;
+    choicetolfoshapemap[4] = lfo_t::SH_NOISE;
 }
 
 OctoShifterProcessor::~OctoShifterProcessor() {}
@@ -201,13 +201,15 @@ void OctoShifterProcessor::changeProgramName(int index, const juce::String &newN
 void OctoShifterProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     DBG("prepareToPlay");
+    samplecount = 0;
     for (int i = 0; i < shifters.size(); ++i)
     {
         shifters[i].stretch->presetDefault(1, sampleRate);
         shifters[i].set_sample_rate(sampleRate, 2);
         shifters[i].set_spatial_parameters(*par_id_to_value_pointer[i + PAR_AZIMUTH], 0.0);
     }
-
+    samplerate = sampleRate;
+    initTables();
     workbuffer.setSize(getTotalNumOutputChannels(), samplesPerBlock);
     workbuffer.clear();
 }
@@ -242,8 +244,22 @@ bool OctoShifterProcessor::isBusesLayoutSupported(const BusesLayout &layouts) co
 #endif
 }
 
+template <typename T> inline T reflect_value_no_loop(const T minval, const T val, const T maxval)
+{
+    assert(maxval > minval);
+    const T range = maxval - minval;
+    const T doubled = range * T(2);
+
+    // Normalize val into [0, 2*range), then reflect
+    T temp = std::fmod(val - minval, doubled);
+    if (temp < T(0))
+        temp += doubled;
+
+    return (temp <= range) ? minval + temp : maxval - (temp - range);
+}
+
 void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
-                                             juce::MidiBuffer &midiMessages)
+                                        juce::MidiBuffer &midiMessages)
 {
     juce::ignoreUnused(midiMessages);
 
@@ -258,16 +274,27 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     // sound input otherwise...
     if (wrapperType == wrapperType_Standalone)
     {
-        const double oscinc0 = 2 * M_PI / getSampleRate() * 256.0;
-        const double oscinc1 = 2 * M_PI / getSampleRate() * 256.0 * 1.5;
+        const double oscinc0 = 2 * M_PI / getSampleRate() * 80.0;
+        const double oscinc1 = 2 * M_PI / getSampleRate() * 80.0 * 1.5;
+        std::array<float, max_input_channels> fifoframe;
         for (int i = 0; i < buffer.getNumSamples(); ++i)
         {
-            float s = 0.5 * std::tanh(std::sin(osc0phase) * 2.0);
-            writepointers[0][i] = s;
+            fifoframe[0] = 0.5 * reflect_value_no_loop(-1.0, std::sin(osc0phase) * 4, 1.0);
+            fifoframe[1] = 0.5 * reflect_value_no_loop(-1.0, std::sin(osc1phase) * 4, 1.0);
             osc0phase += oscinc0;
-            s = 0.5 * std::tanh(std::sin(osc1phase) * 2.0);
-            writepointers[1][i] = s;
             osc1phase += oscinc1;
+            // if (input_fifo.usedSlots() <= BLOCKSIZE)
+            input_fifo.push(fifoframe);
+        }
+    }
+    else
+    {
+        std::array<float, max_input_channels> fifoframe;
+        for (int i = 0; i < buffer.getNumSamples(); ++i)
+        {
+            fifoframe[0] = writepointers[0][i];
+            fifoframe[1] = writepointers[1][i];
+            input_fifo.push(fifoframe);
         }
     }
     ParamChangeMessage msg;
@@ -276,27 +303,68 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         // DBG(msg.id << " " << msg.val);
         set_parameter_value(msg.id, msg.val);
     }
-    int shifterstouse = numshifters;
-    auto sumpointers = workbuffer.getArrayOfWritePointers();
-    workbuffer.clear();
-    for (int j = 0; j < shifterstouse; ++j)
+    while (output_fifo.usedSlots() < buffer.getNumSamples())
     {
-        if (!shifters[j].enabled)
-            continue;
-        for (int i = 0; i < buffer.getNumSamples(); ++i)
+        int shifterstouse = numshifters;
+        auto sumpointers = workbuffer.getArrayOfWritePointers();
+        workbuffer.clear();
+        alignas(16) float inputbuffer[max_input_channels][BLOCKSIZE];
+        for (int i = 0; i < BLOCKSIZE; ++i)
         {
-            alignas(16) float procbuf[64];
-            procbuf[0] = writepointers[j % 2][i];
-            shifters[j].process_frame(procbuf);
-            sumpointers[0][i] += procbuf[0];
-            sumpointers[1][i] += procbuf[1];
+            std::array<float, max_input_channels> frame;
+            input_fifo.pop(frame);
+            for (int j = 0; j < 2; ++j)
+            {
+                inputbuffer[j][i] = frame[j];
+            }
+        }
+        alignas(16) float procbuf[BLOCKSIZE * max_output_channels];
+        memset(procbuf, 0, BLOCKSIZE * max_output_channels * sizeof(float));
+        for (int j = 0; j < shifterstouse; ++j)
+        {
+            if (!shifters[j].enabled)
+                continue;
+            for (int i = 0; i < BLOCKSIZE; ++i)
+            {
+                procbuf[i * max_output_channels] = inputbuffer[j % 2][i];
+            }
+            shifters[j].process_block(procbuf);
+            for (int i = 0; i < BLOCKSIZE; ++i)
+            {
+                sumpointers[0][i] += procbuf[i * max_output_channels + 0];
+                sumpointers[1][i] += procbuf[i * max_output_channels + 1];
+            }
+        }
+        std::array<float, max_output_channels> outframe;
+        for (int i = 0; i < BLOCKSIZE; ++i)
+        {
+            outframe[0] = sumpointers[0][i];
+            outframe[1] = sumpointers[1][i];
+            output_fifo.push(outframe);
         }
     }
+    assert(output_fifo.usedSlots() >= buffer.getNumSamples());
     for (int i = 0; i < buffer.getNumSamples(); ++i)
     {
-        writepointers[0][i] = std::clamp(sumpointers[0][i] * 0.5f, -1.0f, 1.0f);
-        writepointers[1][i] = std::clamp(sumpointers[1][i] * 0.5f, -1.0f, 1.0f);
+        std::array<float, max_output_channels> outframe;
+        // if (output_fifo.usedSlots() >= BLOCKSIZE)
+        {
+            output_fifo.pop(outframe);
+            writepointers[0][i] = std::clamp(outframe[0] * 0.5f, -1.0f, 1.0f);
+            writepointers[1][i] = std::clamp(outframe[1] * 0.5f, -1.0f, 1.0f);
+        }
+        // else
+        {
+            // writepointers[0][i] = 0.0;
+            // writepointers[1][i] = 0.0;
+            // int s = outsilencecount;
+            //++s;
+            // outsilencecount = s;
+        }
     }
+
+    infifoavail = input_fifo.usedSlots();
+    outfifoavail = output_fifo.usedSlots();
 }
 
 //==============================================================================

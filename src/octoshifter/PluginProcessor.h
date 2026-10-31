@@ -23,82 +23,13 @@
 #include <optional>
 #include <utility>
 
-template <typename T> class SingleThreadedFifo
-{
-  public:
-    explicit SingleThreadedFifo(std::size_t capacity) : buf_(capacity), capacity_(capacity) {}
-
-    // Push a copy. Returns false if the FIFO is full.
-    bool push(const T &value)
-    {
-        if (full())
-            return false;
-        buf_[head_] = value;
-        head_ = (head_ + 1) % capacity_;
-        ++size_;
-        return true;
-    }
-
-    // Push by move. Returns false if the FIFO is full.
-    bool push(T &&value)
-    {
-        if (full())
-            return false;
-        buf_[head_] = std::move(value);
-        head_ = (head_ + 1) % capacity_;
-        ++size_;
-        return true;
-    }
-
-    // Pop into out. Returns false if the FIFO is empty.
-    bool pop(T &out)
-    {
-        if (empty())
-            return false;
-        out = std::move(buf_[tail_]);
-        tail_ = (tail_ + 1) % capacity_;
-        --size_;
-        return true;
-    }
-
-    // Pop returning optional. std::nullopt if empty.
-    std::optional<T> pop()
-    {
-        if (empty())
-            return std::nullopt;
-        T out = std::move(buf_[tail_]);
-        tail_ = (tail_ + 1) % capacity_;
-        --size_;
-        return out;
-    }
-
-    // Clear contents; restores all slots as free.
-    void reset() { head_ = tail_ = size_ = 0; }
-
-    std::size_t freeSlots() const { return capacity_ - size_; }
-    std::size_t usedSlots() const { return size_; }
-    std::size_t capacity() const { return capacity_; }
-    bool empty() const { return size_ == 0; }
-    bool full() const { return size_ == capacity_; }
-
-  private:
-    std::vector<T> buf_;
-    std::size_t capacity_;
-    std::size_t head_ = 0; // next write position
-    std::size_t tail_ = 0; // next read position
-    std::size_t size_ = 0; // current element count
-};
+static constexpr size_t BLOCKSIZE = 64;
+static constexpr size_t BLOCK_SIZE_OS = BLOCKSIZE * 2;
 
 class PitchShifter
 {
   public:
     std::unique_ptr<signalsmith::stretch::SignalsmithStretch<>> stretch;
-    static constexpr size_t BLOCKSIZE = 64;
-    static constexpr size_t BLOCK_SIZE_OS = BLOCKSIZE * 2;
-    double samplerate = 0.0;
-    alignas(32) float table_envrate_linear[512];
-    using lfo_t = sst::basic_blocks::modulators::SimpleLFO<PitchShifter, BLOCKSIZE>;
-    lfo_t lfo;
     bool enabled = true;
     float basepitch = 0.0f;
     float baseformant = 0.0f;
@@ -116,24 +47,29 @@ class PitchShifter
     float feedbackamt = 0.0f;
     float baseazimuth = 0.0f;
     float azimuth_lfo_amount = 0.0;
+    float mod_source_values[2] = {0.0f, 0.0f};
+    double samplerate = 0.0;
     alignas(16) std::array<float, 64> spatcoeffs = {0.0f};
     alignas(16) sst::filtersplusplus::Filter sstfilter;
     int numchs = 2;
     sst::basic_blocks::dsp::OnePoleLag<float, true> ingainlag;
     std::vector<float> delaybuffer;
     alignas(16) int delaywritepos = 0;
-    alignas(16) float feedbackaudio = 0.0f;
+    alignas(16) float feedbackaudio[BLOCKSIZE] = {0.0f};
     int lfoshape = 0;
-    PitchShifter() : lfo(this)
+    PitchShifter()
     {
         stretch = std::make_unique<signalsmith::stretch::SignalsmithStretch<>>();
-
         ingainlag.setRateInMilliseconds(50.0, 44100.0, 1.0f);
         ingainlag.snapTo(0.0);
+        for (int i = 0; i < BLOCKSIZE; ++i)
+            feedbackaudio[i] = 0.0f;
     }
 
     void set_sample_rate(double hz, int chans)
     {
+        for (int i = 0; i < BLOCKSIZE; ++i)
+            feedbackaudio[i] = 0.0f;
         numchs = chans;
         samplerate = hz;
         ingainlag.setRateInMilliseconds(50.0, hz, 1.0f);
@@ -151,7 +87,6 @@ class PitchShifter
             assert(false);
         }
         delaybuffer.resize(hz * 5.0);
-        initTables();
     }
     void set_spatial_parameters(float azimuth, float elevation)
     {
@@ -183,61 +118,73 @@ class PitchShifter
         return delaybuffer[readpos];
     }
     // uses only first channel as input, outputs stereo or ambisonics
-    void process_frame(std::span<float> audio_inout)
+    void process_block(std::span<float> audio_inout)
     {
         assert(numchs > 1);
-        assert(audio_inout.size() >= numchs);
-        float insample = audio_inout[0] * ingainlag.getValue();
-        insample += feedbackaudio * feedbackamt;
-        infifo.push(insample);
-        ingainlag.process();
-        if (infifo.usedSlots() == BLOCKSIZE)
+        assert(audio_inout.size() >= 64 * BLOCKSIZE);
+        const bool passthrough = false;
+        if (passthrough)
         {
-            float x = 0.0f;
-            float processinbuffer[1][BLOCKSIZE];
-            float processoutbuffer[1][BLOCKSIZE];
             for (int i = 0; i < BLOCKSIZE; ++i)
             {
-                infifo.pop(x);
-                processinbuffer[0][i] = x;
+                audio_inout[i * 64 + 0] = audio_inout[i * 64 + 0];
+                audio_inout[i * 64 + 1] = audio_inout[i * 64 + 0];
             }
-            lfo.applyPhaseOffset(lfoshift);
-            lfo.process_block(lforate, lfodeform, lfoshape, false, 1.0, lfowarp);
-            // we might want to clamp the applied pitch and formant,
-            // but at the moment the maximums would be at -24 to 24 semitones...
-            float finalpitch = basepitch + lfoamount * lfo.outputBlock[0] * 12.0;
-            stretch->setTransposeSemitones(finalpitch);
-            float modulatedformant = baseformant + formantmodamount * lfo.outputBlock[0] * 12.0;
-            stretch->setFormantSemitones(modulatedformant);
-            stretch->process(processinbuffer, BLOCKSIZE, processoutbuffer, BLOCKSIZE);
-            float modulatedcutoff =
-                basefiltercutoff + lfo.outputBlock[0] * filtercutoff_lfo_amount * 24.0;
-            modulatedcutoff = std::clamp(modulatedcutoff, -48.0f, 65.0f);
-            sstfilter.makeCoefficients(0, modulatedcutoff, filter_reson);
-            sstfilter.prepareBlock();
-            for (int i = 0; i < BLOCKSIZE; ++i)
-            {
-                float filtered = sstfilter.processMonoSample(processoutbuffer[0][i]);
-                push_to_delay(filtered);
-                float delayed = pop_from_delay();
-
-                outfifo.push(delayed);
-            }
-            sstfilter.concludeBlock();
-            float modulated_azi = baseazimuth + azimuth_lfo_amount * lfo.outputBlock[0];
-            modulated_azi = std::clamp(modulated_azi, -1.0f, 1.0f);
-            set_spatial_parameters(modulated_azi, 0.0);
+            return;
         }
-        float x = 0.0f;
-        outfifo.pop(x);
-        feedbackaudio = std::tanh(x);
+        alignas(16) float processinbuffer[1][BLOCKSIZE];
+        alignas(16) float processoutbuffer[1][BLOCKSIZE];
+        for (int i = 0; i < BLOCKSIZE; ++i)
+        {
+            float insample = audio_inout[i * 64] * ingainlag.getValue();
+            insample += feedbackaudio[i] * feedbackamt;
+            processinbuffer[0][i] = insample;
+            ingainlag.process();
+        }
+        float finalpitch = basepitch + lfoamount * mod_source_values[0] * 12.0;
+        stretch->setTransposeSemitones(finalpitch);
+        float modulatedformant = baseformant + formantmodamount * mod_source_values[0] * 12.0;
+        stretch->setFormantSemitones(modulatedformant);
+        stretch->process(processinbuffer, BLOCKSIZE, processoutbuffer, BLOCKSIZE);
+        float modulatedcutoff =
+            basefiltercutoff + mod_source_values[0] * filtercutoff_lfo_amount * 24.0;
+        modulatedcutoff = std::clamp(modulatedcutoff, -48.0f, 65.0f);
 
-        audio_inout[0] = x * spatcoeffs[0];
-        audio_inout[1] = x * spatcoeffs[1];
+        float modulated_azi = baseazimuth + azimuth_lfo_amount * mod_source_values[0];
+        modulated_azi = std::clamp(modulated_azi, -1.0f, 1.0f);
+        set_spatial_parameters(modulated_azi, 0.0);
+
+        sstfilter.makeCoefficients(0, modulatedcutoff, filter_reson);
+        sstfilter.prepareBlock();
+        for (int i = 0; i < BLOCKSIZE; ++i)
+        {
+            float filtered = sstfilter.processMonoSample(processoutbuffer[0][i]);
+            push_to_delay(filtered);
+            float delayed = pop_from_delay();
+            audio_inout[i * 64 + 0] = delayed * spatcoeffs[0];
+            audio_inout[i * 64 + 1] = delayed * spatcoeffs[1];
+            feedbackaudio[i] = std::tanh(delayed);
+        }
+        sstfilter.concludeBlock();
     }
     SingleThreadedFifo<float> infifo{BLOCKSIZE};
     SingleThreadedFifo<float> outfifo{BLOCKSIZE};
+};
 
+using pmd = sst::basic_blocks::params::ParamMetaData;
+
+struct ParamChangeMessage
+{
+    uint32_t id = CLAP_INVALID_ID;
+    float val = 0.0f;
+};
+
+class OctoShifterProcessor final : public juce::AudioProcessor
+{
+  public:
+    using lfo_t = sst::basic_blocks::modulators::SimpleLFO<OctoShifterProcessor, BLOCKSIZE>;
+    double samplerate = 0.0;
+    alignas(32) float table_envrate_linear[512];
     void initTables()
     {
         double dsamplerate_os = samplerate * 2;
@@ -259,20 +206,6 @@ class PitchShifter
         return (1 - a) * table_envrate_linear[e & 0x1ff] +
                a * table_envrate_linear[(e + 1) & 0x1ff];
     }
-};
-
-using pmd = sst::basic_blocks::params::ParamMetaData;
-
-struct ParamChangeMessage
-{
-    uint32_t id = CLAP_INVALID_ID;
-    float val = 0.0f;
-};
-
-class OctoShifterProcessor final : public juce::AudioProcessor
-{
-  public:
-    //==============================================================================
     OctoShifterProcessor();
     ~OctoShifterProcessor() override;
 
@@ -308,7 +241,9 @@ class OctoShifterProcessor final : public juce::AudioProcessor
     void getStateInformation(juce::MemoryBlock &destData) override;
     void setStateInformation(const void *data, int sizeInBytes) override;
     static constexpr size_t numshifters = 8;
-    std::array<PitchShifter, numshifters> shifters;
+    alignas(16) std::array<PitchShifter, numshifters> shifters;
+    static constexpr size_t numLFOs = 2;
+    alignas(!6) std::array<lfo_t, numLFOs> lfos{lfo_t(this), lfo_t(this)};
     enum PARAMS
     {
         PAR_ENABLED = 50,
@@ -345,12 +280,20 @@ class OctoShifterProcessor final : public juce::AudioProcessor
     const float modulation_patterns[2][8] = {{1, 1, 1, 1, 1, 1, 1, 1},
                                              {1, -1, 1, -1, 1, -1, 1, -1}};
     xenakios::Xoroshiro128Plus rng;
+    static constexpr size_t max_input_channels = 8;
+    static constexpr size_t max_output_channels = 64;
+    std::atomic<int> outfifoavail = 0;
+    std::atomic<int> infifoavail = 0;
+    std::atomic<int> outsilencecount = 0;
 
   private:
     double osc0phase = 0.0;
     double osc1phase = 0.0;
     juce::AudioBuffer<float> workbuffer;
-    int samplecount = 0;
+    alignas(16) SingleThreadedFifo<std::array<float, max_input_channels>> input_fifo{4096};
+    alignas(16) SingleThreadedFifo<std::array<float, max_output_channels>> output_fifo{4096};
+    alignas(16) int samplecount = 0;
+
     std::unordered_map<int, int> choicetolfoshapemap;
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OctoShifterProcessor)

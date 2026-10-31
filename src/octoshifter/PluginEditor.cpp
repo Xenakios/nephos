@@ -1,4 +1,6 @@
 #include "PluginProcessor.h"
+#include "juce_core/juce_core.h"
+#include "juce_events/juce_events.h"
 #include "juce_gui_basics/juce_gui_basics.h"
 #include "PluginEditor.h"
 
@@ -20,14 +22,10 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
     : AudioProcessorEditor(&p), processorRef(p),
       lfoShapeKnob(XapSlider::SS_HorizontalSlider,
                    *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFOSHAPE]),
-      lfoRateKnob(XapSlider::SS_Knob,
-                  *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFORATE]),
-      lfoDeformKnob(XapSlider::SS_Knob,
-                    *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFODEFORM]),
-      lfoShiftKnob(XapSlider::SS_Knob,
-                   *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFOSHIFT]),
-      lfoWarpKnob(XapSlider::SS_Knob,
-                  *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFOWARP]),
+      lfoRateKnob(XapSlider::SS_Knob, *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFORATE]),
+      lfoDeformKnob(XapSlider::SS_Knob, *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFODEFORM]),
+      lfoShiftKnob(XapSlider::SS_Knob, *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFOSHIFT]),
+      lfoWarpKnob(XapSlider::SS_Knob, *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFOWARP]),
       enableMulti(p, "ENABLED", OctoShifterProcessor::PAR_ENABLED, 8),
       pitchMulti(p, "PITCH", MyProcessor::PAR_PITCH, 8, MyProcessor::PAR_PITCHLFO0AMOUNT),
       formantMulti(p, "FORMANT", OctoShifterProcessor::PAR_FORMANT, 8,
@@ -50,6 +48,7 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
     addAndMakeVisible(cutoffMulti);
     addAndMakeVisible(resonMulti);
     addAndMakeVisible(aziMulti);
+    addAndMakeVisible(infoLabel);
     for (int i = 0; i < p.numshifters; ++i)
     {
         // auto c = std::make_unique<ShifterComponent>(p, i);
@@ -72,6 +71,10 @@ OctoShifterProcessorEditor::~OctoShifterProcessorEditor() {}
 
 void OctoShifterProcessorEditor::timerCallback()
 {
+    juce::String txt;
+    txt += juce::String(processorRef.infifoavail) + " " + juce::String(processorRef.outfifoavail);
+    txt += " " + juce::String(processorRef.outsilencecount);
+    infoLabel.setText(txt, juce::dontSendNotification);
     ParamChangeMessage msg;
     while (processorRef.params_to_gui_fifo.pop(msg))
     {
@@ -109,7 +112,7 @@ void OctoShifterProcessorEditor::resized()
     multiflex.items.add(juce::FlexItem(cutoffMulti).withFlex(1.0).withMargin(3));
     multiflex.items.add(juce::FlexItem(resonMulti).withFlex(1.0).withMargin(3));
     multiflex.items.add(juce::FlexItem(aziMulti).withFlex(1.0).withMargin(3));
-    multiflex.items.add(juce::FlexItem().withFlex(1.0).withMargin(3));
+    multiflex.items.add(juce::FlexItem(infoLabel).withFlex(1.0).withMargin(3).withMaxHeight(25));
     for (auto &e : multiflex.items)
     {
         e = e.withMinWidth(500);
