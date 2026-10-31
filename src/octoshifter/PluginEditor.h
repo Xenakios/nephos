@@ -102,7 +102,7 @@ class MultiSlider : public juce::Component
             if (paraminfos[i].lfoindex >= 0)
             {
                 g.setColour(juce::Colours::white);
-                g.drawText("LFO" + juce::String(paraminfos[i].lfoindex+1) + " AMT", xcor, 1, barw,
+                g.drawText("LFO" + juce::String(paraminfos[i].lfoindex + 1) + " AMT", xcor, 1, barw,
                            20, juce::Justification::centred);
             }
             float ycor = juce::jmap<float>(v, pmin, pmax, getHeight(), 0.0);
@@ -220,6 +220,10 @@ class LFOComponent : public juce::Component
         flex.items.add(juce::FlexItem(rateKnob).withFlex(1.0));
         flex.items.add(juce::FlexItem(deformKnob).withFlex(1.0));
         flex.items.add(juce::FlexItem(warpKnob).withFlex(1.0));
+        for (auto &e : flex.items)
+        {
+            e = e.withMargin(2);
+        }
         flex.performLayout(getLocalBounds());
     }
 };

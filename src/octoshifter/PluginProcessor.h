@@ -66,6 +66,8 @@ class PitchShifter
     alignas(16) sst::filtersplusplus::Filter sstfilter;
     int numchs = 2;
     sst::basic_blocks::dsp::OnePoleLag<float, true> ingainlag;
+    sst::basic_blocks::dsp::OnePoleLag<float, true> panlag;
+    sst::basic_blocks::dsp::OnePoleLag<float, true> fblag;
     std::vector<float> delaybuffer;
     alignas(16) int delaywritepos = 0;
     alignas(16) float feedbackaudio[BLOCKSIZE] = {0.0f};
@@ -77,8 +79,12 @@ class PitchShifter
             for (int j = 0; j < MT_COUNT; ++j)
                 modmatrix[i][j] = 0.0f;
         stretch = std::make_unique<signalsmith::stretch::SignalsmithStretch<>>();
-        ingainlag.setRateInMilliseconds(50.0, 44100.0, 1.0f);
+        ingainlag.setRateInMilliseconds(5.0, 44100.0, 1.0f);
         ingainlag.snapTo(0.0);
+        panlag.setRateInMilliseconds(5.0, 44100.0, 1.0f);
+        panlag.snapTo(0.0);
+        fblag.setRateInMilliseconds(5.0, 44100.0, 1.0f);
+        fblag.snapTo(0.0);
         for (int i = 0; i < BLOCKSIZE; ++i)
             feedbackaudio[i] = 0.0f;
     }
@@ -100,7 +106,9 @@ class PitchShifter
     {
         numchs = chans;
         samplerate = hz;
-        ingainlag.setRateInMilliseconds(50.0, hz, 1.0f);
+        ingainlag.setRateInMilliseconds(5.0, hz, 1.0f);
+        panlag.setRateInMilliseconds(5.0, hz, 1.0f);
+        fblag.setRateInMilliseconds(5.0, hz, 1.0f);
 
         sstfilter.setFilterModel(sst::filtersplusplus::FilterModel::CytomicSVF);
         sstfilter.setModelConfiguration(
@@ -177,6 +185,7 @@ class PitchShifter
         }
         float modulatedfeedback = basefeedbackamt + modsums[MT_DELAYFEEDBACK];
         modulatedfeedback = std::clamp(modulatedfeedback, 0.0f, 0.999f);
+        fblag.setTarget(modulatedfeedback);
         float modulated_in_volume = base_in_volume + modsums[MT_INVOLUME] * 12.0;
         modulated_in_volume = std::clamp(modulated_in_volume, -48.0f, 0.0f);
         modulated_in_volume = juce::Decibels::decibelsToGain(modulated_in_volume);
@@ -184,9 +193,10 @@ class PitchShifter
         for (int i = 0; i < BLOCKSIZE; ++i)
         {
             float insample = audio_inout[i * 64] * ingainlag.getValue();
-            insample += feedbackaudio[i] * modulatedfeedback;
+            insample += feedbackaudio[i] * fblag.getValue();
             processinbuffer[0][i] = insample;
             ingainlag.process();
+            fblag.process();
         }
         float modulatedpitch = basepitch + modsums[MT_PITCH] * 12.0;
         stretch->setTransposeSemitones(modulatedpitch);
@@ -200,18 +210,28 @@ class PitchShifter
         modulatedreson = std::clamp(modulatedreson, 0.0f, 1.0f);
         sstfilter.makeCoefficients(0, modulatedcutoff, modulatedreson);
 
-        sstfilter.prepareBlock();
         float modulated_azi = baseazimuth + modsums[MT_AZI];
         modulated_azi = std::clamp(modulated_azi, -1.0f, 1.0f);
+        panlag.setTarget(modulated_azi);
         set_spatial_parameters(modulated_azi, 0.0);
+
+        sstfilter.prepareBlock();
+        sst::basic_blocks::dsp::pan_laws::panmatrix_t mat;
         for (int i = 0; i < BLOCKSIZE; ++i)
         {
             float filtered = sstfilter.processMonoSample(processoutbuffer[0][i]);
             push_to_delay(filtered);
             float delayed = pop_from_delay();
-            audio_inout[i * 64 + 0] = delayed * spatcoeffs[0];
-            audio_inout[i * 64 + 1] = delayed * spatcoeffs[1];
+
+            // obviously this is expensive and calculating Ambisonics
+            // coefficients is going to be a lot lot worse...
+            // we may need to look into some kind of look up table thing
+            float panpos = (panlag.getValue() + 1.0) * 0.5;
+            sst::basic_blocks::dsp::pan_laws::monoEqualPower(panpos, mat);
+            audio_inout[i * 64 + 0] = delayed * mat[0];
+            audio_inout[i * 64 + 1] = delayed * mat[3];
             feedbackaudio[i] = std::tanh(delayed);
+            panlag.process();
         }
         sstfilter.concludeBlock();
     }
