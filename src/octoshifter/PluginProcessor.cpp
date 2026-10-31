@@ -103,6 +103,11 @@ OctoShifterProcessor::OctoShifterProcessor()
                                   .withLinearScaleFormatting("%", 100.0)
                                   .withID(PAR_CUTOFF0LFO0AMOUNT));
     param_metadatas.push_back(pmd()
+                                  .withName("LFO AMOUNT")
+                                  .withRange(-1.0f, 1.0f)
+                                  .withLinearScaleFormatting("%", 100.0)
+                                  .withID(PAR_DELAYFB_LFO0AMOUNT));
+    param_metadatas.push_back(pmd()
                                   .withName("LFO DEFORM")
                                   .withRange(-1.0f, 1.0f)
                                   .withLinearScaleFormatting("%", 100.0)
@@ -340,6 +345,8 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 *par_id_to_value_pointer[PAR_FORMANT_LFO0AMOUNT];
             shifters[j].modmatrix[PitchShifter::MS_LFO0][PitchShifter::MT_F0CUTOFF] =
                 *par_id_to_value_pointer[PAR_CUTOFF0LFO0AMOUNT];
+            shifters[j].modmatrix[PitchShifter::MS_LFO0][PitchShifter::MT_DELAYFEEDBACK] =
+                *par_id_to_value_pointer[PAR_DELAYFB_LFO0AMOUNT];
             for (int i = 0; i < BLOCKSIZE; ++i)
             {
                 procbuf[i * max_output_channels] = inputbuffer[j % 2][i];
@@ -452,7 +459,7 @@ void OctoShifterProcessor::set_parameter_value(uint32_t id, float value)
     }
     if (id >= PAR_DELAYFEEDBACK && id < PAR_DELAYFEEDBACK + numshifters)
     {
-        shifters[id - PAR_DELAYFEEDBACK].feedbackamt = value;
+        shifters[id - PAR_DELAYFEEDBACK].basefeedbackamt = value;
     }
     if (id >= PAR_DELAYTIME && id < PAR_DELAYTIME + numshifters)
     {
@@ -461,7 +468,7 @@ void OctoShifterProcessor::set_parameter_value(uint32_t id, float value)
     }
     if (id >= PAR_ENABLED && id < PAR_ENABLED + numshifters)
     {
-        shifters[id - PAR_ENABLED].enabled = value >= 0.5;
+        shifters[id - PAR_ENABLED].set_enabled(value >= 0.5);
     }
 }
 

@@ -36,11 +36,11 @@ class PitchShifter
     float basefiltercutoff = 36.0f;
     float baseazimuth = 0.0f;
     float filter_reson = 0.0f;
-    
+
     float ingain = 1.0f;
     float delaytime = 0.25f;
-    float feedbackamt = 0.0f;
-    
+    float basefeedbackamt = 0.0f;
+
     float mod_source_values[2] = {0.0f, 0.0f};
     double samplerate = 0.0;
     alignas(16) std::array<float, 64> spatcoeffs = {0.0f};
@@ -63,6 +63,8 @@ class PitchShifter
         MT_F0CUTOFF,
         MT_F0RESON,
         MT_AZI,
+        MT_ELEVATION,
+        MT_DELAYFEEDBACK,
         MT_COUNT
     };
     alignas(16) float modmatrix[MS_COUNT][MT_COUNT];
@@ -77,11 +79,23 @@ class PitchShifter
         for (int i = 0; i < BLOCKSIZE; ++i)
             feedbackaudio[i] = 0.0f;
     }
-
-    void set_sample_rate(double hz, int chans)
+    void set_enabled(bool b)
+    {
+        if (!enabled && b)
+        {
+            reset();
+        }
+        enabled = b;
+    }
+    void reset()
     {
         for (int i = 0; i < BLOCKSIZE; ++i)
             feedbackaudio[i] = 0.0f;
+        std::fill(delaybuffer.begin(), delaybuffer.end(), 0.0f);
+    }
+    void set_sample_rate(double hz, int chans)
+    {
+
         numchs = chans;
         samplerate = hz;
         ingainlag.setRateInMilliseconds(50.0, hz, 1.0f);
@@ -99,6 +113,7 @@ class PitchShifter
             assert(false);
         }
         delaybuffer.resize(hz * 5.0);
+        reset();
     }
     void set_spatial_parameters(float azimuth, float elevation)
     {
@@ -146,10 +161,13 @@ class PitchShifter
         }
         alignas(16) float processinbuffer[1][BLOCKSIZE];
         alignas(16) float processoutbuffer[1][BLOCKSIZE];
+        float modulatedfeedback =
+            basefeedbackamt + modmatrix[MS_LFO0][MT_DELAYFEEDBACK] * mod_source_values[MS_LFO0];
+        modulatedfeedback = std::clamp(modulatedfeedback, 0.0f, 0.999f);
         for (int i = 0; i < BLOCKSIZE; ++i)
         {
             float insample = audio_inout[i * 64] * ingainlag.getValue();
-            insample += feedbackaudio[i] * feedbackamt;
+            insample += feedbackaudio[i] * modulatedfeedback;
             processinbuffer[0][i] = insample;
             ingainlag.process();
         }
@@ -275,6 +293,7 @@ class OctoShifterProcessor final : public juce::AudioProcessor
         PAR_AZIMUTHLFO0AMOUNT = 10201,
         PAR_CUTOFF0LFO0AMOUNT = 10202,
         PAR_FORMANT_LFO0AMOUNT = 10203,
+        PAR_DELAYFB_LFO0AMOUNT = 10204,
         PAR_LFODEFORM = 10300,
         PAR_LFOSHIFT = 10400,
         PAR_LFOWARP = 10500
