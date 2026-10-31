@@ -182,6 +182,23 @@ class MultiSlider : public juce::Component
     void update() { repaint(); }
 };
 
+class LFOComponent
+{
+  public:
+    OctoShifterProcessor &procref;
+    XapSlider shapeDrop;
+    // XapSlider rateKnob;
+    // XapSlider deformKnob;
+    // XapSlider warpKnob;
+    int index = -1;
+    LFOComponent(OctoShifterProcessor &p, int lfoindex)
+        : procref(p),
+          shapeDrop(XapSlider::SS_HorizontalSlider,
+                    *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFOSHAPES + lfoindex])
+    {
+    }
+};
+
 class ShifterComponent : public juce::Component
 {
   public:

@@ -23,7 +23,6 @@ OctoShifterProcessor::OctoShifterProcessor()
     params_to_gui_fifo.reset(2048);
     for (int i = 0; i < numshifters; ++i)
     {
-
         param_metadatas.push_back(pmd()
                                       .withName(fmt::format("{}", i + 1))
                                       .asOnOffBool()
@@ -49,7 +48,7 @@ OctoShifterProcessor::OctoShifterProcessor()
         param_metadatas.push_back(pmd()
                                       .withName(fmt::format("Delay time {}", i + 1))
                                       .withRange(0.0f, 1.0f)
-                                      .withDefault(0.1)
+                                      .withDefault(0.5)
                                       .withOffsetPowerFormatting("ms", 0.0, 5.0, 3.0, 1000.0)
                                       .withID(PAR_DELAYTIME + i));
         param_metadatas.push_back(pmd()
@@ -61,7 +60,7 @@ OctoShifterProcessor::OctoShifterProcessor()
         param_metadatas.push_back(pmd()
                                       .withName(fmt::format("Filter Cutoff {}", i + 1))
                                       .withRange(-48, 65)
-                                      .withDefault(0)
+                                      .withDefault(60)
                                       .withSemitoneZeroAt440Formatting()
                                       .withID(PAR_FILTERCUTOFF + i));
         param_metadatas.push_back(pmd()
@@ -77,11 +76,39 @@ OctoShifterProcessor::OctoShifterProcessor()
                                       .withLinearScaleFormatting("%", 100.0)
                                       .withID(PAR_AZIMUTH + i));
     }
-    param_metadatas.push_back(pmd()
-                                  .withName("LFO RATE")
-                                  .withRange(-6.0f, 3.0f)
-                                  .withATwoToTheBFormatting(1.0f, 1.0f, "Hz")
-                                  .withID(PAR_LFORATE));
+    for (int i = 0; i < numLFOs; ++i)
+    {
+        param_metadatas.push_back(pmd()
+                                      .withName(fmt::format("LFO {} DEFORM", i + 1))
+                                      .withRange(-1.0f, 1.0f)
+                                      .withLinearScaleFormatting("%", 100.0)
+                                      .withID(PAR_LFODEFORMS + i));
+        param_metadatas.push_back(pmd()
+                                      .withName(fmt::format("LFO {} SHIFT", i + 1))
+                                      .withRange(-1.0f, 1.0f)
+                                      .withLinearScaleFormatting("%", 100.0)
+                                      .withID(PAR_LFOSHIFTS + i));
+        param_metadatas.push_back(pmd()
+                                      .withName(fmt::format("LFO {} WARP", i + 1))
+                                      .withRange(-1.0f, 1.0f)
+                                      .withLinearScaleFormatting("%", 100.0)
+                                      .withID(PAR_LFOWARPS + i));
+        param_metadatas.push_back(pmd()
+                                      .withName(fmt::format("LFO {} SHAPE", i + 1))
+                                      .withUnorderedMapFormatting({{0, "SINE"},
+                                                                   {1, "SIN<>SQR<>TRI"},
+                                                                   {2, "DOWN<>TRI<>UP"},
+                                                                   {3, "SMOOTH RANDOM"},
+                                                                   {4, "RANDOM"}},
+                                                                  true)
+                                      .withID(PAR_LFOSHAPES + i));
+        param_metadatas.push_back(pmd()
+                                      .withName(fmt::format("LFO {} RATE", i + 1))
+                                      .withRange(-6.0f, 3.0f)
+                                      .withATwoToTheBFormatting(1.0f, 1.0f, "Hz")
+                                      .withID(PAR_LFORATES + i));
+    }
+
     param_metadatas.push_back(pmd()
                                   .withName("LFO AMOUNT")
                                   .withRange(-1.0f, 1.0f)
@@ -107,30 +134,6 @@ OctoShifterProcessor::OctoShifterProcessor()
                                   .withRange(-1.0f, 1.0f)
                                   .withLinearScaleFormatting("%", 100.0)
                                   .withID(PAR_DELAYFB_LFO0AMOUNT));
-    param_metadatas.push_back(pmd()
-                                  .withName("LFO DEFORM")
-                                  .withRange(-1.0f, 1.0f)
-                                  .withLinearScaleFormatting("%", 100.0)
-                                  .withID(PAR_LFODEFORM));
-    param_metadatas.push_back(pmd()
-                                  .withName("LFO SHIFT")
-                                  .withRange(-1.0f, 1.0f)
-                                  .withLinearScaleFormatting("%", 100.0)
-                                  .withID(PAR_LFOSHIFT));
-    param_metadatas.push_back(pmd()
-                                  .withName("LFO WARP")
-                                  .withRange(-1.0f, 1.0f)
-                                  .withLinearScaleFormatting("%", 100.0)
-                                  .withID(PAR_LFOWARP));
-    param_metadatas.push_back(pmd()
-                                  .withName("LFO SHAPE")
-                                  .withUnorderedMapFormatting({{0, "SINE"},
-                                                               {1, "SIN<>SQR<>TRI"},
-                                                               {2, "DOWN<>TRI<>UP"},
-                                                               {3, "SMOOTH RANDOM"},
-                                                               {4, "RANDOM"}},
-                                                              true)
-                                  .withID(PAR_LFOSHAPE));
 
     for (int i = 0; i < param_metadatas.size(); ++i)
     {
@@ -140,11 +143,34 @@ OctoShifterProcessor::OctoShifterProcessor()
         par_id_to_value_pointer[id] = &param_values[i];
         set_parameter_value(id, param_metadatas[i].defaultVal);
     }
+
     choicetolfoshapemap[0] = lfo_t::SINE;
     choicetolfoshapemap[1] = lfo_t::PULSE;
     choicetolfoshapemap[2] = lfo_t::SAW_TRI_RAMP;
     choicetolfoshapemap[3] = lfo_t::SMOOTH_NOISE;
     choicetolfoshapemap[4] = lfo_t::SH_NOISE;
+
+    set_initialpatch();
+}
+
+void OctoShifterProcessor::set_initialpatch()
+{
+    // initial patch that has some values at non default
+    for (int i = 0; i < 6; ++i)
+    {
+        set_parameter_value(PAR_ENABLED + i + 2, false);
+    }
+    for (int i = 0; i < 8; ++i)
+    {
+        float delaytime = 0.2 + 0.4 / 8 * i;
+        set_parameter_value(PAR_DELAYTIME + i, delaytime);
+    }
+    set_parameter_value(PAR_AZIMUTH, -1.0);
+    set_parameter_value(PAR_AZIMUTH + 1, 1.0);
+    set_parameter_value(PAR_PITCH, 0.05);
+    set_parameter_value(PAR_PITCH + 1, -0.05);
+    set_parameter_value(PAR_DELAYFEEDBACK, 0.2);
+    set_parameter_value(PAR_DELAYFEEDBACK + 1, 0.2);
 }
 
 OctoShifterProcessor::~OctoShifterProcessor() {}
@@ -325,17 +351,22 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         }
         alignas(16) float procbuf[BLOCKSIZE * max_output_channels];
         memset(procbuf, 0, BLOCKSIZE * max_output_channels * sizeof(float));
-        int lfo0shape = *par_id_to_value_pointer[PAR_LFOSHAPE];
-        lfo0shape = choicetolfoshapemap[lfo0shape];
-        float lfo0rate = *par_id_to_value_pointer[PAR_LFORATE];
-        float lfo0deform = *par_id_to_value_pointer[PAR_LFODEFORM];
-        float lfo0warp = *par_id_to_value_pointer[PAR_LFOWARP];
-        lfos[0].process_block(lfo0rate, lfo0deform, lfo0shape, false, 1.0, lfo0warp);
+        for (int i = 0; i < numLFOs; ++i)
+        {
+            int lfo0shape = *par_id_to_value_pointer[PAR_LFOSHAPES + i];
+            lfo0shape = choicetolfoshapemap[lfo0shape];
+            float lfo0rate = *par_id_to_value_pointer[PAR_LFORATES + i];
+            float lfo0deform = *par_id_to_value_pointer[PAR_LFODEFORMS + i];
+            float lfo0warp = *par_id_to_value_pointer[PAR_LFOWARPS + i];
+            lfos[i].process_block(lfo0rate, lfo0deform, lfo0shape, false, 1.0, lfo0warp);
+        }
+
         for (int j = 0; j < shifterstouse; ++j)
         {
             if (!shifters[j].enabled)
                 continue;
             shifters[j].mod_source_values[PitchShifter::MS_LFO0] = lfos[0].outputBlock[0];
+            shifters[j].mod_source_values[PitchShifter::MS_LFO1] = lfos[1].outputBlock[0];
             shifters[j].modmatrix[PitchShifter::MS_LFO0][PitchShifter::MT_PITCH] =
                 *par_id_to_value_pointer[PAR_PITCHLFO0AMOUNT];
             float azimod = *par_id_to_value_pointer[PAR_AZIMUTHLFO0AMOUNT];

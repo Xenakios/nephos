@@ -287,17 +287,19 @@ class OctoShifterProcessor final : public juce::AudioProcessor
         PAR_FILTERCUTOFF = 500,
         PAR_FILTERRESON = 600,
         PAR_AZIMUTH = 700,
-        PAR_LFOSHAPE = 10000,
-        PAR_LFORATE = 10100,
-        PAR_PITCHLFO0AMOUNT = 10200,
-        PAR_AZIMUTHLFO0AMOUNT = 10201,
-        PAR_CUTOFF0LFO0AMOUNT = 10202,
-        PAR_FORMANT_LFO0AMOUNT = 10203,
-        PAR_DELAYFB_LFO0AMOUNT = 10204,
-        PAR_LFODEFORM = 10300,
-        PAR_LFOSHIFT = 10400,
-        PAR_LFOWARP = 10500
+        PAR_LFOSHAPES = 10000,
+        PAR_LFORATES = 10100,
+        PAR_LFODEFORMS = 10300,
+        PAR_LFOSHIFTS = 10400,
+        PAR_LFOWARPS = 10500,
+        PAR_PITCHLFO0AMOUNT = 50000,
+        PAR_AZIMUTHLFO0AMOUNT = 51000,
+        PAR_CUTOFF0LFO0AMOUNT = 52000,
+        PAR_FORMANT_LFO0AMOUNT = 53000,
+        PAR_DELAYFB_LFO0AMOUNT = 54000,
+        
     };
+    void set_initialpatch();
     std::vector<pmd> param_metadatas;
     std::unordered_map<uint32_t, pmd *> par_id_to_metadata;
     std::array<float, 256> param_values;
