@@ -11,13 +11,8 @@
 //==============================================================================
 OctoShifterProcessor::OctoShifterProcessor()
     : AudioProcessor(BusesProperties()
-#if !JucePlugin_IsMidiEffect
-#if !JucePlugin_IsSynth
-                         .withInput("Input", juce::AudioChannelSet::stereo(), true)
-#endif
-                         .withOutput("Output", juce::AudioChannelSet::stereo(), true)
-#endif
-      )
+                         .withInput("Input", juce::AudioChannelSet::ambisonic(3), true)
+                         .withOutput("Output", juce::AudioChannelSet::ambisonic(3), true))
 {
     juce::Logger::writeToLog("OctoShifterProcessor CTOR");
     params_from_gui_fifo.reset(2048);
@@ -84,6 +79,13 @@ OctoShifterProcessor::OctoShifterProcessor()
             .withUnorderedMapFormatting({{0, "Default"}, {1, "Cheap"}, {2, "Reserved"}}, true)
             .withDefault(0)
             .withID(PAR_PITCHQUALITY));
+    param_metadatas.push_back(
+        pmd()
+            .withName("OUTPUT MODE")
+            .withUnorderedMapFormatting(
+                {{0, "Stereo"}, {1, "Discrete 8 ch"}, {2, "3rd oAmbisonics"}}, true)
+            .withDefault(0)
+            .withID(PAR_OUTPUTMODE));
     for (int i = 0; i < numLFOs; ++i)
     {
         param_metadatas.push_back(pmd()
@@ -260,17 +262,17 @@ void OctoShifterProcessor::changeProgramName(int index, const juce::String &newN
 //==============================================================================
 void OctoShifterProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-    Log::info("prepareToPlay {} Hz {} samples", sampleRate, samplesPerBlock);
+    Log::info("prepareToPlay {} Hz {} samples, {} total num in channels {} total out channels",
+              sampleRate, samplesPerBlock, getTotalNumInputChannels(), getTotalNumOutputChannels());
     callbackcount = 0;
     for (int i = 0; i < shifters.size(); ++i)
     {
         shifters[i].stretch->presetDefault(1, sampleRate);
-        shifters[i].set_sample_rate(sampleRate, 2);
-        shifters[i].set_spatial_parameters(*par_id_to_value_pointer[i + PAR_AZIMUTH], 0.0);
+        shifters[i].set_sample_rate(sampleRate);
     }
     samplerate = sampleRate;
     initTables();
-    workbuffer.setSize(getTotalNumOutputChannels(), samplesPerBlock);
+    workbuffer.setSize(max_output_channels, samplesPerBlock);
     workbuffer.clear();
 }
 
@@ -280,12 +282,40 @@ void OctoShifterProcessor::releaseResources()
     // spare memory, etc.
 }
 
+juce::String getBusesLayoutDescription(const juce::AudioProcessor::BusesLayout &layout)
+{
+    juce::String description;
+
+    auto appendBuses = [&description](const juce::Array<juce::AudioChannelSet> &buses,
+                                      juce::String type) {
+        description << type << " Buses (" << buses.size() << "):\n";
+
+        if (buses.isEmpty())
+        {
+            description << "  None\n";
+            return;
+        }
+
+        for (int i = 0; i < buses.size(); ++i)
+        {
+            const auto &bus = buses.getReference(i);
+            description << "  Bus " << i << ": "
+                        << bus.getDescription() // e.g., "Stereo" or "5.1 Surround"
+                        << " [" << bus.size() << " channels]\n";
+        }
+    };
+
+    appendBuses(layout.inputBuses, "Input");
+    description << "\n";
+    appendBuses(layout.outputBuses, "Output");
+
+    return description;
+}
+
 bool OctoShifterProcessor::isBusesLayoutSupported(const BusesLayout &layouts) const
 {
-#if JucePlugin_IsMidiEffect
-    juce::ignoreUnused(layouts);
+    // juce::Logger::writeToLog("host requested I/O : " + getBusesLayoutDescription(layouts));
     return true;
-#else
     // This is the place where you check if the layout is supported.
     // In this template code we only support mono or stereo.
     // Some plugin hosts, such as certain GarageBand versions, will only
@@ -301,7 +331,6 @@ bool OctoShifterProcessor::isBusesLayoutSupported(const BusesLayout &layouts) co
 #endif
 
     return true;
-#endif
 }
 
 template <typename T> inline T reflect_value_no_loop(const T minval, const T val, const T maxval)
@@ -356,6 +385,26 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             input_fifo.push(fifoframe);
         }
     }
+    int omode = *par_id_to_value_pointer[PAR_OUTPUTMODE];
+    int engineInChannels = 2;
+    int engineOutChannels = 2;
+
+    PitchShifter::OUTCHANSMODE shifteroutmode = PitchShifter::OCM_STEREO;
+    if (omode == 1)
+    {
+        engineOutChannels = 1;
+        shifteroutmode = PitchShifter::OCM_MONODISCRETE;
+    }
+    else if (omode == 2)
+    {
+        engineOutChannels = 16;
+        shifteroutmode = PitchShifter::OCM_AMBISONICS_3RD;
+    }
+    for (auto &s : shifters)
+    {
+        s.set_output_mode(shifteroutmode);
+    }
+
     ParamChangeMessage msg;
     while (params_from_gui_fifo.pop(msg))
     {
@@ -389,78 +438,89 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             lfos[i].process_block(lfo0rate, lfo0deform, lfo0shape, false, 1.0, lfo0warp);
         }
 
-        for (int j = 0; j < shifterstouse; ++j)
+        for (int shindex = 0; shindex < shifterstouse; ++shindex)
         {
-            if (!shifters[j].enabled)
+            if (!shifters[shindex].enabled)
+            {
                 continue;
-            shifters[j].mod_source_values[PitchShifter::MS_LFO0] = lfos[0].outputBlock[0];
-            shifters[j].mod_source_values[PitchShifter::MS_LFO1] = lfos[1].outputBlock[0];
+            }
+
+            shifters[shindex].mod_source_values[PitchShifter::MS_LFO0] = lfos[0].outputBlock[0];
+            shifters[shindex].mod_source_values[PitchShifter::MS_LFO1] = lfos[1].outputBlock[0];
             for (int i = 0; i < numLFOs; ++i)
             {
-                shifters[j].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_PITCH] =
+                shifters[shindex].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_PITCH] =
                     *par_id_to_value_pointer[PAR_PITCHLFOAMOUNTS + i];
                 float azimod = *par_id_to_value_pointer[PAR_AZIMUTHLFOAMOUNTS + i];
-                azimod *= modulation_patterns[1][j];
-                shifters[j].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_AZI] = azimod;
-                shifters[j].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_FORMANT] =
+                azimod *= modulation_patterns[1][shindex];
+                shifters[shindex].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_AZI] =
+                    azimod;
+                shifters[shindex].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_FORMANT] =
                     *par_id_to_value_pointer[PAR_FORMANT_LFOAMOUNTS + i];
-                shifters[j].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_F0CUTOFF] =
+                shifters[shindex].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_F0CUTOFF] =
                     *par_id_to_value_pointer[PAR_CUTOFF0LFOAMOUNTS + i];
-                shifters[j].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_DELAYFEEDBACK] =
+                shifters[shindex]
+                    .modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_DELAYFEEDBACK] =
                     *par_id_to_value_pointer[PAR_DELAYFB_LFOAMOUNTS + i];
-                shifters[j].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_INVOLUME] =
+                shifters[shindex].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_INVOLUME] =
                     *par_id_to_value_pointer[PAR_INVOLUME_LFOAMOUNTS + i];
-                shifters[j].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_F0RESON] =
+                shifters[shindex].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_F0RESON] =
                     *par_id_to_value_pointer[PAR_RESON0_LFOAMOUNTS + i];
             }
 
             for (int i = 0; i < BLOCKSIZE; ++i)
             {
-                procbuf[i * max_output_channels] = inputbuffer[j % 2][i];
+                procbuf[i * max_output_channels] = inputbuffer[shindex % 2][i];
             }
-            shifters[j].process_block(procbuf);
+            shifters[shindex].process_block(procbuf);
             if (gui_visible && callbackcount % 8 == 0)
             {
                 ModulationMessage msg;
-                msg.shifterindex = j;
+                msg.shifterindex = shindex;
                 for (int i = 0; i < PitchShifter::MT_COUNT; ++i)
                 {
-                    msg.values[i] = shifters[j].modsums[i];
+                    msg.values[i] = shifters[shindex].modsums[i];
                 }
                 modulations_to_gui_fifo.push(msg);
             }
-            for (int i = 0; i < BLOCKSIZE; ++i)
+            if (shifteroutmode != PitchShifter::OCM_MONODISCRETE)
             {
-                sumpointers[0][i] += procbuf[i * max_output_channels + 0];
-                sumpointers[1][i] += procbuf[i * max_output_channels + 1];
+                for (int k = 0; k < engineOutChannels; ++k)
+                {
+                    for (int i = 0; i < BLOCKSIZE; ++i)
+                    {
+                        sumpointers[k][i] += procbuf[i * max_output_channels + k];
+                    }
+                }
+            }
+            else
+            {
+                for (int i = 0; i < BLOCKSIZE; ++i)
+                {
+                    sumpointers[shindex][i] = procbuf[i * max_output_channels];
+                }
             }
         }
         std::array<float, max_output_channels> outframe;
         for (int i = 0; i < BLOCKSIZE; ++i)
         {
-            outframe[0] = sumpointers[0][i];
-            outframe[1] = sumpointers[1][i];
+            for (int j = 0; j < 8; ++j)
+            {
+                outframe[j] = sumpointers[j][i];
+            }
             output_fifo.push(outframe);
         }
         ++callbackcount;
     }
     assert(output_fifo.usedSlots() >= buffer.getNumSamples());
+    int final_out_chans = std::min<int>(max_output_channels, totalNumOutputChannels);
     for (int i = 0; i < buffer.getNumSamples(); ++i)
     {
         std::array<float, max_output_channels> outframe;
-        // if (output_fifo.usedSlots() >= BLOCKSIZE)
+        output_fifo.pop(outframe);
+        for (int j = 0; j < final_out_chans; ++j)
         {
-            output_fifo.pop(outframe);
-            writepointers[0][i] = std::clamp(outframe[0] * 0.5f, -1.0f, 1.0f);
-            writepointers[1][i] = std::clamp(outframe[1] * 0.5f, -1.0f, 1.0f);
-        }
-        // else
-        {
-            // writepointers[0][i] = 0.0;
-            // writepointers[1][i] = 0.0;
-            // int s = outsilencecount;
-            //++s;
-            // outsilencecount = s;
+            writepointers[j][i] = std::clamp(outframe[j] * 0.5f, -1.0f, 1.0f);
         }
     }
 

@@ -88,7 +88,7 @@ class PitchShifter
     double samplerate = 0.0;
     alignas(16) std::array<float, 64> spatcoeffs = {0.0f};
     alignas(16) sst::filtersplusplus::Filter sstfilter;
-    int numchs = 2;
+    int numoutchans = 2;
     sst::basic_blocks::dsp::OnePoleLag<float, true> ingainlag;
     sst::basic_blocks::dsp::OnePoleLag<float, true> panlag;
     sst::basic_blocks::dsp::OnePoleLag<float, true> fblag;
@@ -130,9 +130,33 @@ class PitchShifter
             feedbackaudio[i] = 0.0f;
         std::fill(delaybuffer.begin(), delaybuffer.end(), 0.0f);
     }
-    void set_sample_rate(double hz, int chans)
+    enum OUTCHANSMODE
     {
-        numchs = chans;
+        OCM_STEREO,
+        OCM_MONODISCRETE,
+        OCM_AMBISONICS_1ST,
+        OCM_AMBISONICS_2ND,
+        OCM_AMBISONICS_3RD
+    };
+    OUTCHANSMODE ochanmode = OCM_STEREO;
+    void set_output_mode(OUTCHANSMODE om)
+    {
+        ochanmode = om;
+        numoutchans = 0;
+        if (om == OCM_STEREO)
+            numoutchans = 2;
+        else if (om == OCM_MONODISCRETE)
+            numoutchans = 1;
+        else if (om == OCM_AMBISONICS_1ST)
+            numoutchans = 4;
+        else if (om == OCM_AMBISONICS_2ND)
+            numoutchans = 9;
+        else if (om == OCM_AMBISONICS_3RD)
+            numoutchans = 16;
+        assert(numoutchans > 0);
+    }
+    void set_sample_rate(double hz)
+    {
         samplerate = hz;
         ingainlag.setRateInMilliseconds(5.0, hz, 1.0f);
         panlag.setRateInMilliseconds(5.0, hz, 1.0f);
@@ -155,7 +179,7 @@ class PitchShifter
     }
     void set_spatial_parameters(float azimuth, float elevation)
     {
-        if (numchs == 2)
+        if (numoutchans == 2)
         {
             float panpos = xenakios::mapvalue(azimuth, -1.0f, 1.0f, 0.0f, 1.0f);
             sst::basic_blocks::dsp::pan_laws::panmatrix_t mat;
@@ -185,7 +209,7 @@ class PitchShifter
     // uses only first channel as input, outputs stereo or ambisonics
     void process_block(std::span<float> audio_inout)
     {
-        assert(numchs > 1);
+        assert(numoutchans > 0);
         assert(audio_inout.size() >= 64 * BLOCKSIZE);
         const bool passthrough = false;
         if (passthrough)
@@ -256,6 +280,7 @@ class PitchShifter
 
         sstfilter.prepareBlock();
         sst::basic_blocks::dsp::pan_laws::panmatrix_t mat;
+        alignas(16) float tempoutbuffer[BLOCKSIZE];
         for (int i = 0; i < BLOCKSIZE; ++i)
         {
             float filtered = sstfilter.processMonoSample(processoutbuffer[0][i]);
@@ -267,31 +292,47 @@ class PitchShifter
             }
             else
             {
-                float olddelayed = read_from_delay(delaytime);
-                float newdelayed = read_from_delay(pending_delay_time);
-                float fadegain = 1.0 / delay_change_fade_len * delay_change_fade_pos;
-                delayed = (1.0 - fadegain) * olddelayed + fadegain * newdelayed;
-                ++delay_change_fade_pos;
-                if (delay_change_fade_pos == delay_change_fade_len)
+                const int half = BLOCKSIZE / 2;
+                if (i < half)
                 {
-                    delay_change_fade_pos = 0;
+                    float olddelayed = read_from_delay(delaytime);
+                    float fadegain = 1.0 - (1.0 / half);
+                    delayed = olddelayed * fadegain;
+                }
+                else
+                {
                     delaytime = pending_delay_time;
                     pending_delay_time = -1.0;
+                    float fadegain = 1.0 / half * (i - half);
+                    delayed = read_from_delay(delaytime) * fadegain;
                 }
             }
-
-            // obviously this is expensive and calculating Ambisonics
-            // coefficients is going to be a lot lot worse...
-            // we may need to look into some kind of look up table thing
-            float panpos = (panlag.getValue() + 1.0) * 0.5;
-            sst::basic_blocks::dsp::pan_laws::monoEqualPower(panpos, mat);
-            audio_inout[i * 64 + 0] = delayed * mat[0];
-            audio_inout[i * 64 + 1] = delayed * mat[3];
+            tempoutbuffer[i] = delayed;
             feedbackaudio[i] = std::tanh(delayed);
-            panlag.process();
         }
-        sstfilter.concludeBlock();
-        
+
+        if (ochanmode == OCM_MONODISCRETE)
+        {
+            for (int i = 0; i < BLOCKSIZE; ++i)
+            {
+                audio_inout[i * 64 + 0] = tempoutbuffer[i];
+            }
+        }
+        else if (ochanmode == OCM_STEREO)
+        {
+            for (int i = 0; i < BLOCKSIZE; ++i)
+            {
+                // obviously this is expensive and calculating Ambisonics
+                // coefficients is going to be a lot lot worse...
+                // we may need to look into some kind of look up table thing
+                float panpos = (panlag.getValue() + 1.0) * 0.5;
+                sst::basic_blocks::dsp::pan_laws::monoEqualPower(panpos, mat);
+                audio_inout[i * 64 + 0] = tempoutbuffer[i] * mat[0];
+                audio_inout[i * 64 + 1] = tempoutbuffer[i] * mat[3];
+                panlag.process();
+            }
+            sstfilter.concludeBlock();
+        }
     }
 };
 
@@ -386,6 +427,7 @@ class OctoShifterProcessor final : public juce::AudioProcessor
         PAR_FILTERRESON = 600,
         PAR_AZIMUTH = 700,
         PAR_PITCHQUALITY = 800,
+        PAR_OUTPUTMODE = 900,
         PAR_LFOSHAPES = 10000,
         PAR_LFORATES = 10100,
         PAR_LFODEFORMS = 10300,

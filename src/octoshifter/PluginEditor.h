@@ -282,5 +282,6 @@ class OctoShifterProcessorEditor final : public juce::AudioProcessorEditor, publ
     std::unordered_map<uint32_t, XapSlider *> paridtoslidermap;
     juce::Label infoLabel;
     XapSlider pitchQualityDrop;
+    XapSlider outputModeDrop;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OctoShifterProcessorEditor)
 };

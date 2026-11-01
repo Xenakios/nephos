@@ -21,11 +21,12 @@ using MyProcessor = OctoShifterProcessor;
 //==============================================================================
 OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
     : AudioProcessorEditor(&p), processorRef(p),
-
       pitchQualityDrop(XapSlider::SS_HorizontalSlider,
-                       *p.par_id_to_metadata[OctoShifterProcessor::PAR_PITCHQUALITY])
+                       *p.par_id_to_metadata[OctoShifterProcessor::PAR_PITCHQUALITY]),
+      outputModeDrop(XapSlider::SS_HorizontalSlider,
+                     *p.par_id_to_metadata[OctoShifterProcessor::PAR_OUTPUTMODE])
 {
-    p.gui_visible = true;
+    
     multiSliders.push_back(
         std::make_unique<MultiSlider>(p, "ENABLED", OctoShifterProcessor::PAR_ENABLED, 8));
     multiSliders.push_back(
@@ -59,6 +60,7 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
 
     addAndMakeVisible(infoLabel);
     add_xapslider(p, *this, pitchQualityDrop);
+    add_xapslider(p, *this, outputModeDrop);
     for (int i = 0; i < OctoShifterProcessor::numLFOs; ++i)
     {
         auto c = std::make_unique<LFOComponent>(p, i);
@@ -71,6 +73,7 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
     });
     startTimerHz(25);
     setSize(1100, 700);
+    p.gui_visible = true;
 }
 
 OctoShifterProcessorEditor::~OctoShifterProcessorEditor() { processorRef.gui_visible = false; }
@@ -139,8 +142,9 @@ void OctoShifterProcessorEditor::resized()
         multiflex.items.add(juce::FlexItem(*c).withFlex(1.0).withMargin(3));
     }
     juce::FlexBox miscflex;
-    miscflex.flexDirection = juce::FlexBox::Direction::row;
+    miscflex.flexDirection = juce::FlexBox::Direction::column;
     miscflex.items.add(juce::FlexItem(pitchQualityDrop).withFlex(1).withMaxHeight(25));
+    miscflex.items.add(juce::FlexItem(outputModeDrop).withFlex(1).withMaxHeight(25));
     miscflex.items.add(juce::FlexItem(infoLabel).withFlex(1).withMaxHeight(25));
     multiflex.items.add(juce::FlexItem(miscflex).withFlex(1.0).withMargin(3));
     for (auto &e : multiflex.items)

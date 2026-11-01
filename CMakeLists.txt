@@ -285,6 +285,13 @@ target_compile_definitions(OctoShifter
         _USE_MATH_DEFINES=1
         )
 
+target_compile_options(OctoShifter PRIVATE
+        -mavx2
+        -mfma
+        -Werror=return-type
+        $<$<COMPILE_LANGUAGE:CXX>:-fno-char8_t>
+    )
+
 target_link_libraries(OctoShifter
     PRIVATE
         # AudioPluginData           # If we'd created a binary data target, we'd link to it here
