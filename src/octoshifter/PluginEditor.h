@@ -40,12 +40,16 @@ class MultiSlider : public juce::Component
     int draggedindex = -1;
     int paint_throttle_counter = 0;
     juce::String groupname;
+    juce::TextEditor value_entry_editor;
     std::unique_ptr<juce::VBlankAttachment> vblankAttachment;
     MultiSlider(OctoShifterProcessor &p, juce::String name, uint32_t parstartid, uint32_t numpars,
                 uint32_t lfo0par = CLAP_INVALID_ID, int shifter_par_target = -1,
                 bool notify_only_on_mouse_up = false)
         : pref(p), groupname(name)
     {
+        addChildComponent(value_entry_editor);
+        value_entry_editor.onEscapeKey = [this]() { value_entry_editor.setVisible(false); };
+
         shifter_modulation_target = shifter_par_target;
         paraminfos.resize(8);
         int numvalidated = 0;
@@ -95,13 +99,49 @@ class MultiSlider : public juce::Component
             repaint();
         }
     }
-
+    void show_value_editor(int paramindex, int xcor)
+    {
+        value_entry_editor.setVisible(true);
+        value_entry_editor.setBounds(xcor, getHeight() - 20, 75, 20);
+        value_entry_editor.grabKeyboardFocus();
+        float v = paraminfos[paramindex].value;
+        auto str = pref.par_id_to_metadata[paraminfos[paramindex].id]->valueToString(v);
+        if (str)
+        {
+            value_entry_editor.setText(*str);
+            value_entry_editor.selectAll();
+            value_entry_editor.onReturnKey = [this, paramindex]() {
+                std::string txt = value_entry_editor.getText().toStdString();
+                std::string err;
+                auto v =
+                    pref.par_id_to_metadata[paraminfos[paramindex].id]->valueFromString(txt, err);
+                if (v)
+                {
+                    post_param_event(paramindex, *v);
+                    repaint();
+                    value_entry_editor.setVisible(false);
+                }
+                else
+                {
+                    Log::info("error : could not convert edit text to parameter value : {}", err);
+                    value_entry_editor.setVisible(false);
+                }
+            };
+        }
+    }
     void mouseDown(const juce::MouseEvent &ev) override
     {
-        draggedindex = -1;
         int paramindex = (float)(paraminfos.size()) / getWidth() * ev.x;
+
+        draggedindex = -1;
+
         if (paramindex >= 0 && paramindex < paraminfos.size())
         {
+            if (ev.y > sliders_area.getBottom())
+            {
+                show_value_editor(paramindex, ev.x);
+                return;
+            }
             draggedindex = paramindex;
             if (!paraminfos[paramindex].notify_only_on_mouse_up)
                 post_param_event(draggedindex, parval_from_mouse_y(draggedindex, ev.y));
