@@ -33,11 +33,12 @@ class MultiSlider : public juce::Component
         float defaultval = 0.0f;
         float value = 0.0f;
         bool notify_only_on_mouse_up = false;
+        float modulatedvalue = 0.0f;
     };
     std::vector<ParamInfo> paraminfos;
     int draggedindex = -1;
     juce::String groupname;
-
+    std::unique_ptr<juce::VBlankAttachment> vblankAttachment;
     MultiSlider(OctoShifterProcessor &p, juce::String name, uint32_t parstartid, uint32_t numpars,
                 uint32_t lfo0par = CLAP_INVALID_ID, bool notify_only_on_mouse_up = false)
         : pref(p), groupname(name)
@@ -67,6 +68,7 @@ class MultiSlider : public juce::Component
                           1.0f,        0.0f, *pref.par_id_to_value_pointer[lfo0par + 1]};
             paraminfos.push_back(pi2);
         }
+        vblankAttachment = std::make_unique<juce::VBlankAttachment>(this, [this]() { repaint(); });
     }
 
     void paint(juce::Graphics &g) override
@@ -108,6 +110,14 @@ class MultiSlider : public juce::Component
             float ycor = juce::jmap<float>(v, pmin, pmax, getHeight(), 0.0);
             g.setColour(juce::Colours::yellow);
             g.drawLine(xcor, ycor, xcor + barw - 1.0, ycor, 2.0);
+            if (paraminfos[i].lfoindex == -1)
+            {
+                g.setColour(juce::Colours::lightgrey);
+                v = v + paraminfos[i].modulatedvalue;
+                v = std::clamp(v, pmin, pmax);
+                ycor = juce::jmap<float>(v, pmin, pmax, getHeight(), 0.0);
+                g.drawLine(xcor, ycor, xcor + barw - 1.0, ycor, 2.0);
+            }
         }
     }
     void mouseDoubleClick(const juce::MouseEvent &ev) override

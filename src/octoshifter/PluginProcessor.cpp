@@ -21,6 +21,7 @@ OctoShifterProcessor::OctoShifterProcessor()
 {
     params_from_gui_fifo.reset(2048);
     params_to_gui_fifo.reset(2048);
+    modulations_to_gui_fifo.reset(2048);
     for (int i = 0; i < numshifters; ++i)
     {
         param_metadatas.push_back(pmd()
@@ -247,7 +248,7 @@ void OctoShifterProcessor::changeProgramName(int index, const juce::String &newN
 void OctoShifterProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     DBG("prepareToPlay");
-    samplecount = 0;
+    callbackcount = 0;
     for (int i = 0; i < shifters.size(); ++i)
     {
         shifters[i].stretch->presetDefault(1, sampleRate);
@@ -405,6 +406,16 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 procbuf[i * max_output_channels] = inputbuffer[j % 2][i];
             }
             shifters[j].process_block(procbuf);
+            if (gui_visible && callbackcount % 8 == 0)
+            {
+                ModulationMessage msg;
+                msg.shifterindex = j;
+                for (int i = 0; i < PitchShifter::MT_COUNT; ++i)
+                {
+                    msg.values[i] = shifters[j].modsums[i];
+                }
+                modulations_to_gui_fifo.push(msg);
+            }
             for (int i = 0; i < BLOCKSIZE; ++i)
             {
                 sumpointers[0][i] += procbuf[i * max_output_channels + 0];
@@ -418,6 +429,7 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             outframe[1] = sumpointers[1][i];
             output_fifo.push(outframe);
         }
+        ++callbackcount;
     }
     assert(output_fifo.usedSlots() >= buffer.getNumSamples());
     for (int i = 0; i < buffer.getNumSamples(); ++i)

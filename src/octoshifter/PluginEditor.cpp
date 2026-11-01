@@ -41,6 +41,7 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
       pitchQualityDrop(XapSlider::SS_HorizontalSlider,
                        *p.par_id_to_metadata[OctoShifterProcessor::PAR_PITCHQUALITY])
 {
+    p.gui_visible = true;
     addAndMakeVisible(enableMulti);
     addAndMakeVisible(pitchMulti);
     addAndMakeVisible(formantMulti);
@@ -62,11 +63,11 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
     visitAll<XapSlider>(*this, [this](XapSlider *slid) {
         paridtoslidermap[slid->getParameterMetaData().id] = slid;
     });
-    startTimerHz(10);
+    startTimerHz(25);
     setSize(1100, 700);
 }
 
-OctoShifterProcessorEditor::~OctoShifterProcessorEditor() {}
+OctoShifterProcessorEditor::~OctoShifterProcessorEditor() { processorRef.gui_visible = false; }
 
 void OctoShifterProcessorEditor::timerCallback()
 {
@@ -84,11 +85,21 @@ void OctoShifterProcessorEditor::timerCallback()
         {
             it->second->setValue(msg.val);
         }
-        if (msg.id >= OctoShifterProcessor::PAR_PITCH &&
-            msg.id < OctoShifterProcessor::PAR_PITCH + 8)
-        {
-            pitchMulti.update();
-        }
+    }
+    ModulationMessage modmsg;
+    while (processorRef.modulations_to_gui_fifo.pop(modmsg))
+    {
+        aziMulti.paraminfos[modmsg.shifterindex].modulatedvalue =
+            modmsg.values[PitchShifter::MT_AZI];
+        // aziMulti.repaint();
+        pitchMulti.paraminfos[modmsg.shifterindex].modulatedvalue =
+            modmsg.values[PitchShifter::MT_PITCH] * 12.0;
+        // pitchMulti.repaint();
+        formantMulti.paraminfos[modmsg.shifterindex].modulatedvalue =
+            modmsg.values[PitchShifter::MT_FORMANT] * 12.0;
+        // formantMulti.repaint();
+        inVolumeMulti.paraminfos[modmsg.shifterindex].modulatedvalue =
+            modmsg.values[PitchShifter::MT_INVOLUME] * 12.0;
     }
 }
 

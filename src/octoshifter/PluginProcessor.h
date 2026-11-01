@@ -69,6 +69,7 @@ class PitchShifter
     sst::basic_blocks::dsp::OnePoleLag<float, true> ingainlag;
     sst::basic_blocks::dsp::OnePoleLag<float, true> panlag;
     sst::basic_blocks::dsp::OnePoleLag<float, true> fblag;
+    alignas(16) float modsums[MT_COUNT] = {0.0f};
     std::vector<float> delaybuffer;
     alignas(16) int delaywritepos = 0;
     alignas(16) float feedbackaudio[BLOCKSIZE] = {0.0f};
@@ -186,7 +187,7 @@ class PitchShifter
         latency_out = stretch->outputLatency();
         alignas(16) float processinbuffer[1][BLOCKSIZE];
         alignas(16) float processoutbuffer[1][BLOCKSIZE];
-        alignas(16) float modsums[MT_COUNT] = {0.0f};
+        memset(modsums, 0, sizeof(float) * MT_COUNT);
         // 16 multiplies and adds at the momemt, so not completely terrible...
         // but if we add substantially more modulation sources and targets,
         // i guess we have to look into implementing the mod matrix in
@@ -258,6 +259,12 @@ struct ParamChangeMessage
 {
     uint32_t id = CLAP_INVALID_ID;
     float val = 0.0f;
+};
+
+struct ModulationMessage
+{
+    int shifterindex = 0;
+    float values[PitchShifter::MT_COUNT];
 };
 
 class OctoShifterProcessor final : public juce::AudioProcessor
@@ -357,6 +364,8 @@ class OctoShifterProcessor final : public juce::AudioProcessor
     std::unordered_map<uint32_t, float *> par_id_to_value_pointer;
     choc::fifo::SingleReaderSingleWriterFIFO<ParamChangeMessage> params_from_gui_fifo;
     choc::fifo::SingleReaderSingleWriterFIFO<ParamChangeMessage> params_to_gui_fifo;
+    choc::fifo::SingleReaderSingleWriterFIFO<ModulationMessage> modulations_to_gui_fifo;
+    std::atomic<bool> gui_visible{false};
     void set_state(choc::value::ValueView view);
     void set_parameter_value(uint32_t id, float value);
     void send_param_updates_to_gui();
@@ -373,13 +382,12 @@ class OctoShifterProcessor final : public juce::AudioProcessor
     std::atomic<int> outsilencecount = 0;
 
   private:
-    
     double osc0phase = 0.0;
     double osc1phase = 0.0;
     juce::AudioBuffer<float> workbuffer;
     alignas(16) SingleThreadedFifo<std::array<float, max_input_channels>> input_fifo{4096};
     alignas(16) SingleThreadedFifo<std::array<float, max_output_channels>> output_fifo{4096};
-    alignas(16) int samplecount = 0;
+    alignas(16) int callbackcount = 0;
 
     std::unordered_map<int, int> choicetolfoshapemap;
     //==============================================================================
