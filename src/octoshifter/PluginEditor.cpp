@@ -22,35 +22,41 @@ using MyProcessor = OctoShifterProcessor;
 OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
     : AudioProcessorEditor(&p), processorRef(p),
 
-      enableMulti(p, "ENABLED", OctoShifterProcessor::PAR_ENABLED, 8),
-      pitchMulti(p, "PITCH", MyProcessor::PAR_PITCH, 8, MyProcessor::PAR_PITCHLFOAMOUNTS),
-      formantMulti(p, "FORMANT", OctoShifterProcessor::PAR_FORMANT, 8,
-                   MyProcessor::PAR_FORMANT_LFOAMOUNTS),
-      delayTimeMulti(p, "DELAY TIME", OctoShifterProcessor::PAR_DELAYTIME, 8, CLAP_INVALID_ID,
-                     true),
-      delayFeedbackMulti(p, "DELAY FEEDBACK", OctoShifterProcessor::PAR_DELAYFEEDBACK, 8,
-                         OctoShifterProcessor::PAR_DELAYFB_LFOAMOUNTS),
-      inVolumeMulti(p, "INPUT VOLUME", OctoShifterProcessor::PAR_INPUT_GAIN, 8,
-                    OctoShifterProcessor::PAR_INVOLUME_LFOAMOUNTS),
-      cutoffMulti(p, "FILTER CUTOFF", OctoShifterProcessor::PAR_FILTERCUTOFF, 8,
-                  MyProcessor::PAR_CUTOFF0LFOAMOUNTS),
-      resonMulti(p, "FILTER RESONANCE", OctoShifterProcessor::PAR_FILTERRESON, 8,
-                 OctoShifterProcessor::PAR_RESON0_LFOAMOUNTS),
-      aziMulti(p, "AZIMUTH/PAN", OctoShifterProcessor::PAR_AZIMUTH, 8,
-               MyProcessor::PAR_AZIMUTHLFOAMOUNTS),
       pitchQualityDrop(XapSlider::SS_HorizontalSlider,
                        *p.par_id_to_metadata[OctoShifterProcessor::PAR_PITCHQUALITY])
 {
     p.gui_visible = true;
-    addAndMakeVisible(enableMulti);
-    addAndMakeVisible(pitchMulti);
-    addAndMakeVisible(formantMulti);
-    addAndMakeVisible(delayTimeMulti);
-    addAndMakeVisible(delayFeedbackMulti);
-    addAndMakeVisible(inVolumeMulti);
-    addAndMakeVisible(cutoffMulti);
-    addAndMakeVisible(resonMulti);
-    addAndMakeVisible(aziMulti);
+    multiSliders.push_back(
+        std::make_unique<MultiSlider>(p, "ENABLED", OctoShifterProcessor::PAR_ENABLED, 8));
+    multiSliders.push_back(
+        std::make_unique<MultiSlider>(p, "INPUT VOLUME", OctoShifterProcessor::PAR_INPUT_GAIN, 8,
+                                      OctoShifterProcessor::PAR_INVOLUME_LFOAMOUNTS));
+    multiSliders.push_back(std::make_unique<MultiSlider>(
+        p, "PITCH", OctoShifterProcessor::PAR_PITCH, 8, OctoShifterProcessor::PAR_PITCHLFOAMOUNTS,
+        PitchShifter::MT_PITCH));
+    multiSliders.push_back(
+        std::make_unique<MultiSlider>(p, "FORMANT", OctoShifterProcessor::PAR_FORMANT, 8,
+                                      OctoShifterProcessor::PAR_FORMANT_LFOAMOUNTS));
+    multiSliders.push_back(std::make_unique<MultiSlider>(
+        p, "DELAY TIME", OctoShifterProcessor::PAR_DELAYTIME, 8, CLAP_INVALID_ID, -1, true));
+    multiSliders.push_back(
+        std::make_unique<MultiSlider>(p, "DELAY FEEDBACK", OctoShifterProcessor::PAR_DELAYFEEDBACK,
+                                      8, OctoShifterProcessor::PAR_DELAYFB_LFOAMOUNTS));
+    multiSliders.push_back(
+        std::make_unique<MultiSlider>(p, "FILTER CUTOFF", OctoShifterProcessor::PAR_FILTERCUTOFF, 8,
+                                      OctoShifterProcessor::PAR_CUTOFF0LFOAMOUNTS));
+    multiSliders.push_back(
+        std::make_unique<MultiSlider>(p, "FILTER RESONANCE", OctoShifterProcessor::PAR_FILTERRESON,
+                                      8, OctoShifterProcessor::PAR_RESON0_LFOAMOUNTS));
+    multiSliders.push_back(std::make_unique<MultiSlider>(
+        p, "PAN/AZIMUTH", OctoShifterProcessor::PAR_AZIMUTH, 8,
+        OctoShifterProcessor::PAR_AZIMUTHLFOAMOUNTS, PitchShifter::MT_AZI));
+
+    for (auto &c : multiSliders)
+    {
+        addAndMakeVisible(*c);
+    }
+
     addAndMakeVisible(infoLabel);
     add_xapslider(p, *this, pitchQualityDrop);
     for (int i = 0; i < OctoShifterProcessor::numLFOs; ++i)
@@ -89,17 +95,30 @@ void OctoShifterProcessorEditor::timerCallback()
     ModulationMessage modmsg;
     while (processorRef.modulations_to_gui_fifo.pop(modmsg))
     {
+        for (auto &c : multiSliders)
+        {
+            if (c->shifter_modulation_target >= 0)
+            {
+                auto it = processorRef.mod_ranges.find(c->shifter_modulation_target);
+                if (it != processorRef.mod_ranges.end())
+                {
+                    c->paraminfos[modmsg.shifterindex].modulatedvalue =
+                        modmsg.values[c->shifter_modulation_target] * it->second;
+                }
+            }
+        }
+        /*
         aziMulti.paraminfos[modmsg.shifterindex].modulatedvalue =
             modmsg.values[PitchShifter::MT_AZI];
-        // aziMulti.repaint();
         pitchMulti.paraminfos[modmsg.shifterindex].modulatedvalue =
             modmsg.values[PitchShifter::MT_PITCH] * 12.0;
-        // pitchMulti.repaint();
         formantMulti.paraminfos[modmsg.shifterindex].modulatedvalue =
             modmsg.values[PitchShifter::MT_FORMANT] * 12.0;
-        // formantMulti.repaint();
         inVolumeMulti.paraminfos[modmsg.shifterindex].modulatedvalue =
             modmsg.values[PitchShifter::MT_INVOLUME] * 12.0;
+        cutoffMulti.paraminfos[modmsg.shifterindex].modulatedvalue =
+            modmsg.values[PitchShifter::MT_F0CUTOFF] * 24.0;
+        */
     }
 }
 
@@ -115,15 +134,10 @@ void OctoShifterProcessorEditor::resized()
     juce::FlexBox multiflex;
     multiflex.flexDirection = juce::FlexBox::Direction::row;
     multiflex.flexWrap = juce::FlexBox::Wrap::wrap;
-    multiflex.items.add(juce::FlexItem(enableMulti).withFlex(1.0).withMargin(3));
-    multiflex.items.add(juce::FlexItem(inVolumeMulti).withFlex(1.0).withMargin(3));
-    multiflex.items.add(juce::FlexItem(pitchMulti).withFlex(1.0).withMargin(3));
-    multiflex.items.add(juce::FlexItem(formantMulti).withFlex(1.0).withMargin(3));
-    multiflex.items.add(juce::FlexItem(delayTimeMulti).withFlex(1.0).withMargin(3));
-    multiflex.items.add(juce::FlexItem(delayFeedbackMulti).withFlex(1.0).withMargin(3));
-    multiflex.items.add(juce::FlexItem(cutoffMulti).withFlex(1.0).withMargin(3));
-    multiflex.items.add(juce::FlexItem(resonMulti).withFlex(1.0).withMargin(3));
-    multiflex.items.add(juce::FlexItem(aziMulti).withFlex(1.0).withMargin(3));
+    for (auto &c : multiSliders)
+    {
+        multiflex.items.add(juce::FlexItem(*c).withFlex(1.0).withMargin(3));
+    }
     juce::FlexBox miscflex;
     miscflex.flexDirection = juce::FlexBox::Direction::row;
     miscflex.items.add(juce::FlexItem(pitchQualityDrop).withFlex(1).withMaxHeight(25));

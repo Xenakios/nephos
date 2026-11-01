@@ -36,13 +36,17 @@ class MultiSlider : public juce::Component
         float modulatedvalue = 0.0f;
     };
     std::vector<ParamInfo> paraminfos;
+    int shifter_modulation_target = -1;
     int draggedindex = -1;
+    int paint_throttle_counter = 0;
     juce::String groupname;
     std::unique_ptr<juce::VBlankAttachment> vblankAttachment;
     MultiSlider(OctoShifterProcessor &p, juce::String name, uint32_t parstartid, uint32_t numpars,
-                uint32_t lfo0par = CLAP_INVALID_ID, bool notify_only_on_mouse_up = false)
+                uint32_t lfo0par = CLAP_INVALID_ID, int shifter_par_target = -1,
+                bool notify_only_on_mouse_up = false)
         : pref(p), groupname(name)
     {
+        shifter_modulation_target = shifter_par_target;
         paraminfos.resize(8);
         int numvalidated = 0;
         for (int i = 0; i < numpars; ++i)
@@ -68,7 +72,13 @@ class MultiSlider : public juce::Component
                           1.0f,        0.0f, *pref.par_id_to_value_pointer[lfo0par + 1]};
             paraminfos.push_back(pi2);
         }
-        vblankAttachment = std::make_unique<juce::VBlankAttachment>(this, [this]() { repaint(); });
+        vblankAttachment = std::make_unique<juce::VBlankAttachment>(this, [this]() {
+            if (paint_throttle_counter == 0)
+                repaint();
+            //++paint_throttle_counter;
+            if (paint_throttle_counter == 4)
+                paint_throttle_counter = 0;
+        });
     }
 
     void paint(juce::Graphics &g) override
@@ -312,15 +322,7 @@ class OctoShifterProcessorEditor final : public juce::AudioProcessorEditor, publ
     std::vector<std::unique_ptr<ShifterComponent>> shiftercomps;
     std::vector<std::unique_ptr<LFOComponent>> lfo_comps;
 
-    MultiSlider enableMulti;
-    MultiSlider pitchMulti;
-    MultiSlider formantMulti;
-    MultiSlider delayTimeMulti;
-    MultiSlider delayFeedbackMulti;
-    MultiSlider inVolumeMulti;
-    MultiSlider cutoffMulti;
-    MultiSlider resonMulti;
-    MultiSlider aziMulti;
+    std::vector<std::unique_ptr<MultiSlider>> multiSliders;
     std::unordered_map<uint32_t, XapSlider *> paridtoslidermap;
     juce::Label infoLabel;
     XapSlider pitchQualityDrop;

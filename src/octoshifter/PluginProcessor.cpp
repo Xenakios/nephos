@@ -19,6 +19,7 @@ OctoShifterProcessor::OctoShifterProcessor()
 #endif
       )
 {
+    juce::Logger::writeToLog("OctoShifterProcessor CTOR");
     params_from_gui_fifo.reset(2048);
     params_to_gui_fifo.reset(2048);
     modulations_to_gui_fifo.reset(2048);
@@ -166,6 +167,15 @@ OctoShifterProcessor::OctoShifterProcessor()
     choicetolfoshapemap[3] = lfo_t::SMOOTH_NOISE;
     choicetolfoshapemap[4] = lfo_t::SH_NOISE;
 
+    mod_ranges[PitchShifter::MT_PITCH] = 12.0f;
+    mod_ranges[PitchShifter::MT_INVOLUME] = 12.0f;
+    mod_ranges[PitchShifter::MT_F0CUTOFF] = 24.0f;
+    mod_ranges[PitchShifter::MT_FORMANT] = 12.0f;
+    mod_ranges[PitchShifter::MT_F0RESON] = 1.0f;
+    mod_ranges[PitchShifter::MT_AZI] = 1.0f;
+    mod_ranges[PitchShifter::MT_ELEVATION] = 1.0f;
+    mod_ranges[PitchShifter::MT_DELAYFEEDBACK] = 1.0f;
+
     set_initialpatch();
 }
 
@@ -189,7 +199,10 @@ void OctoShifterProcessor::set_initialpatch()
     set_parameter_value(PAR_DELAYFEEDBACK + 1, 0.2);
 }
 
-OctoShifterProcessor::~OctoShifterProcessor() {}
+OctoShifterProcessor::~OctoShifterProcessor()
+{
+    juce::Logger::writeToLog("OctoShifterProcessor DTOR");
+}
 
 //==============================================================================
 const juce::String OctoShifterProcessor::getName() const { return JucePlugin_Name; }
@@ -247,7 +260,7 @@ void OctoShifterProcessor::changeProgramName(int index, const juce::String &newN
 //==============================================================================
 void OctoShifterProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-    DBG("prepareToPlay");
+    Log::info("prepareToPlay {} Hz {} samples", sampleRate, samplesPerBlock);
     callbackcount = 0;
     for (int i = 0; i < shifters.size(); ++i)
     {
@@ -470,6 +483,7 @@ juce::AudioProcessorEditor *OctoShifterProcessor::createEditor()
 //==============================================================================
 void OctoShifterProcessor::getStateInformation(juce::MemoryBlock &destData)
 {
+    juce::Logger::writeToLog("getStateInformation");
     auto state = choc::value::createObject("state");
     state.setMember("version", 1);
     auto params_state = choc::value::createObject("params");
@@ -565,7 +579,7 @@ void OctoShifterProcessor::set_state(choc::value::ValueView view)
 
 void OctoShifterProcessor::setStateInformation(const void *data, int sizeInBytes)
 {
-    DBG("setStateInformation");
+    juce::Logger::writeToLog("setStateInformation");
     try
     {
         if (sizeInBytes < 1)
