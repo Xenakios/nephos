@@ -536,8 +536,9 @@ bool OctoShifterProcessor::hasEditor() const
 
 juce::AudioProcessorEditor *OctoShifterProcessor::createEditor()
 {
-    // return new juce::GenericAudioProcessorEditor(*this);
-    return new OctoShifterProcessorEditor(*this);
+    auto ed = new OctoShifterProcessorEditor(*this);
+    send_param_updates_to_gui();
+    return ed;
 }
 
 //==============================================================================
