@@ -38,7 +38,7 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
         std::make_unique<MultiSlider>(p, "FORMANT", OctoShifterProcessor::PAR_FORMANT, 8,
                                       OctoShifterProcessor::PAR_FORMANT_LFOAMOUNTS));
     multiSliders.push_back(std::make_unique<MultiSlider>(
-        p, "DELAY TIME", OctoShifterProcessor::PAR_DELAYTIME, 8, CLAP_INVALID_ID, -1, true));
+        p, "DELAY TIME", OctoShifterProcessor::PAR_DELAYTIME, 8, CLAP_INVALID_ID, -1));
     multiSliders.push_back(
         std::make_unique<MultiSlider>(p, "DELAY FEEDBACK", OctoShifterProcessor::PAR_DELAYFEEDBACK,
                                       8, OctoShifterProcessor::PAR_DELAYFB_LFOAMOUNTS));
@@ -165,7 +165,7 @@ void MultiSlider::paint(juce::Graphics &g)
     // if (polar == pmd::Polarity::BIPOLAR)
     //     txt += " (BIPOLAR)";
     g.drawText(txt, 2, 1, getWidth(), 16, juce::Justification::centredLeft);
-    
+
     int parstodraw = paraminfos.size();
     float barw = (float)sliders_area.getWidth() / parstodraw;
     for (int i = 0; i < parstodraw; ++i)

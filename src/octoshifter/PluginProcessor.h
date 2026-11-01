@@ -79,6 +79,9 @@ class PitchShifter
 
     float base_in_volume = 0.0f;
     float delaytime = 0.25f;
+    float pending_delay_time = -1.0f;
+    constexpr static int delay_change_fade_len = 128;
+    int delay_change_fade_pos = 0;
     float basefeedbackamt = 0.0f;
 
     float mod_source_values[MS_COUNT] = {0.0f, 0.0f};
@@ -168,9 +171,9 @@ class PitchShifter
         if (delaywritepos == delaybuffer.size())
             delaywritepos = 0;
     }
-    float pop_from_delay()
+    float read_from_delay(float delaysecs)
     {
-        int deltimesamples = delaytime * samplerate;
+        int deltimesamples = delaysecs * samplerate;
         if (deltimesamples < 8)
             deltimesamples = 8;
         int readpos = delaywritepos - deltimesamples;
@@ -257,7 +260,25 @@ class PitchShifter
         {
             float filtered = sstfilter.processMonoSample(processoutbuffer[0][i]);
             push_to_delay(filtered);
-            float delayed = pop_from_delay();
+            float delayed = 0.0f;
+            if (pending_delay_time < 0.0f)
+            {
+                delayed = read_from_delay(delaytime);
+            }
+            else
+            {
+                float olddelayed = read_from_delay(delaytime);
+                float newdelayed = read_from_delay(pending_delay_time);
+                float fadegain = 1.0 / delay_change_fade_len * delay_change_fade_pos;
+                delayed = (1.0 - fadegain) * olddelayed + fadegain * newdelayed;
+                ++delay_change_fade_pos;
+                if (delay_change_fade_pos == delay_change_fade_len)
+                {
+                    delay_change_fade_pos = 0;
+                    delaytime = pending_delay_time;
+                    pending_delay_time = -1.0;
+                }
+            }
 
             // obviously this is expensive and calculating Ambisonics
             // coefficients is going to be a lot lot worse...
@@ -270,6 +291,7 @@ class PitchShifter
             panlag.process();
         }
         sstfilter.concludeBlock();
+        
     }
 };
 

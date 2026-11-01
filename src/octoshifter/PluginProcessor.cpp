@@ -550,7 +550,8 @@ void OctoShifterProcessor::set_parameter_value(uint32_t id, float value)
     if (id >= PAR_DELAYTIME && id < PAR_DELAYTIME + numshifters)
     {
         value = (value * value * value) * 5.0;
-        shifters[id - PAR_DELAYTIME].delaytime = std::clamp(value, 0.0f, 5.0f);
+        shifters[id - PAR_DELAYTIME].pending_delay_time = std::clamp(value, 0.0f, 5.0f);
+        shifters[id - PAR_DELAYTIME].delay_change_fade_pos = 0;
     }
     if (id >= PAR_ENABLED && id < PAR_ENABLED + numshifters)
     {
