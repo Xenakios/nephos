@@ -80,56 +80,12 @@ class MultiSlider : public juce::Component
                 paint_throttle_counter = 0;
         });
     }
-
-    void paint(juce::Graphics &g) override
+    juce::Rectangle<int> sliders_area{0, 0, 10, 10};
+    void resized() override
     {
-        g.fillAll(juce::Colours::black);
-        g.setColour(juce::Colours::lightgrey);
-        g.setFont(40.0);
-        // auto polar = pref.par_id_to_metadata[firstpar]->getPolarity();
-        juce::String txt = groupname;
-        // if (polar == pmd::Polarity::BIPOLAR)
-        //     txt += " (BIPOLAR)";
-        g.drawText(txt, 0, 0, getWidth(), getHeight(), juce::Justification::centred);
-        g.setFont(12.0);
-        int parstodraw = paraminfos.size();
-        float barw = (float)getWidth() / parstodraw;
-        for (int i = 0; i < parstodraw; ++i)
-        {
-            float xcor = barw * i;
-            float v = paraminfos[i].value;
-            uint32_t pid = paraminfos[i].id;
-            if (pid != CLAP_INVALID_ID)
-            {
-                auto partxt = pref.par_id_to_metadata[pid]->valueToString(v);
-                if (partxt)
-                {
-                    g.setColour(juce::Colours::white);
-                    g.drawText(*partxt, xcor, getHeight() - 20, barw, 20,
-                               juce::Justification::centred);
-                }
-            }
-            float pmin = paraminfos[i].minval;
-            float pmax = paraminfos[i].maxval;
-            if (paraminfos[i].lfoindex >= 0)
-            {
-                g.setColour(juce::Colours::white);
-                g.drawText("LFO" + juce::String(paraminfos[i].lfoindex + 1) + " AMT", xcor, 1, barw,
-                           20, juce::Justification::centred);
-            }
-            float ycor = juce::jmap<float>(v, pmin, pmax, getHeight(), 0.0);
-            g.setColour(juce::Colours::yellow);
-            g.drawLine(xcor, ycor, xcor + barw - 1.0, ycor, 2.0);
-            if (paraminfos[i].lfoindex == -1)
-            {
-                g.setColour(juce::Colours::lightgrey);
-                v = v + paraminfos[i].modulatedvalue;
-                v = std::clamp(v, pmin, pmax);
-                ycor = juce::jmap<float>(v, pmin, pmax, getHeight(), 0.0);
-                g.drawLine(xcor, ycor, xcor + barw - 1.0, ycor, 2.0);
-            }
-        }
+        sliders_area = juce::Rectangle<int>{0, 15, getWidth(), getHeight() - 30};
     }
+    void paint(juce::Graphics &g) override;
     void mouseDoubleClick(const juce::MouseEvent &ev) override
     {
         int paramindex = (float)paraminfos.size() / getWidth() * ev.x;
@@ -161,7 +117,7 @@ class MultiSlider : public juce::Component
         {
             quan = false;
         }
-        float v = juce::jmap<float>(y, 0.0, getHeight(), pmax, pmin);
+        float v = juce::jmap<float>(y, sliders_area.getY(), sliders_area.getBottom(), pmax, pmin);
         v = std::clamp(v, pmin, pmax);
         if (quan)
             v = pref.par_id_to_metadata[paraminfos[i].id]->quantize(v);

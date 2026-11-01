@@ -154,3 +154,53 @@ void OctoShifterProcessorEditor::resized()
     }
     flex.performLayout(getLocalBounds());
 }
+void MultiSlider::paint(juce::Graphics &g)
+{
+    g.fillAll(juce::Colours::black);
+    g.setColour(juce::Colours::white);
+
+    g.setFont(12.0);
+    // auto polar = pref.par_id_to_metadata[firstpar]->getPolarity();
+    juce::String txt = groupname;
+    // if (polar == pmd::Polarity::BIPOLAR)
+    //     txt += " (BIPOLAR)";
+    g.drawText(txt, 2, 1, getWidth(), 16, juce::Justification::centredLeft);
+    
+    int parstodraw = paraminfos.size();
+    float barw = (float)sliders_area.getWidth() / parstodraw;
+    for (int i = 0; i < parstodraw; ++i)
+    {
+        float xcor = sliders_area.getX() + barw * i;
+        float v = paraminfos[i].value;
+        uint32_t pid = paraminfos[i].id;
+        if (pid != CLAP_INVALID_ID)
+        {
+            auto partxt = pref.par_id_to_metadata[pid]->valueToString(v);
+            if (partxt)
+            {
+                g.setColour(juce::Colours::white);
+                g.drawText(*partxt, xcor, getHeight() - 18, barw, 18, juce::Justification::centred);
+            }
+        }
+        float pmin = paraminfos[i].minval;
+        float pmax = paraminfos[i].maxval;
+        if (paraminfos[i].lfoindex >= 0)
+        {
+            g.setColour(juce::Colours::white);
+            g.drawText("LFO" + juce::String(paraminfos[i].lfoindex + 1) + " AMT", xcor, 1, barw, 16,
+                       juce::Justification::centred);
+        }
+        float ycor =
+            juce::jmap<float>(v, pmin, pmax, sliders_area.getBottom(), sliders_area.getY());
+        g.setColour(juce::Colours::yellow);
+        g.drawLine(xcor, ycor, xcor + barw - 1.0, ycor, 2.0);
+        if (paraminfos[i].lfoindex == -1)
+        {
+            g.setColour(juce::Colours::lightgrey);
+            v = v + paraminfos[i].modulatedvalue;
+            v = std::clamp(v, pmin, pmax);
+            ycor = juce::jmap<float>(v, pmin, pmax, sliders_area.getBottom(), sliders_area.getY());
+            g.drawLine(xcor, ycor, xcor + barw - 1.0, ycor, 2.0);
+        }
+    }
+}
