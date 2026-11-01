@@ -411,6 +411,7 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         // DBG(msg.id << " " << msg.val);
         set_parameter_value(msg.id, msg.val);
     }
+    
     while (output_fifo.usedSlots() < buffer.getNumSamples())
     {
         int shifterstouse = numshifters;
@@ -452,7 +453,6 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 shifters[shindex].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_PITCH] =
                     *par_id_to_value_pointer[PAR_PITCHLFOAMOUNTS + i];
                 float azimod = *par_id_to_value_pointer[PAR_AZIMUTHLFOAMOUNTS + i];
-                azimod *= modulation_patterns[1][shindex];
                 shifters[shindex].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_AZI] =
                     azimod;
                 shifters[shindex].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_FORMANT] =
@@ -467,7 +467,14 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 shifters[shindex].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_F0RESON] =
                     *par_id_to_value_pointer[PAR_RESON0_LFOAMOUNTS + i];
             }
-
+            for (int i = 0; i < PitchShifter::MS_COUNT; ++i)
+            {
+                for (int j = 0; j < PitchShifter::MT_COUNT; ++j)
+                {
+                    int modpat = modtarget_to_modpattern[j];
+                    shifters[shindex].modmatrix[i][j] *= modulation_patterns[modpat][shindex];
+                }
+            }
             for (int i = 0; i < BLOCKSIZE; ++i)
             {
                 procbuf[i * max_output_channels] = inputbuffer[shindex % 2][i];

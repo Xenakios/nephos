@@ -26,8 +26,6 @@
 #include <utility>
 #include "../juceplugin/juce_fmt_utils.h"
 
-
-
 static constexpr size_t BLOCKSIZE = 64;
 static constexpr size_t BLOCK_SIZE_OS = BLOCKSIZE * 2;
 
@@ -436,11 +434,7 @@ class OctoShifterProcessor final : public juce::AudioProcessor
     void set_state(choc::value::ValueView view);
     void set_parameter_value(uint32_t id, float value);
     void send_param_updates_to_gui();
-    // since we are not crazy enough to allow separate modulation amounts for each parameter
-    // of each shifter, we have these patterns that can still produce different modulation
-    // amounts per shifter
-    const float modulation_patterns[2][8] = {{1, 1, 1, 1, 1, 1, 1, 1},
-                                             {1, -1, 1, -1, 1, -1, 1, -1}};
+
     xenakios::Xoroshiro128Plus rng;
     static constexpr size_t max_input_channels = 8;
     static constexpr size_t max_output_channels = 64;
@@ -448,6 +442,15 @@ class OctoShifterProcessor final : public juce::AudioProcessor
     std::atomic<int> infifoavail = 0;
     std::atomic<int> outsilencecount = 0;
     std::unordered_map<int, float> mod_ranges;
+    // since we are not crazy enough to allow separate modulation amounts for each parameter
+    // of each shifter, we have these patterns that can still produce different modulation
+    // amounts per shifter
+    static const size_t num_modulation_patterns = 4;
+    const int8_t modulation_patterns[num_modulation_patterns][8] = {{1, 1, 1, 1, 1, 1, 1, 1},
+                                                                    {1, -1, 1, -1, 1, -1, 1, -1},
+                                                                    {-1, 1, -1, 1, -1, 1, -1, 1},
+                                                                    {1, 0, 0, 0, 0, 0, 0, 0}};
+    std::array<int, PitchShifter::MT_COUNT> modtarget_to_modpattern={0};
 
   private:
     double osc0phase = 0.0;

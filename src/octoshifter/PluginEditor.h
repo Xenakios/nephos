@@ -3,6 +3,7 @@
 #include "PluginProcessor.h"
 #include "../juceplugin/xap_slider.h"
 #include "clap/id.h"
+#include "juce_core/juce_core.h"
 #include "juce_events/juce_events.h"
 #include "juce_graphics/juce_graphics.h"
 #include "juce_gui_basics/juce_gui_basics.h"
@@ -131,6 +132,25 @@ class MultiSlider : public juce::Component
     }
     void mouseDown(const juce::MouseEvent &ev) override
     {
+        if (ev.mods.isRightButtonDown())
+        {
+            juce::PopupMenu menu;
+            menu.addSectionHeader("Per shifter modulation pattern");
+            for (int i = 0; i < OctoShifterProcessor::num_modulation_patterns; ++i)
+            {
+                std::string txt;
+                for (int j = 0; j < 8; ++j)
+                {
+                    txt += fmt::format("{} ", pref.modulation_patterns[i][j]);
+                }
+                int curpat = pref.modtarget_to_modpattern[shifter_modulation_target];
+                menu.addItem(txt, true, i == curpat, [this, i]() {
+                    pref.modtarget_to_modpattern[shifter_modulation_target] = i;
+                });
+            }
+            menu.showMenuAsync({});
+            return;
+        }
         int paramindex = (float)(paraminfos.size()) / getWidth() * ev.x;
 
         draggedindex = -1;
