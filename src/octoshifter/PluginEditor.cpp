@@ -26,29 +26,29 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
       outputModeDrop(XapSlider::SS_HorizontalSlider,
                      *p.par_id_to_metadata[OctoShifterProcessor::PAR_OUTPUTMODE])
 {
-    
+
     multiSliders.push_back(
         std::make_unique<MultiSlider>(p, "ENABLED", OctoShifterProcessor::PAR_ENABLED, 8));
-    multiSliders.push_back(
-        std::make_unique<MultiSlider>(p, "INPUT VOLUME", OctoShifterProcessor::PAR_INPUT_GAIN, 8,
-                                      OctoShifterProcessor::PAR_INVOLUME_LFOAMOUNTS));
+    multiSliders.push_back(std::make_unique<MultiSlider>(
+        p, "INPUT VOLUME", OctoShifterProcessor::PAR_INPUT_GAIN, 8,
+        OctoShifterProcessor::PAR_INVOLUME_LFOAMOUNTS, PitchShifter::MT_INVOLUME));
     multiSliders.push_back(std::make_unique<MultiSlider>(
         p, "PITCH", OctoShifterProcessor::PAR_PITCH, 8, OctoShifterProcessor::PAR_PITCHLFOAMOUNTS,
         PitchShifter::MT_PITCH));
-    multiSliders.push_back(
-        std::make_unique<MultiSlider>(p, "FORMANT", OctoShifterProcessor::PAR_FORMANT, 8,
-                                      OctoShifterProcessor::PAR_FORMANT_LFOAMOUNTS));
+    multiSliders.push_back(std::make_unique<MultiSlider>(
+        p, "FORMANT", OctoShifterProcessor::PAR_FORMANT, 8,
+        OctoShifterProcessor::PAR_FORMANT_LFOAMOUNTS, PitchShifter::MT_FORMANT));
     multiSliders.push_back(std::make_unique<MultiSlider>(
         p, "DELAY TIME", OctoShifterProcessor::PAR_DELAYTIME, 8, CLAP_INVALID_ID, -1));
-    multiSliders.push_back(
-        std::make_unique<MultiSlider>(p, "DELAY FEEDBACK", OctoShifterProcessor::PAR_DELAYFEEDBACK,
-                                      8, OctoShifterProcessor::PAR_DELAYFB_LFOAMOUNTS));
-    multiSliders.push_back(
-        std::make_unique<MultiSlider>(p, "FILTER CUTOFF", OctoShifterProcessor::PAR_FILTERCUTOFF, 8,
-                                      OctoShifterProcessor::PAR_CUTOFF0LFOAMOUNTS));
-    multiSliders.push_back(
-        std::make_unique<MultiSlider>(p, "FILTER RESONANCE", OctoShifterProcessor::PAR_FILTERRESON,
-                                      8, OctoShifterProcessor::PAR_RESON0_LFOAMOUNTS));
+    multiSliders.push_back(std::make_unique<MultiSlider>(
+        p, "DELAY FEEDBACK", OctoShifterProcessor::PAR_DELAYFEEDBACK, 8,
+        OctoShifterProcessor::PAR_DELAYFB_LFOAMOUNTS, PitchShifter::MT_DELAYFEEDBACK));
+    multiSliders.push_back(std::make_unique<MultiSlider>(
+        p, "FILTER CUTOFF", OctoShifterProcessor::PAR_FILTERCUTOFF, 8,
+        OctoShifterProcessor::PAR_CUTOFF0LFOAMOUNTS, PitchShifter::MT_F0CUTOFF));
+    multiSliders.push_back(std::make_unique<MultiSlider>(
+        p, "FILTER RESONANCE", OctoShifterProcessor::PAR_FILTERRESON, 8,
+        OctoShifterProcessor::PAR_RESON0_LFOAMOUNTS, PitchShifter::MT_F0RESON));
     multiSliders.push_back(std::make_unique<MultiSlider>(
         p, "PAN/AZIMUTH", OctoShifterProcessor::PAR_AZIMUTH, 8,
         OctoShifterProcessor::PAR_AZIMUTHLFOAMOUNTS, PitchShifter::MT_AZI));

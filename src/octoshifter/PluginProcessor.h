@@ -141,7 +141,7 @@ class PitchShifter
         samplerate = hz;
         ingainlag.setRateInMilliseconds(5.0, hz, 1.0f);
         panlag.setRateInMilliseconds(5.0, hz, 1.0f);
-        fblag.setRateInMilliseconds(5.0, hz, 1.0f);
+        fblag.setRateInMilliseconds(10.0, hz, 1.0f);
 
         sstfilter.setFilterModel(sst::filtersplusplus::FilterModel::CytomicSVF);
         sstfilter.setModelConfiguration(
@@ -192,16 +192,6 @@ class PitchShifter
     {
         assert(numoutchans > 0);
         assert(audio_inout.size() >= 64 * BLOCKSIZE);
-        const bool passthrough = false;
-        if (passthrough)
-        {
-            for (int i = 0; i < BLOCKSIZE; ++i)
-            {
-                audio_inout[i * 64 + 0] = audio_inout[i * 64 + 0];
-                audio_inout[i * 64 + 1] = audio_inout[i * 64 + 0];
-            }
-            return;
-        }
         if (pending_quality_change >= 0)
         {
             int q = pending_quality_change.load();
@@ -227,9 +217,11 @@ class PitchShifter
                 modsums[j] += modmatrix[i][j] * mod_source_values[i];
             }
         }
-        float modulatedfeedback = basefeedbackamt + modsums[MT_DELAYFEEDBACK];
+
+        float modulatedfeedback = basefeedbackamt + modsums[MT_DELAYFEEDBACK] * 0.5f;
         modulatedfeedback = std::clamp(modulatedfeedback, 0.0f, 0.999f);
         fblag.setTarget(modulatedfeedback);
+
         float modulated_in_volume = base_in_volume + modsums[MT_INVOLUME] * 12.0;
         modulated_in_volume = std::clamp(modulated_in_volume, -48.0f, 0.0f);
         modulated_in_volume = juce::Decibels::decibelsToGain(modulated_in_volume);
@@ -290,6 +282,7 @@ class PitchShifter
             }
             tempoutbuffer[i] = delayed;
             feedbackaudio[i] = std::tanh(delayed);
+            // feedbackaudio[i] = delayed;
         }
 
         if (ochanmode == OCM_MONODISCRETE)
@@ -450,7 +443,7 @@ class OctoShifterProcessor final : public juce::AudioProcessor
                                                                     {1, -1, 1, -1, 1, -1, 1, -1},
                                                                     {-1, 1, -1, 1, -1, 1, -1, 1},
                                                                     {1, 0, 0, 0, 0, 0, 0, 0}};
-    std::array<int, PitchShifter::MT_COUNT> modtarget_to_modpattern={0};
+    std::array<int, PitchShifter::MT_COUNT> modtarget_to_modpattern = {0};
 
   private:
     double osc0phase = 0.0;

@@ -176,7 +176,7 @@ OctoShifterProcessor::OctoShifterProcessor()
     mod_ranges[PitchShifter::MT_F0RESON] = 1.0f;
     mod_ranges[PitchShifter::MT_AZI] = 1.0f;
     mod_ranges[PitchShifter::MT_ELEVATION] = 1.0f;
-    mod_ranges[PitchShifter::MT_DELAYFEEDBACK] = 1.0f;
+    mod_ranges[PitchShifter::MT_DELAYFEEDBACK] = 0.5f;
 
     set_initialpatch();
 }
@@ -363,12 +363,20 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     if (wrapperType == wrapperType_Standalone)
     {
         const double oscinc0 = 2 * M_PI / getSampleRate() * 80.0;
-        const double oscinc1 = 2 * M_PI / getSampleRate() * 80.0 * 1.5;
+        const double oscinc1 = 2 * M_PI / getSampleRate() * 80.0 * (21.0 / 9);
+        const float TWO_PI = 6.28318530718f;
+        
+        
         std::array<float, max_input_channels> fifoframe;
         for (int i = 0; i < buffer.getNumSamples(); ++i)
         {
-            fifoframe[0] = 0.5 * reflect_value_no_loop(-1.0, std::sin(osc0phase) * 8, 1.0);
-            fifoframe[1] = 0.5 * reflect_value_no_loop(-1.0, std::sin(osc1phase) * 8, 1.0);
+            float phase = osc0phase / TWO_PI;                      // 0..1 if osc0phase is radians
+            float saw = 2.0f * (phase - std::floor(phase + 0.5f)); // -1..1
+            float osc0 = 0.5f * saw;
+            //float osc0 = 0.5 * reflect_value_no_loop(-1.0, std::sin(osc0phase) * 8, 1.0);
+            float osc1 = 0.5 * reflect_value_no_loop(-1.0, std::sin(osc1phase) * 8, 1.0);
+            fifoframe[0] = osc0;
+            fifoframe[1] = osc1;
             osc0phase += oscinc0;
             osc1phase += oscinc1;
             // if (input_fifo.usedSlots() <= BLOCKSIZE)
@@ -411,7 +419,7 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         // DBG(msg.id << " " << msg.val);
         set_parameter_value(msg.id, msg.val);
     }
-    
+
     while (output_fifo.usedSlots() < buffer.getNumSamples())
     {
         int shifterstouse = numshifters;
