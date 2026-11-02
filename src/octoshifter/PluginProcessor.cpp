@@ -6,6 +6,7 @@
 #include "juce_audio_processors/juce_audio_processors.h"
 #include "juce_audio_processors_headless/juce_audio_processors_headless.h"
 #include "juce_core/juce_core.h"
+#include "sst/filters++/api.h"
 #include <unordered_map>
 
 //==============================================================================
@@ -19,6 +20,7 @@ OctoShifterProcessor::OctoShifterProcessor()
     params_to_gui_fifo.reset(2048);
     modulations_to_gui_fifo.reset(2048);
     filter_mode_from_gui_fifo.reset(256);
+    filter_mode_to_gui_fifo.reset(256);
     for (int i = 0; i < numshifters; ++i)
     {
         param_metadatas.push_back(pmd()
@@ -277,6 +279,8 @@ void OctoShifterProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     initTables();
     workbuffer.setSize(max_output_channels, samplesPerBlock);
     workbuffer.clear();
+    current_filter_mode.model = shifters[0].sstfilter.getFilterModel();
+    current_filter_mode.config = shifters[0].sstfilter.getModelConfiguration();
 }
 
 void OctoShifterProcessor::releaseResources()
@@ -416,6 +420,7 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     FilterModeMessage filmsg;
     while (filter_mode_from_gui_fifo.pop(filmsg))
     {
+        current_filter_mode = filmsg;
         for (auto &s : shifters)
         {
             s.set_filter_mode(filmsg.model, filmsg.config);
@@ -577,6 +582,13 @@ void OctoShifterProcessor::getStateInformation(juce::MemoryBlock &destData)
         params_state.setMember(idstr, *par_id_to_value_pointer[e.id]);
     }
     state.setMember("parameters", params_state);
+    auto filterstate = choc::value::createObject("filter");
+    filterstate.setMember("model", (int64_t)current_filter_mode.model);
+    filterstate.setMember("pt", (int64_t)current_filter_mode.config.pt);
+    filterstate.setMember("st", (int64_t)current_filter_mode.config.st);
+    filterstate.setMember("dt", (int64_t)current_filter_mode.config.dt);
+    filterstate.setMember("mt", (int64_t)current_filter_mode.config.mt);
+    state.setMember("filter0state", filterstate);
     auto sdata = state.serialise();
     destData.append(sdata.data.data(), sdata.data.size());
 }
@@ -590,6 +602,7 @@ void OctoShifterProcessor::send_param_updates_to_gui()
         msg.val = *e.second;
         params_to_gui_fifo.push(msg);
     }
+    filter_mode_to_gui_fifo.push(current_filter_mode);
 }
 
 void OctoShifterProcessor::set_parameter_value(uint32_t id, float value)
@@ -645,6 +658,18 @@ void OctoShifterProcessor::set_parameter_value(uint32_t id, float value)
 
 void OctoShifterProcessor::set_state(choc::value::ValueView view)
 {
+    if (view.hasObjectMember("filter0state"))
+    {
+        namespace sfpp = sst::filtersplusplus;
+        auto filterstate = view["filter0state"];
+        FilterModeMessage fm;
+        fm.model = (sfpp::FilterModel)filterstate["model"].getWithDefault(0);
+        fm.config.dt = (decltype(fm.config.dt))filterstate["dt"].getWithDefault(0);
+        fm.config.st = (decltype(fm.config.st))filterstate["st"].getWithDefault(0);
+        fm.config.mt = (decltype(fm.config.mt))filterstate["mt"].getWithDefault(0);
+        fm.config.pt = (decltype(fm.config.pt))filterstate["pt"].getWithDefault(0);
+        filter_mode_from_gui_fifo.push(fm);
+    }
     if (view.hasObjectMember("parameters"))
     {
         auto params = view["parameters"];

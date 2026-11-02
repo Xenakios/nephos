@@ -152,7 +152,7 @@ class MultiSlider : public juce::Component
 
         if (paramindex >= 0 && paramindex < paraminfos.size())
         {
-            if (ev.y > sliders_area.getBottom() + 2)
+            if (ev.y > sliders_area.getBottom() - 5)
             {
                 show_value_editor(paramindex, ev.x);
                 return;
@@ -199,6 +199,8 @@ class MultiSlider : public juce::Component
     }
     void mouseDrag(const juce::MouseEvent &ev) override
     {
+        if (value_entry_editor.isVisible())
+            return;
         int paramindex = (float)paraminfos.size() / getWidth() * ev.x;
         if (paramindex >= 0 && paramindex < paraminfos.size())
         {

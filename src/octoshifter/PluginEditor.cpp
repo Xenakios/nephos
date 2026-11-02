@@ -158,6 +158,21 @@ void OctoShifterProcessorEditor::timerCallback()
             it->second->setValue(msg.val);
         }
     }
+    FilterModeMessage fmsg;
+    while (processorRef.filter_mode_to_gui_fifo.pop(fmsg))
+    {
+        for (auto& e : id_to_filter_mode)
+        {
+            if (e.second.model == fmsg.model && e.second.config == fmsg.config)
+            {
+                filterPicker.set_selected_ID(e.first);
+                auto txt = filterPicker.get_text_from_id(e.first);
+                if (txt)
+                    filterPicker.showButton.setButtonText(*txt);
+                break;
+            }
+        }
+    }
 }
 
 void OctoShifterProcessorEditor::paint(juce::Graphics &g)

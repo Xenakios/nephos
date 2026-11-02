@@ -488,6 +488,7 @@ class OctoShifterProcessor final : public juce::AudioProcessor
     choc::fifo::SingleReaderSingleWriterFIFO<ParamChangeMessage> params_to_gui_fifo;
     choc::fifo::SingleReaderSingleWriterFIFO<ModulationMessage> modulations_to_gui_fifo;
     choc::fifo::SingleReaderSingleWriterFIFO<FilterModeMessage> filter_mode_from_gui_fifo;
+    choc::fifo::SingleReaderSingleWriterFIFO<FilterModeMessage> filter_mode_to_gui_fifo;
     std::atomic<bool> gui_visible{false};
     void set_state(choc::value::ValueView view);
     void set_parameter_value(uint32_t id, float value);
@@ -509,7 +510,7 @@ class OctoShifterProcessor final : public juce::AudioProcessor
                                                                     {-1, 1, -1, 1, -1, 1, -1, 1},
                                                                     {1, 0, 0, 0, 0, 0, 0, 0}};
     std::array<int, PitchShifter::MT_COUNT> modtarget_to_modpattern = {0};
-
+    FilterModeMessage current_filter_mode;
   private:
     double osc0phase = 0.0;
     double osc1phase = 0.0;
