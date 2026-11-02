@@ -273,6 +273,7 @@ target_sources(OctoShifter
         src/octoshifter/PluginEditor.cpp
         src/juceplugin/xap_slider.cpp
         src/juceplugin/dropdowncomponent.cpp
+        src/octoshifter/modcurves.cpp
 )   
 
 # target_compile_options(NephosPlugin PRIVATE -mavx2 -mfma -Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Werror=return-type "$<$<COMPILE_LANGUAGE:CXX>:-fno-char8_t>")
