@@ -9,6 +9,7 @@
 #include "juce_gui_basics/juce_gui_basics.h"
 #include <stdio.h>
 #include <unordered_map>
+#include "../juceplugin/dropdowncomponent.h""
 
 inline void add_xapslider(OctoShifterProcessor &proc, juce::Component &parentcomp, XapSlider &slid)
 {
@@ -343,5 +344,7 @@ class OctoShifterProcessorEditor final : public juce::AudioProcessorEditor, publ
     juce::Label infoLabel;
     XapSlider pitchQualityDrop;
     XapSlider outputModeDrop;
+    GalleryPicker filterPicker;
+    std::unordered_map<int64_t, FilterModeMessage> id_to_filter_mode;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OctoShifterProcessorEditor)
 };

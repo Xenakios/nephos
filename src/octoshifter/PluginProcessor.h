@@ -25,6 +25,7 @@
 #include <optional>
 #include <utility>
 #include "../juceplugin/juce_fmt_utils.h"
+#include "sst/filters++/model_config.h"
 
 static constexpr size_t BLOCKSIZE = 64;
 static constexpr size_t BLOCK_SIZE_OS = BLOCKSIZE * 2;
@@ -34,7 +35,13 @@ struct ModulationEntry
     int source_index = -1;
     float depth = 0.0f;
     int curve = 0;
-    float* target = nullptr;
+    float *target = nullptr;
+};
+
+struct FilterModeMessage
+{
+    sst::filtersplusplus::FilterModel model;
+    sst::filtersplusplus::ModelConfig config;
 };
 
 class PitchShifter
@@ -163,6 +170,19 @@ class PitchShifter
             numoutchans = 16;
         assert(numoutchans > 0);
     }
+    void set_filter_mode(sst::filtersplusplus::FilterModel mo,
+                         sst::filtersplusplus::ModelConfig conf)
+    {
+        sstfilter.setFilterModel(mo);
+        sstfilter.setModelConfiguration(conf);
+        sstfilter.setSampleRateAndBlockSize(samplerate, BLOCKSIZE);
+        sstfilter.setMono();
+        // sstfilter.provideAllDelayLines(delaylinememory.data());
+        if (!sstfilter.prepareInstance())
+        {
+            Log::info("could not prepare sst filter");
+        }
+    }
     void set_sample_rate(double hz)
     {
         samplerate = hz;
@@ -270,7 +290,7 @@ class PitchShifter
         stretch->setFormantSemitones(modulatedformant);
         stretch->process(processinbuffer, BLOCKSIZE, processoutbuffer, BLOCKSIZE);
 
-        float modulatedcutoff = basefiltercutoff + modsums[MT_F0CUTOFF] * 24.0;
+        float modulatedcutoff = basefiltercutoff + modsums[MT_F0CUTOFF] * 36.0;
         modulatedcutoff = std::clamp(modulatedcutoff, -48.0f, 65.0f);
         float modulatedreson = base_filter_reson + modsums[MT_F0RESON];
         modulatedreson = std::clamp(modulatedreson, 0.0f, 1.0f);
@@ -453,6 +473,7 @@ class OctoShifterProcessor final : public juce::AudioProcessor
     choc::fifo::SingleReaderSingleWriterFIFO<ParamChangeMessage> params_from_gui_fifo;
     choc::fifo::SingleReaderSingleWriterFIFO<ParamChangeMessage> params_to_gui_fifo;
     choc::fifo::SingleReaderSingleWriterFIFO<ModulationMessage> modulations_to_gui_fifo;
+    choc::fifo::SingleReaderSingleWriterFIFO<FilterModeMessage> filter_mode_from_gui_fifo;
     std::atomic<bool> gui_visible{false};
     void set_state(choc::value::ValueView view);
     void set_parameter_value(uint32_t id, float value);

@@ -18,6 +18,7 @@ OctoShifterProcessor::OctoShifterProcessor()
     params_from_gui_fifo.reset(2048);
     params_to_gui_fifo.reset(2048);
     modulations_to_gui_fifo.reset(2048);
+    filter_mode_from_gui_fifo.reset(256);
     for (int i = 0; i < numshifters; ++i)
     {
         param_metadatas.push_back(pmd()
@@ -171,7 +172,7 @@ OctoShifterProcessor::OctoShifterProcessor()
 
     mod_ranges[PitchShifter::MT_PITCH] = 12.0f;
     mod_ranges[PitchShifter::MT_INVOLUME] = 12.0f;
-    mod_ranges[PitchShifter::MT_F0CUTOFF] = 24.0f;
+    mod_ranges[PitchShifter::MT_F0CUTOFF] = 36.0f;
     mod_ranges[PitchShifter::MT_FORMANT] = 12.0f;
     mod_ranges[PitchShifter::MT_F0RESON] = 1.0f;
     mod_ranges[PitchShifter::MT_AZI] = 1.0f;
@@ -371,7 +372,7 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             float phase = osc0phase / TWO_PI;                      // 0..1 if osc0phase is radians
             float saw = 2.0f * (phase - std::floor(phase + 0.5f)); // -1..1
             float osc0 = 0.5f * saw;
-            //float osc0 = 0.5 * reflect_value_no_loop(-1.0, std::sin(osc0phase) * 8, 1.0);
+            // float osc0 = 0.5 * reflect_value_no_loop(-1.0, std::sin(osc0phase) * 8, 1.0);
             float osc1 = 0.5 * reflect_value_no_loop(-1.0, std::sin(osc1phase) * 8, 1.0);
             fifoframe[0] = osc0;
             fifoframe[1] = osc1;
@@ -410,7 +411,14 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     {
         s.set_output_mode(shifteroutmode);
     }
-
+    FilterModeMessage filmsg;
+    while (filter_mode_from_gui_fifo.pop(filmsg))
+    {
+        for (auto &s : shifters)
+        {
+            s.set_filter_mode(filmsg.model, filmsg.config);
+        }
+    }
     ParamChangeMessage msg;
     while (params_from_gui_fifo.pop(msg))
     {

@@ -3,6 +3,9 @@
 #include "juce_core/juce_core.h"
 #include "juce_events/juce_events.h"
 #include "juce_gui_basics/juce_gui_basics.h"
+#include "sst/filters++/api.h"
+#include "sst/filters++/enums.h"
+#include "sst/filters++/enums_to_string.h"
 #include "PluginEditor.h"
 
 template <typename CompType>
@@ -71,6 +74,32 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
     visitAll<XapSlider>(*this, [this](XapSlider *slid) {
         paridtoslidermap[slid->getParameterMetaData().id] = slid;
     });
+    addAndMakeVisible(filterPicker.showButton);
+    auto filtmodes = sst::filtersplusplus::Filter::availableModels();
+    int64_t id = 0;
+    for (auto &mo : filtmodes)
+    {
+        if (mo == sst::filtersplusplus::FilterModel::Comb)
+            continue;
+        auto confs = sst::filtersplusplus::Filter::availableModelConfigurations(mo);
+        auto moname = sst::filtersplusplus::toString(mo);
+        for (auto &co : confs)
+        {
+            filterPicker.add_entry(moname, id, co.toString());
+            FilterModeMessage msg;
+            msg.model = mo;
+            msg.config = co;
+            id_to_filter_mode[id] = msg;
+            ++id;
+        }
+    }
+    filterPicker.OnSelected = [this](int64_t id) {
+        auto msg = id_to_filter_mode[id];
+        processorRef.filter_mode_from_gui_fifo.push(msg);
+        auto txt = filterPicker.get_text_from_id(id);
+        if (txt)
+            filterPicker.showButton.setButtonText(*txt);
+    };
     startTimerHz(25);
     setSize(1100, 700);
     p.gui_visible = true;
@@ -110,18 +139,6 @@ void OctoShifterProcessorEditor::timerCallback()
                 }
             }
         }
-        /*
-        aziMulti.paraminfos[modmsg.shifterindex].modulatedvalue =
-            modmsg.values[PitchShifter::MT_AZI];
-        pitchMulti.paraminfos[modmsg.shifterindex].modulatedvalue =
-            modmsg.values[PitchShifter::MT_PITCH] * 12.0;
-        formantMulti.paraminfos[modmsg.shifterindex].modulatedvalue =
-            modmsg.values[PitchShifter::MT_FORMANT] * 12.0;
-        inVolumeMulti.paraminfos[modmsg.shifterindex].modulatedvalue =
-            modmsg.values[PitchShifter::MT_INVOLUME] * 12.0;
-        cutoffMulti.paraminfos[modmsg.shifterindex].modulatedvalue =
-            modmsg.values[PitchShifter::MT_F0CUTOFF] * 24.0;
-        */
     }
 }
 
@@ -145,6 +162,7 @@ void OctoShifterProcessorEditor::resized()
     miscflex.flexDirection = juce::FlexBox::Direction::column;
     miscflex.items.add(juce::FlexItem(pitchQualityDrop).withFlex(1).withMaxHeight(25));
     miscflex.items.add(juce::FlexItem(outputModeDrop).withFlex(1).withMaxHeight(25));
+    miscflex.items.add(juce::FlexItem(filterPicker.showButton).withFlex(1).withMaxHeight(25));
     miscflex.items.add(juce::FlexItem(infoLabel).withFlex(1).withMaxHeight(25));
     multiflex.items.add(juce::FlexItem(miscflex).withFlex(1.0).withMargin(3));
     for (auto &e : multiflex.items)
