@@ -29,6 +29,14 @@
 static constexpr size_t BLOCKSIZE = 64;
 static constexpr size_t BLOCK_SIZE_OS = BLOCKSIZE * 2;
 
+struct ModulationEntry
+{
+    int source_index = -1;
+    float depth = 0.0f;
+    int curve = 0;
+    float* target = nullptr;
+};
+
 class PitchShifter
 {
   public:
@@ -79,14 +87,33 @@ class PitchShifter
     alignas(16) float feedbackaudio[BLOCKSIZE] = {0.0f};
 
     alignas(16) float modmatrix[MS_COUNT][MT_COUNT];
+    alignas(16) std::function<float(float)> modmatrixcurves[MS_COUNT][MT_COUNT];
     std::atomic<int> pending_quality_change{-1};
     std::atomic<int> latency_in;
     std::atomic<int> latency_out;
+    static float xor_curve(float x, uint16_t a)
+    {
+        x = std::clamp(x, -1.0f, 1.0f);
+        x = (x + 1.0f) * 0.5f;
+        uint16_t ival = static_cast<uint16_t>(x * 65535.0f);
+        ival = ival ^ a;
+        x = ival / 65535.0f;
+        return -1.0f + 2.0f * x;
+    }
     PitchShifter()
     {
         for (int i = 0; i < MS_COUNT; ++i)
+        {
             for (int j = 0; j < MT_COUNT; ++j)
+            {
                 modmatrix[i][j] = 0.0f;
+                modmatrixcurves[i][j] = [](float x) { return x; };
+            }
+        }
+        modmatrixcurves[MS_LFO0][MT_DELAYFEEDBACK] = [](float x) {
+            return std::clamp((x + 1.0f) * 0.5f, 0.0f, 1.0f);
+        };
+        modmatrixcurves[MS_LFO1][MT_PITCH] = [](float x) { return xor_curve(x, 17844); };
         stretch = std::make_unique<signalsmith::stretch::SignalsmithStretch<>>();
         ingainlag.setRateInMilliseconds(5.0, 44100.0, 1.0f);
         ingainlag.snapTo(0.0);
@@ -206,15 +233,18 @@ class PitchShifter
         alignas(16) float processinbuffer[1][BLOCKSIZE];
         alignas(16) float processoutbuffer[1][BLOCKSIZE];
         memset(modsums, 0, sizeof(float) * MT_COUNT);
-        // 16 multiplies and adds at the momemt, so not completely terrible...
-        // but if we add substantially more modulation sources and targets,
-        // i guess we have to look into implementing the mod matrix in
-        // some other way...
+        // this is getting complicated enough to start thinking about
+        // a more proper modulation system, i guess...
         for (int i = 0; i < MS_COUNT; ++i)
         {
             for (int j = 0; j < MT_COUNT; ++j)
             {
-                modsums[j] += modmatrix[i][j] * mod_source_values[i];
+                if (std::abs(modmatrix[i][j]) > 0.0f)
+                {
+                    float msval = mod_source_values[i];
+                    msval = modmatrixcurves[i][j](msval);
+                    modsums[j] += modmatrix[i][j] * msval;
+                }
             }
         }
 

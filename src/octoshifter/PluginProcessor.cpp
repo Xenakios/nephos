@@ -365,8 +365,6 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         const double oscinc0 = 2 * M_PI / getSampleRate() * 80.0;
         const double oscinc1 = 2 * M_PI / getSampleRate() * 80.0 * (21.0 / 9);
         const float TWO_PI = 6.28318530718f;
-        
-        
         std::array<float, max_input_channels> fifoframe;
         for (int i = 0; i < buffer.getNumSamples(); ++i)
         {
