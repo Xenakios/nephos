@@ -1,3 +1,4 @@
 # OctoShifter effect
 
-Just some pitch shift experimenting with 8 LFO modulated instances of the Signalsmith Stretch DSP...
+8 pitch shifters filtered, delayed and spatialized, with LFO modulation.
+
