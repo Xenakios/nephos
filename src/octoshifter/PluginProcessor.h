@@ -320,7 +320,7 @@ class PitchShifter
         set_spatial_parameters(modulated_azi, 0.0);
 
         sstfilter.prepareBlock();
-        sst::basic_blocks::dsp::pan_laws::panmatrix_t mat;
+        alignas(16) sst::basic_blocks::dsp::pan_laws::panmatrix_t mat={0.0f};
         alignas(16) float tempoutbuffer[BLOCKSIZE];
         for (int i = 0; i < BLOCKSIZE; ++i)
         {
@@ -368,9 +368,9 @@ class PitchShifter
                 // coefficients is going to be a lot lot worse...
                 // we may need to look into some kind of look up table thing
                 float panpos = (panlag.getValue() + 1.0) * 0.5;
-                sst::basic_blocks::dsp::pan_laws::monoEqualPower(panpos, mat);
+                sst::basic_blocks::dsp::pan_laws::stereoEqualPower(panpos, mat);
                 audio_inout[i * 64 + 0] = tempoutbuffer[i] * mat[0];
-                audio_inout[i * 64 + 1] = tempoutbuffer[i] * mat[3];
+                audio_inout[i * 64 + 1] = tempoutbuffer[i] * mat[1];
                 panlag.process();
             }
             sstfilter.concludeBlock();
