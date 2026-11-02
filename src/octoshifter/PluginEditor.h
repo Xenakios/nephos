@@ -125,44 +125,7 @@ class MultiSlider : public juce::Component
             };
         }
     }
-    void mouseDown(const juce::MouseEvent &ev) override
-    {
-        if (ev.mods.isRightButtonDown())
-        {
-            juce::PopupMenu menu;
-            menu.addSectionHeader("Per shifter modulation pattern");
-            for (int i = 0; i < OctoShifterProcessor::num_modulation_patterns; ++i)
-            {
-                std::string txt;
-                for (int j = 0; j < 8; ++j)
-                {
-                    txt += fmt::format("{} ", pref.modulation_patterns[i][j]);
-                }
-                int curpat = pref.modtarget_to_modpattern[shifter_modulation_target];
-                menu.addItem(txt, true, i == curpat, [this, i]() {
-                    pref.modtarget_to_modpattern[shifter_modulation_target] = i;
-                });
-            }
-            menu.showMenuAsync({});
-            return;
-        }
-        int paramindex = (float)(paraminfos.size()) / getWidth() * ev.x;
-
-        draggedindex = -1;
-
-        if (paramindex >= 0 && paramindex < paraminfos.size())
-        {
-            if (ev.y > sliders_area.getBottom() - 5)
-            {
-                show_value_editor(paramindex, ev.x);
-                return;
-            }
-            draggedindex = paramindex;
-            if (!paraminfos[paramindex].notify_only_on_mouse_up)
-                post_param_event(draggedindex, parval_from_mouse_y(draggedindex, ev.y));
-            repaint();
-        }
-    }
+    void mouseDown(const juce::MouseEvent &ev) override;
     float parval_from_mouse_y(int i, float y)
     {
         float pmin = paraminfos[i].minval;

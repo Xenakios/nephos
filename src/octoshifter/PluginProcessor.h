@@ -44,6 +44,13 @@ struct FilterModeMessage
     sst::filtersplusplus::ModelConfig config;
 };
 
+struct CurveMessage
+{
+    int lfoindex = -1;
+    int shifter_param_target = 0;
+    int curveid = 0;
+};
+
 class PitchShifter
 {
   public:
@@ -493,6 +500,8 @@ class OctoShifterProcessor final : public juce::AudioProcessor
     choc::fifo::SingleReaderSingleWriterFIFO<ModulationMessage> modulations_to_gui_fifo;
     choc::fifo::SingleReaderSingleWriterFIFO<FilterModeMessage> filter_mode_from_gui_fifo;
     choc::fifo::SingleReaderSingleWriterFIFO<FilterModeMessage> filter_mode_to_gui_fifo;
+    choc::fifo::SingleReaderSingleWriterFIFO<CurveMessage> curve_from_gui_fifo;
+    
     std::atomic<bool> gui_visible{false};
     choc::value::Value get_state();
     void set_state(choc::value::ValueView view);

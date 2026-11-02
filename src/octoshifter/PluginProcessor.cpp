@@ -6,6 +6,7 @@
 #include "juce_audio_processors/juce_audio_processors.h"
 #include "juce_audio_processors_headless/juce_audio_processors_headless.h"
 #include "juce_core/juce_core.h"
+#include "modcurves.h"
 #include "sst/filters++/api.h"
 #include <unordered_map>
 
@@ -19,8 +20,10 @@ OctoShifterProcessor::OctoShifterProcessor()
     params_from_gui_fifo.reset(2048);
     params_to_gui_fifo.reset(2048);
     modulations_to_gui_fifo.reset(2048);
-    filter_mode_from_gui_fifo.reset(256);
-    filter_mode_to_gui_fifo.reset(256);
+    // should be infrequent events so small fifos should be fine...
+    filter_mode_from_gui_fifo.reset(32);
+    filter_mode_to_gui_fifo.reset(32);
+    curve_from_gui_fifo.reset(32);
     for (int i = 0; i < numshifters; ++i)
     {
         param_metadatas.push_back(pmd()
@@ -424,6 +427,16 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         for (auto &s : shifters)
         {
             s.set_filter_mode(filmsg.model, filmsg.config);
+        }
+    }
+    CurveMessage curmsg;
+    while (curve_from_gui_fifo.pop(curmsg))
+    {
+        auto func = getCurveOperator(curmsg.curveid);
+        assert(func);
+        for (auto &sh : shifters)
+        {
+            sh.modmatrixcurves[curmsg.lfoindex][curmsg.shifter_param_target] = func;
         }
     }
     ParamChangeMessage msg;

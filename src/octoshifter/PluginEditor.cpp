@@ -3,6 +3,7 @@
 #include "juce_core/juce_core.h"
 #include "juce_events/juce_events.h"
 #include "juce_gui_basics/juce_gui_basics.h"
+#include "modcurves.h"
 #include "sst/filters++/api.h"
 #include "sst/filters++/enums.h"
 #include "sst/filters++/enums_to_string.h"
@@ -270,5 +271,68 @@ void MultiSlider::paint(juce::Graphics &g)
             ycor = juce::jmap<float>(v, pmin, pmax, sliders_area.getBottom(), sliders_area.getY());
             g.drawLine(xcor, ycor, xcor + barw - 1.0, ycor, 2.0);
         }
+    }
+}
+void MultiSlider::mouseDown(const juce::MouseEvent &ev)
+{
+    int paramindex = (float)(paraminfos.size()) / getWidth() * ev.x;
+    if (paramindex < 0 || paramindex >= paraminfos.size())
+        return;
+    if (ev.mods.isRightButtonDown())
+    {
+        if (paraminfos[paramindex].lfoindex >= 0)
+        {
+            juce::PopupMenu menu;
+            menu.addSectionHeader("LFO " + juce::String(paraminfos[paramindex].lfoindex + 1) +
+                                  " modulation curve");
+
+            auto curveinfos = get_curve_metadata();
+            for (auto &c : curveinfos)
+            {
+                menu.addItem(c.groupname + " : " + c.name, true, false, [this, c, paramindex]() {
+                    CurveMessage msg;
+                    msg.curveid = c.id;
+                    msg.lfoindex = paraminfos[paramindex].lfoindex;
+                    msg.shifter_param_target = shifter_modulation_target;
+                    pref.curve_from_gui_fifo.push(msg);
+                });
+            }
+            menu.showMenuAsync({});
+            return;
+        }
+        if (paraminfos[paramindex].lfoindex == -1)
+        {
+            juce::PopupMenu menu;
+            menu.addSectionHeader("Per shifter modulation pattern");
+            for (int i = 0; i < OctoShifterProcessor::num_modulation_patterns; ++i)
+            {
+                std::string txt;
+                for (int j = 0; j < 8; ++j)
+                {
+                    txt += fmt::format("{} ", pref.modulation_patterns[i][j]);
+                }
+                int curpat = pref.modtarget_to_modpattern[shifter_modulation_target];
+                menu.addItem(txt, true, i == curpat, [this, i]() {
+                    pref.modtarget_to_modpattern[shifter_modulation_target] = i;
+                });
+            }
+            menu.showMenuAsync({});
+            return;
+        }
+    }
+
+    draggedindex = -1;
+
+    if (paramindex >= 0 && paramindex < paraminfos.size())
+    {
+        if (ev.y > sliders_area.getBottom() - 5)
+        {
+            show_value_editor(paramindex, ev.x);
+            return;
+        }
+        draggedindex = paramindex;
+        if (!paraminfos[paramindex].notify_only_on_mouse_up)
+            post_param_event(draggedindex, parval_from_mouse_y(draggedindex, ev.y));
+        repaint();
     }
 }

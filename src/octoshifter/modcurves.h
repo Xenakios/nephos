@@ -97,7 +97,9 @@ static float harmseries(float x, int octaves)
     x = 1.0 + (numpartials - 1) * x;
     return std::log2(std::floor(x)) / octaves;
 }
-static std::function<float(float)> getCurveOperator(CurveIdentifier id);
+
+std::function<float(float)> getCurveOperator(CurveIdentifier id);
+
 struct CurveMetadata
 {
     int id = 0;
