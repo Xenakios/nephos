@@ -77,7 +77,7 @@ OctoShifterProcessor::OctoShifterProcessor()
     param_metadatas.push_back(
         pmd()
             .withName("PITCH SHIFT MODE")
-            .withUnorderedMapFormatting({{0, "Default"}, {1, "Cheap"}, {2, "Reserved"}}, true)
+            .withUnorderedMapFormatting({{0, "Default"}, {1, "Cheap"}, {2, "Borken"}}, true)
             .withDefault(0)
             .withID(PAR_PITCHQUALITY));
     param_metadatas.push_back(

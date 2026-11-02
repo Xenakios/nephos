@@ -120,7 +120,7 @@ class PitchShifter
         modmatrixcurves[MS_LFO0][MT_DELAYFEEDBACK] = [](float x) {
             return std::clamp((x + 1.0f) * 0.5f, 0.0f, 1.0f);
         };
-        modmatrixcurves[MS_LFO1][MT_PITCH] = [](float x) { return xor_curve(x, 17844); };
+        // modmatrixcurves[MS_LFO1][MT_PITCH] = [](float x) { return xor_curve(x, 17844); };
         stretch = std::make_unique<signalsmith::stretch::SignalsmithStretch<>>();
         ingainlag.setRateInMilliseconds(5.0, 44100.0, 1.0f);
         ingainlag.snapTo(0.0);
@@ -244,8 +244,13 @@ class PitchShifter
             int q = pending_quality_change.load();
             if (q == 0)
                 stretch->presetDefault(1, samplerate);
-            if (q == 1)
+            else if (q == 1)
                 stretch->presetCheaper(1, samplerate);
+            else if (q == 2)
+            {
+                stretch->configure(1, static_cast<int>(samplerate * 0.08),
+                                   static_cast<int>(samplerate * 0.04), false);
+            }
             pending_quality_change = -1;
         }
         latency_in = stretch->inputLatency();
