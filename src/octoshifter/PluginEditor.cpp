@@ -100,9 +100,7 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
     filterPicker.OnSelected = [this](int64_t id) {
         auto msg = id_to_filter_mode[id];
         processorRef.filter_mode_from_gui_fifo.push(msg);
-        auto txt = filterPicker.get_text_from_id(id);
-        if (txt)
-            filterPicker.showButton.setButtonText(*txt);
+        update_filter_button(id);
     };
     startTimerHz(10);
     setSize(1100, 700);
@@ -161,14 +159,28 @@ void OctoShifterProcessorEditor::timerCallback()
     FilterModeMessage fmsg;
     while (processorRef.filter_mode_to_gui_fifo.pop(fmsg))
     {
-        for (auto& e : id_to_filter_mode)
+        for (auto &e : id_to_filter_mode)
         {
             if (e.second.model == fmsg.model && e.second.config == fmsg.config)
             {
                 filterPicker.set_selected_ID(e.first);
-                auto txt = filterPicker.get_text_from_id(e.first);
-                if (txt)
-                    filterPicker.showButton.setButtonText(*txt);
+                update_filter_button(e.first);
+                break;
+            }
+        }
+    }
+}
+
+void OctoShifterProcessorEditor::update_filter_button(int64_t id)
+{
+    for (auto &e : filterPicker.categories)
+    {
+        for (auto &i : e.items)
+        {
+            if (i.id == id)
+            {
+                std::string buttext = e.text + " : " + i.text;
+                filterPicker.showButton.setButtonText(buttext);
                 break;
             }
         }
@@ -234,7 +246,8 @@ void MultiSlider::paint(juce::Graphics &g)
             if (partxt)
             {
                 g.setColour(juce::Colours::white);
-                g.drawText(*partxt, xcor, getHeight() - 18, barw, 18, juce::Justification::centredBottom);
+                g.drawText(*partxt, xcor, getHeight() - 18, barw, 18,
+                           juce::Justification::centredBottom);
             }
         }
         float pmin = paraminfos[i].minval;

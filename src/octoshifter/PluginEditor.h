@@ -342,6 +342,7 @@ class OctoShifterProcessorEditor final : public juce::AudioProcessorEditor, publ
     XapSlider outputModeDrop;
     GalleryPicker filterPicker;
     std::unordered_map<int64_t, FilterModeMessage> id_to_filter_mode;
+    void update_filter_button(int64_t id);
     std::unique_ptr<juce::VBlankAttachment> vblankAttachment;
     int paint_throttle_counter = 0;
     void update_components_with_modulation();

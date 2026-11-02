@@ -53,6 +53,10 @@ class PitchShifter
         MS_LFO1,
         MS_COUNT
     };
+    // only add to the end of this because we are using 
+    // these directly as indexes...
+    // delay time is not a modulatable target because
+    // we can't modulate that well at the moment
     enum MODTARGETS
     {
         MT_PITCH,
