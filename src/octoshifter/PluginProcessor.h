@@ -251,6 +251,11 @@ class PitchShifter
                 stretch->configure(1, static_cast<int>(samplerate * 0.08),
                                    static_cast<int>(samplerate * 0.04), false);
             }
+            else if (q == 3)
+            {
+                stretch->configure(1, static_cast<int>(samplerate * 0.20),
+                                   static_cast<int>(samplerate * 0.03), false);
+            }
             pending_quality_change = -1;
         }
         latency_in = stretch->inputLatency();

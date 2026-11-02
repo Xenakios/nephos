@@ -74,7 +74,10 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
     visitAll<XapSlider>(*this, [this](XapSlider *slid) {
         paridtoslidermap[slid->getParameterMetaData().id] = slid;
     });
+
     addAndMakeVisible(filterPicker.showButton);
+    //filterPicker.addToDesktop(juce::ComponentPeer::StyleFlags::windowIsResizable |
+    //                          juce::ComponentPeer::StyleFlags::windowHasTitleBar);
     auto filtmodes = sst::filtersplusplus::Filter::availableModels();
     int64_t id = 0;
     for (auto &mo : filtmodes)
