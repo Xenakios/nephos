@@ -59,6 +59,7 @@ OctoShifterProcessor::OctoShifterProcessor()
                                       .withName(fmt::format("Filter Cutoff {}", i + 1))
                                       .withRange(-48, 65)
                                       .withDefault(60)
+                                      .withDecimalPlaces(0)
                                       .withSemitoneZeroAt440Formatting()
                                       .withID(PAR_FILTERCUTOFF + i));
         param_metadatas.push_back(pmd()

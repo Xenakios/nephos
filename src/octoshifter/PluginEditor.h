@@ -9,7 +9,7 @@
 #include "juce_gui_basics/juce_gui_basics.h"
 #include <stdio.h>
 #include <unordered_map>
-#include "../juceplugin/dropdowncomponent.h""
+#include "../juceplugin/dropdowncomponent.h"
 
 inline void add_xapslider(OctoShifterProcessor &proc, juce::Component &parentcomp, XapSlider &slid)
 {
@@ -43,7 +43,7 @@ class MultiSlider : public juce::Component
     int paint_throttle_counter = 0;
     juce::String groupname;
     juce::TextEditor value_entry_editor;
-    std::unique_ptr<juce::VBlankAttachment> vblankAttachment;
+
     MultiSlider(OctoShifterProcessor &p, juce::String name, uint32_t parstartid, uint32_t numpars,
                 uint32_t lfo0par = CLAP_INVALID_ID, int shifter_par_target = -1,
                 bool notify_only_on_mouse_up = false)
@@ -79,13 +79,6 @@ class MultiSlider : public juce::Component
                           1.0f,        0.0f, *pref.par_id_to_value_pointer[lfo0par + 1]};
             paraminfos.push_back(pi2);
         }
-        vblankAttachment = std::make_unique<juce::VBlankAttachment>(this, [this]() {
-            if (paint_throttle_counter == 0)
-                repaint();
-            //++paint_throttle_counter;
-            if (paint_throttle_counter == 4)
-                paint_throttle_counter = 0;
-        });
     }
     juce::Rectangle<int> sliders_area{0, 0, 10, 10};
     void resized() override
@@ -159,7 +152,7 @@ class MultiSlider : public juce::Component
 
         if (paramindex >= 0 && paramindex < paraminfos.size())
         {
-            if (ev.y > sliders_area.getBottom())
+            if (ev.y > sliders_area.getBottom() + 2)
             {
                 show_value_editor(paramindex, ev.x);
                 return;
@@ -347,5 +340,8 @@ class OctoShifterProcessorEditor final : public juce::AudioProcessorEditor, publ
     XapSlider outputModeDrop;
     GalleryPicker filterPicker;
     std::unordered_map<int64_t, FilterModeMessage> id_to_filter_mode;
+    std::unique_ptr<juce::VBlankAttachment> vblankAttachment;
+    int paint_throttle_counter = 0;
+    void update_components_with_modulation();
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OctoShifterProcessorEditor)
 };

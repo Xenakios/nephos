@@ -104,12 +104,42 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
         if (txt)
             filterPicker.showButton.setButtonText(*txt);
     };
-    startTimerHz(25);
+    startTimerHz(10);
     setSize(1100, 700);
+    vblankAttachment = std::make_unique<juce::VBlankAttachment>(this, [this]() {
+        if (paint_throttle_counter == 0)
+        {
+            update_components_with_modulation();
+        }
+        ++paint_throttle_counter;
+        if (paint_throttle_counter == 1)
+            paint_throttle_counter = 0;
+    });
     p.gui_visible = true;
 }
 
 OctoShifterProcessorEditor::~OctoShifterProcessorEditor() { processorRef.gui_visible = false; }
+
+void OctoShifterProcessorEditor::update_components_with_modulation()
+{
+    ModulationMessage modmsg;
+    while (processorRef.modulations_to_gui_fifo.pop(modmsg))
+    {
+        for (auto &c : multiSliders)
+        {
+            if (c->shifter_modulation_target >= 0)
+            {
+                auto it = processorRef.mod_ranges.find(c->shifter_modulation_target);
+                if (it != processorRef.mod_ranges.end())
+                {
+                    c->paraminfos[modmsg.shifterindex].modulatedvalue =
+                        modmsg.values[c->shifter_modulation_target] * it->second;
+                }
+            }
+            c->repaint();
+        }
+    }
+}
 
 void OctoShifterProcessorEditor::timerCallback()
 {
@@ -126,22 +156,6 @@ void OctoShifterProcessorEditor::timerCallback()
         if (it != paridtoslidermap.end())
         {
             it->second->setValue(msg.val);
-        }
-    }
-    ModulationMessage modmsg;
-    while (processorRef.modulations_to_gui_fifo.pop(modmsg))
-    {
-        for (auto &c : multiSliders)
-        {
-            if (c->shifter_modulation_target >= 0)
-            {
-                auto it = processorRef.mod_ranges.find(c->shifter_modulation_target);
-                if (it != processorRef.mod_ranges.end())
-                {
-                    c->paraminfos[modmsg.shifterindex].modulatedvalue =
-                        modmsg.values[c->shifter_modulation_target] * it->second;
-                }
-            }
         }
     }
 }
@@ -205,7 +219,7 @@ void MultiSlider::paint(juce::Graphics &g)
             if (partxt)
             {
                 g.setColour(juce::Colours::white);
-                g.drawText(*partxt, xcor, getHeight() - 18, barw, 18, juce::Justification::centred);
+                g.drawText(*partxt, xcor, getHeight() - 18, barw, 18, juce::Justification::centredBottom);
             }
         }
         float pmin = paraminfos[i].minval;

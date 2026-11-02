@@ -118,8 +118,9 @@ void GalleryPicker::paint(juce::Graphics &g)
     ++paintcount;
     g.fillAll(juce::Colours::black);
     g.setFont(font);
-    // g.setColour(juce::Colours::magenta);
-    // g.drawRect(g.getClipBounds());
+    g.setColour(juce::Colours::magenta);
+    g.drawRect(g.getClipBounds());
+    
     for (size_t i = 0; i < categories.size(); ++i)
     {
         if (!categories[i].text.empty() && !categories[i].rect.isEmpty())
@@ -137,7 +138,7 @@ void GalleryPicker::paint(juce::Graphics &g)
             if (!it.rect.isEmpty())
             {
                 auto r = it.rect;
-                
+
                 juce::Colour textcol;
                 if (it.id == selectedID)
                 {
@@ -173,7 +174,7 @@ void GalleryPicker::paint(juce::Graphics &g)
         }
     }
     g.setColour(juce::Colours::white);
-    g.drawText(juce::String(paintcount), getLocalBounds(), juce::Justification::bottomRight);
+    g.drawText(juce::String(paintcount), g.getClipBounds(), juce::Justification::bottomRight);
     g.setColour(juce::Colours::red);
     getLookAndFeel().drawTickBox(g, *this, closeButtonRect.getX(), closeButtonRect.getY(),
                                  closeButtonRect.getWidth(), closeButtonRect.getHeight(), true,
