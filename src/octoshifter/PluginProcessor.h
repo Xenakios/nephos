@@ -494,6 +494,7 @@ class OctoShifterProcessor final : public juce::AudioProcessor
     choc::fifo::SingleReaderSingleWriterFIFO<FilterModeMessage> filter_mode_from_gui_fifo;
     choc::fifo::SingleReaderSingleWriterFIFO<FilterModeMessage> filter_mode_to_gui_fifo;
     std::atomic<bool> gui_visible{false};
+    choc::value::Value get_state();
     void set_state(choc::value::ValueView view);
     void set_parameter_value(uint32_t id, float value);
     void send_param_updates_to_gui();

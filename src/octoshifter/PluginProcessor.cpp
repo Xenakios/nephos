@@ -573,22 +573,7 @@ juce::AudioProcessorEditor *OctoShifterProcessor::createEditor()
 void OctoShifterProcessor::getStateInformation(juce::MemoryBlock &destData)
 {
     juce::Logger::writeToLog("getStateInformation");
-    auto state = choc::value::createObject("state");
-    state.setMember("version", 1);
-    auto params_state = choc::value::createObject("params");
-    for (auto &e : param_metadatas)
-    {
-        std::string idstr = std::to_string(e.id);
-        params_state.setMember(idstr, *par_id_to_value_pointer[e.id]);
-    }
-    state.setMember("parameters", params_state);
-    auto filterstate = choc::value::createObject("filter");
-    filterstate.setMember("model", (int64_t)current_filter_mode.model);
-    filterstate.setMember("pt", (int64_t)current_filter_mode.config.pt);
-    filterstate.setMember("st", (int64_t)current_filter_mode.config.st);
-    filterstate.setMember("dt", (int64_t)current_filter_mode.config.dt);
-    filterstate.setMember("mt", (int64_t)current_filter_mode.config.mt);
-    state.setMember("filter0state", filterstate);
+    auto state = get_state();
     auto sdata = state.serialise();
     destData.append(sdata.data.data(), sdata.data.size());
 }
@@ -656,6 +641,33 @@ void OctoShifterProcessor::set_parameter_value(uint32_t id, float value)
     }
 }
 
+choc::value::Value OctoShifterProcessor::get_state()
+{
+    auto state = choc::value::createObject("state");
+    state.setMember("version", 1);
+    auto params_state = choc::value::createObject("params");
+    for (auto &e : param_metadatas)
+    {
+        std::string idstr = std::to_string(e.id);
+        params_state.setMember(idstr, *par_id_to_value_pointer[e.id]);
+    }
+    state.setMember("parameters", params_state);
+    auto filterstate = choc::value::createObject("filter");
+    filterstate.setMember("model", (int64_t)current_filter_mode.model);
+    filterstate.setMember("pt", (int64_t)current_filter_mode.config.pt);
+    filterstate.setMember("st", (int64_t)current_filter_mode.config.st);
+    filterstate.setMember("dt", (int64_t)current_filter_mode.config.dt);
+    filterstate.setMember("mt", (int64_t)current_filter_mode.config.mt);
+    state.setMember("filter0state", filterstate);
+    auto modpatterns_state = choc::value::createEmptyArray();
+    for (int i = 0; i < PitchShifter::MT_COUNT; ++i)
+    {
+        modpatterns_state.addArrayElement((int64_t)modtarget_to_modpattern[i]);
+    }
+    state.setMember("parametermodpatterns", modpatterns_state);
+    return state;
+}
+
 void OctoShifterProcessor::set_state(choc::value::ValueView view)
 {
     if (view.hasObjectMember("filter0state"))
@@ -669,6 +681,17 @@ void OctoShifterProcessor::set_state(choc::value::ValueView view)
         fm.config.mt = (decltype(fm.config.mt))filterstate["mt"].getWithDefault(0);
         fm.config.pt = (decltype(fm.config.pt))filterstate["pt"].getWithDefault(0);
         filter_mode_from_gui_fifo.push(fm);
+    }
+    if (view.hasObjectMember("parametermodpatterns"))
+    {
+        auto patar = view["parametermodpatterns"];
+        for (int i = 0; i < patar.size(); ++i)
+        {
+            if (i < PitchShifter::MT_COUNT)
+            {
+                modtarget_to_modpattern[i] = patar[i].getWithDefault(0);
+            }
+        }
     }
     if (view.hasObjectMember("parameters"))
     {

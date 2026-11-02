@@ -329,8 +329,6 @@ class OctoShifterProcessorEditor final : public juce::AudioProcessorEditor, publ
     void timerCallback() override;
 
   private:
-    // This reference is provided as a quick way for your editor to
-    // access the processor object that created it.
     OctoShifterProcessor &processorRef;
     std::vector<std::unique_ptr<ShifterComponent>> shiftercomps;
     std::vector<std::unique_ptr<LFOComponent>> lfo_comps;
