@@ -51,6 +51,7 @@ class MultiSlider : public juce::Component
     {
         addChildComponent(value_entry_editor);
         value_entry_editor.onEscapeKey = [this]() { value_entry_editor.setVisible(false); };
+        value_entry_editor.onFocusLost = [this]() { value_entry_editor.setVisible(false); };
 
         shifter_modulation_target = shifter_par_target;
         paraminfos.resize(8);

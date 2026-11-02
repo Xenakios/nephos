@@ -137,12 +137,16 @@ class PitchShifter
         {
             reset();
         }
+        for (int i = 0; i < MT_COUNT; ++i)
+            modsums[i] = 0.0f;
         enabled = b;
     }
     void reset()
     {
         for (int i = 0; i < BLOCKSIZE; ++i)
             feedbackaudio[i] = 0.0f;
+        for (int i = 0; i < MT_COUNT; ++i)
+            modsums[i] = 0.0f;
         std::fill(delaybuffer.begin(), delaybuffer.end(), 0.0f);
     }
     enum OUTCHANSMODE

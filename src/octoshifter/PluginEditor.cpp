@@ -76,13 +76,14 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
     });
 
     addAndMakeVisible(filterPicker.showButton);
-    //filterPicker.addToDesktop(juce::ComponentPeer::StyleFlags::windowIsResizable |
-    //                          juce::ComponentPeer::StyleFlags::windowHasTitleBar);
+    // filterPicker.addToDesktop(juce::ComponentPeer::StyleFlags::windowIsResizable |
+    //                           juce::ComponentPeer::StyleFlags::windowHasTitleBar);
     auto filtmodes = sst::filtersplusplus::Filter::availableModels();
     int64_t id = 0;
     for (auto &mo : filtmodes)
     {
-        if (mo == sst::filtersplusplus::FilterModel::Comb)
+        if (mo == sst::filtersplusplus::FilterModel::Comb ||
+            mo == sst::filtersplusplus::FilterModel::CutoffWarp)
             continue;
         auto confs = sst::filtersplusplus::Filter::availableModelConfigurations(mo);
         auto moname = sst::filtersplusplus::toString(mo);
