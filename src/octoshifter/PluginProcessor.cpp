@@ -38,6 +38,12 @@ OctoShifterProcessor::OctoShifterProcessor()
                                       .withLinearScaleFormatting("dB")
                                       .withID(PAR_INPUT_GAIN + i));
         param_metadatas.push_back(pmd()
+                                      .withName(fmt::format("Output Volume {}", i + 1))
+                                      .withRange(-48.0f, 0.0f)
+                                      .withDefault(-6.0)
+                                      .withLinearScaleFormatting("dB")
+                                      .withID(PAR_OUTPUT_GAIN + i));
+        param_metadatas.push_back(pmd()
                                       .withName(fmt::format("Pitch {}", i + 1))
                                       .withRange(-12.0f, 12.0f)
                                       .withQuantizedInterval(0.5)
@@ -159,6 +165,11 @@ OctoShifterProcessor::OctoShifterProcessor()
                                       .withName(fmt::format("LFO {} AMOUNT", i + 1))
                                       .withRange(-1.0f, 1.0f)
                                       .withLinearScaleFormatting("%", 100.0)
+                                      .withID(PAR_OUTVOLUME_LFOAMOUNTS + i));
+        param_metadatas.push_back(pmd()
+                                      .withName(fmt::format("LFO {} AMOUNT", i + 1))
+                                      .withRange(-1.0f, 1.0f)
+                                      .withLinearScaleFormatting("%", 100.0)
                                       .withID(PAR_RESON0_LFOAMOUNTS + i));
     }
 
@@ -179,6 +190,7 @@ OctoShifterProcessor::OctoShifterProcessor()
 
     mod_ranges[PitchShifter::MT_PITCH] = 12.0f;
     mod_ranges[PitchShifter::MT_INVOLUME] = 12.0f;
+    mod_ranges[PitchShifter::MT_OUTVOLUME] = 12.0f;
     mod_ranges[PitchShifter::MT_F0CUTOFF] = 36.0f;
     mod_ranges[PitchShifter::MT_FORMANT] = 12.0f;
     mod_ranges[PitchShifter::MT_F0RESON] = 1.0f;
@@ -498,6 +510,8 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                     *par_id_to_value_pointer[PAR_DELAYFB_LFOAMOUNTS + i];
                 shifters[shindex].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_INVOLUME] =
                     *par_id_to_value_pointer[PAR_INVOLUME_LFOAMOUNTS + i];
+                shifters[shindex].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_OUTVOLUME] =
+                    *par_id_to_value_pointer[PAR_OUTVOLUME_LFOAMOUNTS + i];
                 shifters[shindex].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_F0RESON] =
                     *par_id_to_value_pointer[PAR_RESON0_LFOAMOUNTS + i];
             }
@@ -633,6 +647,10 @@ void OctoShifterProcessor::set_parameter_value(uint32_t id, float value)
     if (id >= PAR_INPUT_GAIN && id < PAR_INPUT_GAIN + numshifters)
     {
         shifters[id - PAR_INPUT_GAIN].base_in_volume = value;
+    }
+    if (id >= PAR_OUTPUT_GAIN && id < PAR_OUTPUT_GAIN + numshifters)
+    {
+        shifters[id - PAR_OUTPUT_GAIN].base_out_volume = value;
     }
     if (id >= PAR_AZIMUTH && id < PAR_AZIMUTH + numshifters)
     {

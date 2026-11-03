@@ -16,6 +16,16 @@ std::function<float(float)> getCurveOperator(CurveIdentifier id)
     }
     switch (id)
     {
+    case CURVE_CONST_ZERO:
+        return [](auto x) { return 0.0f; };
+    case CURVE_CONST_MINUS100:
+        return [](auto x) { return -1.0f; };
+    case CURVE_CONST_MINUS50:
+        return [](auto x) { return -0.5f; };
+    case CURVE_CONST_50:
+        return [](auto x) { return 0.5f; };
+    case CURVE_CONST_100:
+        return [](auto x) { return 1.0f; };
     case CURVE_LINEAR:
         return [](auto x) { return x; };
     case CURVE_SQUARE:

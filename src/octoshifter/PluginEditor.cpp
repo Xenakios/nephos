@@ -56,7 +56,9 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
     multiSliders.push_back(std::make_unique<MultiSlider>(
         p, "PAN/AZIMUTH", OctoShifterProcessor::PAR_AZIMUTH, 8,
         OctoShifterProcessor::PAR_AZIMUTHLFOAMOUNTS, PitchShifter::MT_AZI));
-
+    multiSliders.push_back(std::make_unique<MultiSlider>(
+        p, "OUTPUT VOLUME", OctoShifterProcessor::PAR_OUTPUT_GAIN, 8,
+        OctoShifterProcessor::PAR_OUTVOLUME_LFOAMOUNTS, PitchShifter::MT_OUTVOLUME));
     for (auto &c : multiSliders)
     {
         addAndMakeVisible(*c);

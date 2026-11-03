@@ -60,7 +60,7 @@ class PitchShifter
         MS_LFO1,
         MS_COUNT
     };
-    // only add to the end of this because we are using 
+    // only add to the end of this because we are using
     // these directly as indexes...
     // delay time is not a modulatable target because
     // we can't modulate that well at the moment
@@ -74,6 +74,7 @@ class PitchShifter
         MT_ELEVATION,
         MT_DELAYFEEDBACK,
         MT_INVOLUME,
+        MT_OUTVOLUME,
         MT_COUNT
     };
     std::unique_ptr<signalsmith::stretch::SignalsmithStretch<>> stretch;
@@ -85,6 +86,7 @@ class PitchShifter
     float base_filter_reson = 0.0f;
 
     float base_in_volume = 0.0f;
+    float base_out_volume = 0.0f;
     float delaytime = 0.25f;
     float pending_delay_time = -1.0f;
     constexpr static int delay_change_fade_len = 128;
@@ -97,6 +99,7 @@ class PitchShifter
     alignas(16) sst::filtersplusplus::Filter sstfilter;
     int numoutchans = 2;
     sst::basic_blocks::dsp::OnePoleLag<float, true> ingainlag;
+    sst::basic_blocks::dsp::OnePoleLag<float, true> outgainlag;
     sst::basic_blocks::dsp::OnePoleLag<float, true> panlag;
     sst::basic_blocks::dsp::OnePoleLag<float, true> fblag;
     alignas(16) float modsums[MT_COUNT] = {0.0f};
@@ -109,15 +112,7 @@ class PitchShifter
     std::atomic<int> pending_quality_change{-1};
     std::atomic<int> latency_in;
     std::atomic<int> latency_out;
-    static float xor_curve(float x, uint16_t a)
-    {
-        x = std::clamp(x, -1.0f, 1.0f);
-        x = (x + 1.0f) * 0.5f;
-        uint16_t ival = static_cast<uint16_t>(x * 65535.0f);
-        ival = ival ^ a;
-        x = ival / 65535.0f;
-        return -1.0f + 2.0f * x;
-    }
+
     PitchShifter()
     {
         for (int i = 0; i < MS_COUNT; ++i)
@@ -135,6 +130,8 @@ class PitchShifter
         stretch = std::make_unique<signalsmith::stretch::SignalsmithStretch<>>();
         ingainlag.setRateInMilliseconds(5.0, 44100.0, 1.0f);
         ingainlag.snapTo(0.0);
+        outgainlag.setRateInMilliseconds(5.0, 44100.0, 1.0f);
+        outgainlag.snapTo(0.0);
         panlag.setRateInMilliseconds(5.0, 44100.0, 1.0f);
         panlag.snapTo(0.0);
         fblag.setRateInMilliseconds(5.0, 44100.0, 1.0f);
@@ -202,6 +199,7 @@ class PitchShifter
     {
         samplerate = hz;
         ingainlag.setRateInMilliseconds(5.0, hz, 1.0f);
+        outgainlag.setRateInMilliseconds(5.0, hz, 1.0f);
         panlag.setRateInMilliseconds(5.0, hz, 1.0f);
         fblag.setRateInMilliseconds(10.0, hz, 1.0f);
 
@@ -217,7 +215,7 @@ class PitchShifter
         {
             assert(false);
         }
-        delaybuffer.resize(hz * 5.0);
+        delaybuffer.resize((size_t)(hz * 5.0));
         reset();
     }
     void set_spatial_parameters(float azimuth, float elevation)
@@ -301,6 +299,12 @@ class PitchShifter
         modulated_in_volume = std::clamp(modulated_in_volume, -48.0f, 0.0f);
         modulated_in_volume = juce::Decibels::decibelsToGain(modulated_in_volume);
         ingainlag.setTarget(modulated_in_volume);
+
+        float modulated_out_volume = base_out_volume + modsums[MT_OUTVOLUME] * 12.0;
+        modulated_out_volume = std::clamp(modulated_out_volume, -48.0f, 0.0f);
+        modulated_out_volume = juce::Decibels::decibelsToGain(modulated_out_volume);
+        outgainlag.setTarget(modulated_out_volume);
+
         for (int i = 0; i < BLOCKSIZE; ++i)
         {
             float insample = audio_inout[i * 64] * ingainlag.getValue();
@@ -324,10 +328,10 @@ class PitchShifter
         float modulated_azi = baseazimuth + modsums[MT_AZI];
         modulated_azi = std::clamp(modulated_azi, -1.0f, 1.0f);
         panlag.setTarget(modulated_azi);
-        set_spatial_parameters(modulated_azi, 0.0);
+        
 
         sstfilter.prepareBlock();
-        alignas(16) sst::basic_blocks::dsp::pan_laws::panmatrix_t mat={0.0f};
+        alignas(16) sst::basic_blocks::dsp::pan_laws::panmatrix_t mat = {0.0f};
         alignas(16) float tempoutbuffer[BLOCKSIZE];
         for (int i = 0; i < BLOCKSIZE; ++i)
         {
@@ -355,9 +359,10 @@ class PitchShifter
                     delayed = read_from_delay(delaytime) * fadegain;
                 }
             }
-            tempoutbuffer[i] = delayed;
+            tempoutbuffer[i] = delayed * outgainlag.getValue();
             feedbackaudio[i] = std::tanh(delayed);
             // feedbackaudio[i] = delayed;
+            outgainlag.process();
         }
 
         if (ochanmode == OCM_MONODISCRETE)
@@ -468,6 +473,7 @@ class OctoShifterProcessor final : public juce::AudioProcessor
     {
         PAR_ENABLED = 50,
         PAR_INPUT_GAIN = 100,
+        PAR_OUTPUT_GAIN = 150,
         PAR_PITCH = 200,
         PAR_FORMANT = 300,
         PAR_DELAYTIME = 400,
@@ -489,6 +495,7 @@ class OctoShifterProcessor final : public juce::AudioProcessor
         PAR_DELAYFB_LFOAMOUNTS = 54000,
         PAR_INVOLUME_LFOAMOUNTS = 55000,
         PAR_RESON0_LFOAMOUNTS = 56000,
+        PAR_OUTVOLUME_LFOAMOUNTS = 57000
     };
     void set_initialpatch();
     std::vector<pmd> param_metadatas;
@@ -501,7 +508,7 @@ class OctoShifterProcessor final : public juce::AudioProcessor
     choc::fifo::SingleReaderSingleWriterFIFO<FilterModeMessage> filter_mode_from_gui_fifo;
     choc::fifo::SingleReaderSingleWriterFIFO<FilterModeMessage> filter_mode_to_gui_fifo;
     choc::fifo::SingleReaderSingleWriterFIFO<CurveMessage> curve_from_gui_fifo;
-    
+
     std::atomic<bool> gui_visible{false};
     choc::value::Value get_state();
     void set_state(choc::value::ValueView view);
@@ -525,6 +532,7 @@ class OctoShifterProcessor final : public juce::AudioProcessor
                                                                     {1, 0, 0, 0, 0, 0, 0, 0}};
     std::array<int, PitchShifter::MT_COUNT> modtarget_to_modpattern = {0};
     FilterModeMessage current_filter_mode;
+
   private:
     double osc0phase = 0.0;
     double osc1phase = 0.0;
