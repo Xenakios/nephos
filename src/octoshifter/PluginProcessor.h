@@ -31,6 +31,43 @@
 static constexpr size_t BLOCKSIZE = 64;
 static constexpr size_t BLOCK_SIZE_OS = BLOCKSIZE * 2;
 
+template <typename T> inline T reflect_value_no_loop(const T minval, const T val, const T maxval)
+{
+    assert(maxval > minval);
+    const T range = maxval - minval;
+    const T doubled = range * T(2);
+
+    // Normalize val into [0, 2*range), then reflect
+    T temp = std::fmod(val - minval, doubled);
+    if (temp < T(0))
+        temp += doubled;
+
+    return (temp <= range) ? minval + temp : maxval - (temp - range);
+}
+
+template <typename T>
+[[nodiscard]] inline T wrap_value_no_loop(const T minval, const T val, const T maxval) noexcept
+{
+    assert(maxval > minval);
+    const T range = maxval - minval;
+
+    if constexpr (std::is_floating_point_v<T>)
+    {
+        T temp = std::fmod(val - minval, range);
+        if (temp < T(0))
+            temp += range;
+        return temp + minval;
+    }
+    else
+    {
+        static_assert(std::is_signed_v<T>, "Use a signed integer type");
+        T temp = (val - minval) % range;
+        if (temp < T(0))
+            temp += range;
+        return temp + minval;
+    }
+}
+
 struct ModulationEntry
 {
     int source_index = -1;
@@ -235,19 +272,7 @@ class PitchShifter
         delaybuffer.resize((size_t)(hz * 5.0));
         reset();
     }
-    /*
-    void set_spatial_parameters(float azimuth, float elevation)
-    {
-        if (numoutchans == 2)
-        {
-            float panpos = xenakios::mapvalue(azimuth, -1.0f, 1.0f, 0.0f, 1.0f);
-            sst::basic_blocks::dsp::pan_laws::panmatrix_t mat;
-            sst::basic_blocks::dsp::pan_laws::monoEqualPower(panpos, mat);
-            spatcoeffs[0] = mat[0];
-            spatcoeffs[1] = mat[3];
-        }
-    }
-        */
+
     void push_to_delay(float x)
     {
         delaybuffer[delaywritepos] = x;
@@ -349,7 +374,10 @@ class PitchShifter
         sstfilter.makeCoefficients(0, modulatedcutoff, modulatedreson);
 
         float modulated_azi = baseazimuth + modsums[MT_AZI];
-        modulated_azi = std::clamp(modulated_azi, -1.0f, 1.0f);
+        if (ochanmode < OCM_AMBISONICS_1ST)
+            modulated_azi = reflect_value_no_loop(-1.0f, modulated_azi, 1.0f);
+        else
+            modulated_azi = wrap_value_no_loop(-1.0f, modulated_azi, 1.0f);
         azilag.setTarget(modulated_azi);
 
         sstfilter.prepareBlock();
@@ -414,7 +442,7 @@ class PitchShifter
             float azi_degrees = modulated_azi * 180.0f;
             float azi_radians = degreesToRadians(azi_degrees);
             float modulated_elev = base_elevation + modsums[MT_ELEVATION];
-            modulated_elev = std::clamp(modulated_elev, -1.0f, 1.0f) * 180.0f;
+            modulated_elev = wrap_value_no_loop(-1.0f, modulated_elev, 1.0f) * 180.0f;
             float elev_radians = degreesToRadians(modulated_elev);
             float x = 0.0f;
             float y = 0.0f;

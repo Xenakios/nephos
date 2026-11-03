@@ -301,7 +301,13 @@ void MultiSlider::paint(juce::Graphics &g)
         {
             g.setColour(juce::Colours::lightgrey);
             v = v + paraminfos[i].modulatedvalue;
-            v = std::clamp(v, pmin, pmax);
+            // this is painful, need to figure out something else for this...
+            if (paraminfos[i].id >= OctoShifterProcessor::PAR_AZIMUTH &&
+                paraminfos[i].id <
+                    OctoShifterProcessor::PAR_AZIMUTH + OctoShifterProcessor::numshifters)
+                v = reflect_value_no_loop(pmin, v, pmax);
+            else
+                v = std::clamp(v, pmin, pmax);
             ycor = juce::jmap<float>(v, pmin, pmax, sliders_area.getBottom(), sliders_area.getY());
             g.drawLine(xcor, ycor, xcor + barw - 1.0, ycor, 2.0);
         }
