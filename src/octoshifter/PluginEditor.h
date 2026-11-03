@@ -212,7 +212,7 @@ class LFOComponent : public juce::Component
     {
         juce::FlexBox flex;
         flex.flexDirection = juce::FlexBox::Direction::row;
-        flex.items.add(juce::FlexItem(shapeDrop).withFlex(1.0).withMaxHeight(25));
+        flex.items.add(juce::FlexItem(shapeDrop).withFlex(2).withMaxHeight(25));
         flex.items.add(juce::FlexItem(rateKnob).withFlex(1.0));
         flex.items.add(juce::FlexItem(deformKnob).withFlex(1.0));
         flex.items.add(juce::FlexItem(warpKnob).withFlex(1.0));

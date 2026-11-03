@@ -58,6 +58,7 @@ OctoShifterProcessor::OctoShifterProcessor()
                                       .withName(fmt::format("Delay time {}", i + 1))
                                       .withRange(0.0f, 1.0f)
                                       .withDefault(0.5)
+                                      .withDecimalPlaces(0)
                                       .withOffsetPowerFormatting("ms", 0.0, 5.0, 3.0, 1000.0)
                                       .withID(PAR_DELAYTIME + i));
         param_metadatas.push_back(pmd()

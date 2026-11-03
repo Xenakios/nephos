@@ -234,10 +234,13 @@ void OctoShifterProcessorEditor::resized()
         e = e.withMinWidth(500);
     }
     flex.items.add(juce::FlexItem(multiflex).withFlex(8));
+    juce::FlexBox lfoflex;
+    lfoflex.flexDirection = juce::FlexBox::Direction::row;
     for (auto &c : lfo_comps)
     {
-        flex.items.add(juce::FlexItem(*c).withFlex(0.7).withMargin(2));
+        lfoflex.items.add(juce::FlexItem(*c).withFlex(1.0).withMargin(1));
     }
+    flex.items.add(juce::FlexItem(lfoflex).withFlex(1.0));
     flex.performLayout(getLocalBounds());
 }
 void MultiSlider::paint(juce::Graphics &g)
