@@ -47,6 +47,7 @@ struct FilterModeMessage
 struct CurveMessage
 {
     int lfoindex = -1;
+    int shifter_index = 0;
     int shifter_param_target = 0;
     int curveid = 0;
 };

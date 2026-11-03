@@ -207,12 +207,14 @@ void OctoShifterProcessorEditor::resized()
         multiflex.items.add(juce::FlexItem(*c).withFlex(1.0).withMargin(3));
     }
     juce::FlexBox miscflex;
-    miscflex.flexDirection = juce::FlexBox::Direction::column;
-    miscflex.items.add(juce::FlexItem(pitchQualityDrop).withFlex(1).withMaxHeight(25));
-    miscflex.items.add(juce::FlexItem(outputModeDrop).withFlex(1).withMaxHeight(25));
-    miscflex.items.add(juce::FlexItem(filterPicker.showButton).withFlex(1).withMaxHeight(25));
+    miscflex.flexDirection = juce::FlexBox::Direction::row;
+    miscflex.items.add(
+        juce::FlexItem(pitchQualityDrop).withFlex(1).withMaxHeight(25).withMargin(2));
+    miscflex.items.add(juce::FlexItem(outputModeDrop).withFlex(1).withMaxHeight(25).withMargin(2));
+    miscflex.items.add(
+        juce::FlexItem(filterPicker.showButton).withFlex(1).withMaxHeight(25).withMargin(2));
     miscflex.items.add(juce::FlexItem(infoLabel).withFlex(1).withMaxHeight(25));
-    multiflex.items.add(juce::FlexItem(miscflex).withFlex(1.0).withMargin(3));
+    flex.items.add(juce::FlexItem(miscflex).withFlex(0.4).withMargin(1));
     for (auto &e : multiflex.items)
     {
         e = e.withMinWidth(500);
@@ -282,23 +284,30 @@ void MultiSlider::mouseDown(const juce::MouseEvent &ev)
         return;
     if (ev.mods.isRightButtonDown())
     {
-        if (paraminfos[paramindex].lfoindex >= 0)
+        if (paraminfos[paramindex].lfoindex == -1)
         {
             juce::PopupMenu menu;
-            menu.addSectionHeader("LFO " + juce::String(paraminfos[paramindex].lfoindex + 1) +
-                                  " modulation curve");
-
-            auto curveinfos = get_curve_metadata();
-            for (auto &c : curveinfos)
+            for (int i = 0; i < OctoShifterProcessor::numLFOs; ++i)
             {
-                menu.addItem(c.groupname + " : " + c.name, true, false, [this, c, paramindex]() {
-                    CurveMessage msg;
-                    msg.curveid = c.id;
-                    msg.lfoindex = paraminfos[paramindex].lfoindex;
-                    msg.shifter_param_target = shifter_modulation_target;
-                    pref.curve_from_gui_fifo.push(msg);
-                });
+                juce::PopupMenu curvemenu;
+                auto curveinfos = get_curve_metadata();
+                for (auto &c : curveinfos)
+                {
+                    curvemenu.addItem(c.groupname + " : " + c.name, true, false,
+                                      [this, c, paramindex, i]() {
+                                          CurveMessage msg;
+                                          msg.shifter_index = paramindex;
+                                          msg.curveid = c.id;
+                                          msg.lfoindex = i;
+                                          msg.shifter_param_target = shifter_modulation_target;
+                                          pref.curve_from_gui_fifo.push(msg);
+                                      });
+                }
+                menu.addSubMenu("LFO " + juce::String(i + 1) + " curve", curvemenu);
             }
+            // menu.addSectionHeader("LFO " + juce::String(paraminfos[paramindex].lfoindex + 1) +
+            //                       " modulation curve");
+
             menu.showMenuAsync({});
             return;
         }

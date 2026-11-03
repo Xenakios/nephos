@@ -446,9 +446,12 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     {
         auto func = getCurveOperator(curmsg.curveid);
         assert(func);
+        assert(curmsg.shifter_index >= 0);
+        shifters[curmsg.shifter_index]
+            .modmatrixcurves[curmsg.lfoindex][curmsg.shifter_param_target] = func;
         for (auto &sh : shifters)
         {
-            sh.modmatrixcurves[curmsg.lfoindex][curmsg.shifter_param_target] = func;
+            // sh.modmatrixcurves[curmsg.lfoindex][curmsg.shifter_param_target] = func;
         }
     }
     ParamChangeMessage msg;

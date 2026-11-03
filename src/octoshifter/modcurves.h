@@ -42,11 +42,11 @@ enum CurveTypes
     CURVE_POPCORN,
     CURVE_BUTTERFLY,
     CURVE_SIGMOID1,
-    CURVE_CONST_MINUS100,
-    CURVE_CONST_MINUS50,
-    CURVE_CONST_ZERO,
-    CURVE_CONST_50,
-    CURVE_CONST_100,
+    CURVE_MUL_MINUS100,
+    CURVE_MUL_MINUS50,
+    CURVE_MUL_ZERO,
+    CURVE_MUL_50,
+    CURVE_MUL_100,
     NUM_CURVES
 };
 static float peaking_curve(float x, float y)
@@ -118,11 +118,11 @@ static std::vector<CurveMetadata> get_curve_metadata()
     result.emplace_back(CURVE_ABS, "UTILITY", "Absolute value");
     result.emplace_back(CURVE_BIPOLARTOUNIPOLAR, "UTILITY", "Bipolar to Unipolar");
     result.emplace_back(CURVE_UNIPOLARTOBIPOLAR, "UTILITY", "Unipolar to Bipolar");
-    result.emplace_back(CURVE_CONST_MINUS100, "UTILITY", "Constant -100%");
-    result.emplace_back(CURVE_CONST_MINUS50, "UTILITY", "Constant -50%");
-    result.emplace_back(CURVE_CONST_ZERO, "UTILITY", "Constant 0%");
-    result.emplace_back(CURVE_CONST_50, "UTILITY", "Constant +50%");
-    result.emplace_back(CURVE_CONST_100, "UTILITY", "Constant +100%");
+    result.emplace_back(CURVE_MUL_MINUS100, "UTILITY", "* -100%");
+    result.emplace_back(CURVE_MUL_MINUS50, "UTILITY", "* -50%");
+    result.emplace_back(CURVE_MUL_ZERO, "UTILITY", "* 0%");
+    result.emplace_back(CURVE_MUL_50, "UTILITY", "* +50%");
+    result.emplace_back(CURVE_MUL_100, "UTILITY", "* +100%");
     result.emplace_back(CURVE_SQUARE, "POWER", "x^2");
     result.emplace_back(CURVE_CUBE, "POWER", "x^3");
     result.emplace_back(CURVE_TOPOWER16, "POWER", "x^16");
