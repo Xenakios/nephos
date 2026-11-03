@@ -20,7 +20,7 @@
 #include "../../Common/xap_utils.h"
 #include "sst/filters++/api.h"
 #include "sst/filters++/enums.h"
-
+#include "../../Common/xen_ambisonics.h"
 #include <vector>
 #include <cstddef>
 #include <optional>
@@ -105,7 +105,7 @@ class PitchShifter
     int numoutchans = 2;
     sst::basic_blocks::dsp::OnePoleLag<float, true> ingainlag;
     sst::basic_blocks::dsp::OnePoleLag<float, true> outgainlag;
-    sst::basic_blocks::dsp::OnePoleLag<float, true> panlag;
+    sst::basic_blocks::dsp::OnePoleLag<float, true> azilag;
     sst::basic_blocks::dsp::OnePoleLag<float, true> fblag;
     alignas(16) float modsums[MT_COUNT] = {0.0f};
     std::vector<float> delaybuffer;
@@ -137,8 +137,8 @@ class PitchShifter
         ingainlag.snapTo(0.0);
         outgainlag.setRateInMilliseconds(5.0, 44100.0, 1.0f);
         outgainlag.snapTo(0.0);
-        panlag.setRateInMilliseconds(5.0, 44100.0, 1.0f);
-        panlag.snapTo(0.0);
+        azilag.setRateInMilliseconds(5.0, 44100.0, 1.0f);
+        azilag.snapTo(0.0);
         fblag.setRateInMilliseconds(5.0, 44100.0, 1.0f);
         fblag.snapTo(0.0);
         for (int i = 0; i < BLOCKSIZE; ++i)
@@ -173,7 +173,7 @@ class PitchShifter
     OUTCHANSMODE ochanmode = OCM_STEREO;
     void set_output_mode(OUTCHANSMODE om)
     {
-        ochanmode = om;
+
         numoutchans = 0;
         if (om == OCM_STEREO)
             numoutchans = 2;
@@ -184,7 +184,17 @@ class PitchShifter
         else if (om == OCM_AMBISONICS_2ND)
             numoutchans = 9;
         else if (om == OCM_AMBISONICS_3RD)
+        {
             numoutchans = 16;
+            if (ochanmode != OCM_AMBISONICS_3RD)
+            {
+                for (int i = 0; i < 16; ++i)
+                {
+                    spatcoeffs[i] = 0.0f;
+                }
+            }
+        }
+        ochanmode = om;
         assert(numoutchans > 0);
     }
     void set_filter_mode(sst::filtersplusplus::FilterModel mo,
@@ -206,7 +216,7 @@ class PitchShifter
         dcfilter.reset();
         ingainlag.setRateInMilliseconds(5.0, hz, 1.0f);
         outgainlag.setRateInMilliseconds(5.0, hz, 1.0f);
-        panlag.setRateInMilliseconds(5.0, hz, 1.0f);
+        azilag.setRateInMilliseconds(5.0, hz, 1.0f);
         fblag.setRateInMilliseconds(10.0, hz, 1.0f);
 
         sstfilter.setFilterModel(sst::filtersplusplus::FilterModel::CytomicSVF);
@@ -224,6 +234,7 @@ class PitchShifter
         delaybuffer.resize((size_t)(hz * 5.0));
         reset();
     }
+    /*
     void set_spatial_parameters(float azimuth, float elevation)
     {
         if (numoutchans == 2)
@@ -235,6 +246,7 @@ class PitchShifter
             spatcoeffs[1] = mat[3];
         }
     }
+        */
     void push_to_delay(float x)
     {
         delaybuffer[delaywritepos] = x;
@@ -337,7 +349,7 @@ class PitchShifter
 
         float modulated_azi = baseazimuth + modsums[MT_AZI];
         modulated_azi = std::clamp(modulated_azi, -1.0f, 1.0f);
-        panlag.setTarget(modulated_azi);
+        azilag.setTarget(modulated_azi);
 
         sstfilter.prepareBlock();
         alignas(16) sst::basic_blocks::dsp::pan_laws::panmatrix_t mat = {0.0f};
@@ -388,14 +400,42 @@ class PitchShifter
                 // obviously this is expensive and calculating Ambisonics
                 // coefficients is going to be a lot lot worse...
                 // we may need to look into some kind of look up table thing
-                float panpos = (panlag.getValue() + 1.0) * 0.5;
+                float panpos = (azilag.getValue() + 1.0) * 0.5;
                 sst::basic_blocks::dsp::pan_laws::stereoEqualPower(panpos, mat);
                 audio_inout[i * 64 + 0] = tempoutbuffer[i] * mat[0];
                 audio_inout[i * 64 + 1] = tempoutbuffer[i] * mat[1];
-                panlag.process();
+                azilag.process();
             }
-            sstfilter.concludeBlock();
         }
+        else if (ochanmode == OCM_AMBISONICS_3RD)
+        {
+            alignas(16) float newambicoeffs[64] = {0.0f};
+            float azi_degrees = modulated_azi * 180.0f;
+            float azi_radians = degreesToRadians(azi_degrees);
+            float x = 0.0f;
+            float y = 0.0f;
+            float z = 0.0f;
+            sphericalToCartesian(azi_radians, 0.0f, x, y, z);
+            SHEval3(x, y, z, newambicoeffs);
+            for (int i = 0; i < 16; ++i)
+                newambicoeffs[i] *= n3d2sn3d[i];
+            for (int i = 0; i < BLOCKSIZE; ++i)
+            {
+                float interpos = 1.0 / BLOCKSIZE * i;
+                for (int j = 0; j < 16; ++j)
+                {
+                    float coeffa = spatcoeffs[j];
+                    float coeffb = newambicoeffs[j];
+                    float interpcoeff = coeffa + (coeffb - coeffa) * interpos;
+                    audio_inout[i * 64 + j] = tempoutbuffer[i] * interpcoeff;
+                }
+            }
+            for (int j = 0; j < 16; ++j)
+            {
+                spatcoeffs[j] = newambicoeffs[j];
+            }
+        }
+        sstfilter.concludeBlock();
     }
 };
 

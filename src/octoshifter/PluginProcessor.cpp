@@ -564,7 +564,7 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         std::array<float, max_output_channels> outframe;
         for (int i = 0; i < BLOCKSIZE; ++i)
         {
-            for (int j = 0; j < 8; ++j)
+            for (int j = 0; j < 16; ++j)
             {
                 outframe[j] = sumpointers[j][i];
             }
