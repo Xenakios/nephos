@@ -488,6 +488,7 @@ struct ParamChangeMessage
 {
     uint32_t id = CLAP_INVALID_ID;
     float val = 0.0f;
+    bool ishostautomation = false;
 };
 
 struct ModulationMessage
@@ -496,7 +497,8 @@ struct ModulationMessage
     float values[PitchShifter::MT_COUNT];
 };
 
-class OctoShifterProcessor final : public juce::AudioProcessor
+class OctoShifterProcessor final : public juce::AudioProcessor,
+                                   public juce::AudioProcessorParameter::Listener
 {
   public:
     using lfo_t = sst::basic_blocks::modulators::SimpleLFO<OctoShifterProcessor, BLOCKSIZE>;
@@ -525,7 +527,8 @@ class OctoShifterProcessor final : public juce::AudioProcessor
     }
     OctoShifterProcessor();
     ~OctoShifterProcessor() override;
-
+    void parameterValueChanged(int parameterIndex, float newValue) override;
+    void parameterGestureChanged (int parameterIndex, bool gestureIsStarting) override;
     //==============================================================================
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
@@ -622,6 +625,8 @@ class OctoShifterProcessor final : public juce::AudioProcessor
     FilterModeMessage current_filter_mode;
 
   private:
+    std::unordered_map<uint32_t, juce::RangedAudioParameter *> clap_id_to_juce_param;
+    std::unordered_map<juce::RangedAudioParameter *, uint32_t> juce_param_to_clap_id;
     double osc0phase = 0.0;
     double osc1phase = 0.0;
     juce::AudioBuffer<float> workbuffer;

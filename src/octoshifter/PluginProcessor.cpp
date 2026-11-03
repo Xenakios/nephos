@@ -29,67 +29,67 @@ OctoShifterProcessor::OctoShifterProcessor()
     for (int i = 0; i < numshifters; ++i)
     {
         param_metadatas.push_back(pmd()
-                                      .withName(fmt::format("{}", i + 1))
+                                      .withName(fmt::format("{} : Enabled", i + 1))
                                       .asOnOffBool()
                                       .withDefault(true)
                                       .withID(PAR_ENABLED + i));
         param_metadatas.push_back(pmd()
-                                      .withName(fmt::format("Input Volume {}", i + 1))
+                                      .withName(fmt::format("{} : Input Volume", i + 1))
                                       .withRange(-48.0f, 0.0f)
                                       .withDefault(-6.0)
                                       .withLinearScaleFormatting("dB")
                                       .withID(PAR_INPUT_GAIN + i));
         param_metadatas.push_back(pmd()
-                                      .withName(fmt::format("Output Volume {}", i + 1))
+                                      .withName(fmt::format("{} : Output Volume", i + 1))
                                       .withRange(-48.0f, 0.0f)
                                       .withDefault(-6.0)
                                       .withLinearScaleFormatting("dB")
                                       .withID(PAR_OUTPUT_GAIN + i));
         param_metadatas.push_back(pmd()
-                                      .withName(fmt::format("Pitch {}", i + 1))
+                                      .withName(fmt::format("{} : Pitch", i + 1))
                                       .withRange(-12.0f, 12.0f)
                                       .withQuantizedInterval(0.5)
                                       .withLinearScaleFormatting("st")
                                       .withID(PAR_PITCH + i));
         param_metadatas.push_back(pmd()
-                                      .withName(fmt::format("Formant {}", i + 1))
+                                      .withName(fmt::format("{} : Formant", i + 1))
                                       .withRange(-12.0f, 12.0f)
                                       .withLinearScaleFormatting("st")
                                       .withID(PAR_FORMANT + i));
         param_metadatas.push_back(pmd()
-                                      .withName(fmt::format("Delay time {}", i + 1))
+                                      .withName(fmt::format("{} : Delay time", i + 1))
                                       .withRange(0.0f, 1.0f)
                                       .withDefault(0.5)
                                       .withDecimalPlaces(0)
                                       .withOffsetPowerFormatting("ms", 0.0, 5.0, 3.0, 1000.0)
                                       .withID(PAR_DELAYTIME + i));
         param_metadatas.push_back(pmd()
-                                      .withName(fmt::format("Delay Feedback {}", i + 1))
+                                      .withName(fmt::format("{} : Delay Feedback", i + 1))
                                       .withRange(0.0, 1.0)
                                       .withDefault(0.0)
                                       .withLinearScaleFormatting("%", 100.0)
                                       .withID(PAR_DELAYFEEDBACK + i));
         param_metadatas.push_back(pmd()
-                                      .withName(fmt::format("Filter Cutoff {}", i + 1))
+                                      .withName(fmt::format("{} : Filter Cutoff", i + 1))
                                       .withRange(-48, 65)
                                       .withDefault(60)
                                       .withDecimalPlaces(0)
                                       .withSemitoneZeroAt440Formatting()
                                       .withID(PAR_FILTERCUTOFF + i));
         param_metadatas.push_back(pmd()
-                                      .withName(fmt::format("Filter Resonance {}", i + 1))
+                                      .withName(fmt::format("{} : Filter Resonance", i + 1))
                                       .withRange(0.0, 1.0)
                                       .withDefault(0.0)
                                       .withLinearScaleFormatting("%", 100.0)
                                       .withID(PAR_FILTERRESON + i));
         param_metadatas.push_back(pmd()
-                                      .withName(fmt::format("Azimuth {}", i + 1))
+                                      .withName(fmt::format("{} : Azimuth", i + 1))
                                       .withRange(-1.0f, 1.0f)
                                       .withDefault(0.0)
                                       .withLinearScaleFormatting("%", 100.0)
                                       .withID(PAR_AZIMUTH + i));
         param_metadatas.push_back(pmd()
-                                      .withName(fmt::format("Elevation {}", i + 1))
+                                      .withName(fmt::format("{} : Elevation", i + 1))
                                       .withRange(-1.0f, 1.0f)
                                       .withDefault(0.0)
                                       .withLinearScaleFormatting("%", 100.0)
@@ -196,6 +196,16 @@ OctoShifterProcessor::OctoShifterProcessor()
         par_id_to_metadata[id] = &param_metadatas[i];
         param_values[i] = param_metadatas[i].defaultVal;
         par_id_to_value_pointer[id] = &param_values[i];
+        float minv = param_metadatas[i].minVal;
+        float maxv = param_metadatas[i].maxVal;
+        float def = param_metadatas[i].defaultVal;
+        auto parname = param_metadatas[i].name;
+        auto par = new juce::AudioParameterFloat(juce::ParameterID(juce::String(id), 1), parname,
+                                                 {minv, maxv}, def);
+        addParameter(par);
+        clap_id_to_juce_param[id] = par;
+        juce_param_to_clap_id[par] = id;
+        par->addListener(this);
         set_parameter_value(id, param_metadatas[i].defaultVal);
     }
 
@@ -217,6 +227,20 @@ OctoShifterProcessor::OctoShifterProcessor()
 
     set_initialpatch();
 }
+
+void OctoShifterProcessor::parameterValueChanged(int parameterIndex, float newValue)
+{
+    ParamChangeMessage msg;
+    auto &pars = getParameters();
+    auto basepar = pars[parameterIndex];
+    auto rangedpar = static_cast<juce::RangedAudioParameter *>(basepar);
+    msg.id = juce_param_to_clap_id[rangedpar];
+    msg.val = rangedpar->convertFrom0to1(newValue);
+    msg.ishostautomation = true;
+    params_from_gui_fifo.push(msg);
+}
+
+void OctoShifterProcessor::parameterGestureChanged(int parameterIndex, bool gestureIsStarting) {}
 
 void OctoShifterProcessor::set_initialpatch()
 {
@@ -467,6 +491,28 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     while (params_from_gui_fifo.pop(msg))
     {
         // DBG(msg.id << " " << msg.val);
+        if (!msg.ishostautomation)
+        {
+            // our gui sent the message, so notify host
+            // so it can record automation, keep track of last moved parameter etc
+            auto it = clap_id_to_juce_param.find(msg.id);
+            assert(it != clap_id_to_juce_param.end());
+            if (it != clap_id_to_juce_param.end())
+            {
+                float norm = it->second->convertTo0to1(msg.val);
+                it->second->setValueNotifyingHost(norm);
+            }
+        }
+        else
+        {
+            // host sent the message, so notify our GUI
+            // to visually see host automation/modulation
+            ParamChangeMessage togui;
+            togui.id = msg.id;
+            togui.val = msg.val;
+            params_to_gui_fifo.push(togui);
+        }
+        // in either case, obviously actually set the param value
         set_parameter_value(msg.id, msg.val);
     }
 
