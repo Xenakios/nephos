@@ -14,6 +14,7 @@
 #include "containers/choc_SingleReaderSingleWriterFIFO.h"
 #include "sst/basic-blocks/params/ParamMetadata.h"
 #include "sst/basic-blocks/dsp/PanLaws.h"
+#include "sst/basic-blocks/dsp/OnePoles.h"
 #include "sst/filters++.h"
 #include <span>
 #include "../../Common/xap_utils.h"
@@ -98,6 +99,7 @@ class PitchShifter
     double samplerate = 0.0;
     alignas(16) std::array<float, 64> spatcoeffs = {0.0f};
     alignas(16) sst::filtersplusplus::Filter sstfilter;
+    alignas(16) sst::basic_blocks::dsp::DCBlocker<BLOCKSIZE> dcfilter;
     int numoutchans = 2;
     sst::basic_blocks::dsp::OnePoleLag<float, true> ingainlag;
     sst::basic_blocks::dsp::OnePoleLag<float, true> outgainlag;
@@ -199,6 +201,7 @@ class PitchShifter
     void set_sample_rate(double hz)
     {
         samplerate = hz;
+        dcfilter.reset();
         ingainlag.setRateInMilliseconds(5.0, hz, 1.0f);
         outgainlag.setRateInMilliseconds(5.0, hz, 1.0f);
         panlag.setRateInMilliseconds(5.0, hz, 1.0f);
@@ -310,6 +313,7 @@ class PitchShifter
         {
             float insample = audio_inout[i * 64] * ingainlag.getValue();
             insample += feedbackaudio[i] * fblag.getValue();
+            insample = dcfilter.step(insample);
             processinbuffer[0][i] = insample;
             ingainlag.process();
             fblag.process();
