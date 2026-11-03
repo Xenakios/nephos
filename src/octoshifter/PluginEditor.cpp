@@ -67,6 +67,9 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
     optionsMenuButton.setButtonText("OPTIONS");
     optionsMenuButton.onClick = [this]() {
         juce::PopupMenu menu;
+        menu.addItem(
+            "Formant compensation enabled", true, processorRef.formant_compensation,
+            [this]() { processorRef.formant_compensation = !processorRef.formant_compensation; });
         menu.addItem("DC blocker enabled", true, processorRef.dc_blocker_enabled, [this]() {
             processorRef.dc_blocker_enabled = !processorRef.dc_blocker_enabled;
         });

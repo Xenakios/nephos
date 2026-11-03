@@ -101,6 +101,7 @@ class PitchShifter
     alignas(16) sst::filtersplusplus::Filter sstfilter;
     alignas(16) sst::basic_blocks::dsp::DCBlocker<BLOCKSIZE> dcfilter;
     bool dcblocker_enabled = true;
+    bool compensate_formants = false;
     int numoutchans = 2;
     sst::basic_blocks::dsp::OnePoleLag<float, true> ingainlag;
     sst::basic_blocks::dsp::OnePoleLag<float, true> outgainlag;
@@ -325,7 +326,7 @@ class PitchShifter
         float modulatedpitch = basepitch + modsums[MT_PITCH] * 12.0;
         stretch->setTransposeSemitones(modulatedpitch);
         float modulatedformant = baseformant + modsums[MT_FORMANT] * 12.0;
-        stretch->setFormantSemitones(modulatedformant);
+        stretch->setFormantSemitones(modulatedformant, compensate_formants);
         stretch->process(processinbuffer, BLOCKSIZE, processoutbuffer, BLOCKSIZE);
 
         float modulatedcutoff = basefiltercutoff + modsums[MT_F0CUTOFF] * 36.0;
@@ -337,7 +338,6 @@ class PitchShifter
         float modulated_azi = baseazimuth + modsums[MT_AZI];
         modulated_azi = std::clamp(modulated_azi, -1.0f, 1.0f);
         panlag.setTarget(modulated_azi);
-        
 
         sstfilter.prepareBlock();
         alignas(16) sst::basic_blocks::dsp::pan_laws::panmatrix_t mat = {0.0f};
@@ -531,6 +531,7 @@ class OctoShifterProcessor final : public juce::AudioProcessor
     std::atomic<int> infifoavail = 0;
     std::atomic<int> outsilencecount = 0;
     std::atomic<bool> dc_blocker_enabled = true;
+    std::atomic<bool> formant_compensation = false;
     std::unordered_map<int, float> mod_ranges;
     // since we are not crazy enough to allow separate modulation amounts for each parameter
     // of each shifter, we have these patterns that can still produce different modulation
