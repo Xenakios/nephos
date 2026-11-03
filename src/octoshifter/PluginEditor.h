@@ -86,6 +86,21 @@ class MultiSlider : public juce::Component
         sliders_area = juce::Rectangle<int>{0, 15, getWidth(), getHeight() - 30};
     }
     void paint(juce::Graphics &g) override;
+    void mouseWheelMove(const juce::MouseEvent &event,
+                        const juce::MouseWheelDetails &wheel) override
+    {
+        int paramindex = (float)(paraminfos.size()) / getWidth() * event.x;
+        if (paramindex < 0 || paramindex >= paraminfos.size())
+            return;
+        float step = (paraminfos[paramindex].maxval - paraminfos[paramindex].minval) / 25.0;
+        if (wheel.deltaY < 0.0)
+            step = -step;
+        if (event.mods.isShiftDown())
+            step *= 0.1;
+        float newval = paraminfos[paramindex].value + step;
+        newval = std::clamp(newval, paraminfos[paramindex].minval, paraminfos[paramindex].maxval);
+        post_param_event(paramindex, newval);
+    }
     void mouseDoubleClick(const juce::MouseEvent &ev) override
     {
         int paramindex = (float)paraminfos.size() / getWidth() * ev.x;
@@ -237,7 +252,7 @@ class OctoShifterProcessorEditor final : public juce::AudioProcessorEditor, publ
 
   private:
     OctoShifterProcessor &processorRef;
-    
+
     std::vector<std::unique_ptr<LFOComponent>> lfo_comps;
 
     std::vector<std::unique_ptr<MultiSlider>> multiSliders;
