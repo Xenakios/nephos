@@ -21,16 +21,17 @@ inline void visitAll(juce::Component &c, std::function<void(CompType *)> fn)
         visitAll(*child, fn);
     }
 }
-using MyProcessor = OctoShifterProcessor;
-//==============================================================================
+
 OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
     : AudioProcessorEditor(&p), processorRef(p),
       pitchQualityDrop(XapSlider::SS_HorizontalSlider,
                        *p.par_id_to_metadata[OctoShifterProcessor::PAR_PITCHQUALITY]),
       outputModeDrop(XapSlider::SS_HorizontalSlider,
-                     *p.par_id_to_metadata[OctoShifterProcessor::PAR_OUTPUTMODE])
+                     *p.par_id_to_metadata[OctoShifterProcessor::PAR_OUTPUTMODE]),
+      spatializationTabs(juce::TabbedButtonBar::Orientation::TabsAtTop)
 {
-
+    addAndMakeVisible(spatializationTabs);
+    spatializationTabs.setTabBarDepth(16);
     multiSliders.push_back(
         std::make_unique<MultiSlider>(p, "ENABLED", OctoShifterProcessor::PAR_ENABLED, 8));
     multiSliders.push_back(std::make_unique<MultiSlider>(
@@ -53,15 +54,23 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
     multiSliders.push_back(std::make_unique<MultiSlider>(
         p, "FILTER RESONANCE", OctoShifterProcessor::PAR_FILTERRESON, 8,
         OctoShifterProcessor::PAR_RESON0_LFOAMOUNTS, PitchShifter::MT_F0RESON));
+
     multiSliders.push_back(std::make_unique<MultiSlider>(
         p, "PAN/AZIMUTH", OctoShifterProcessor::PAR_AZIMUTH, 8,
         OctoShifterProcessor::PAR_AZIMUTHLFOAMOUNTS, PitchShifter::MT_AZI));
+    spatializationTabs.addTab("PAN/AZIMUTH", juce::Colours::grey, multiSliders.back().get(), false);
+    multiSliders.push_back(std::make_unique<MultiSlider>(
+        p, "ELEVATION", OctoShifterProcessor::PAR_ELEVATION, 8,
+        OctoShifterProcessor::PAR_ELEVATION_LFOAMOUNTS, PitchShifter::MT_ELEVATION));
+    spatializationTabs.addTab("ELEVATION", juce::Colours::grey, multiSliders.back().get(), false);
+
     multiSliders.push_back(std::make_unique<MultiSlider>(
         p, "OUTPUT VOLUME", OctoShifterProcessor::PAR_OUTPUT_GAIN, 8,
         OctoShifterProcessor::PAR_OUTVOLUME_LFOAMOUNTS, PitchShifter::MT_OUTVOLUME));
     for (auto &c : multiSliders)
     {
-        addAndMakeVisible(*c);
+        if (c->groupname != "PAN/AZIMUTH" && c->groupname != "ELEVATION")
+            addAndMakeVisible(*c);
     }
     addAndMakeVisible(optionsMenuButton);
     optionsMenuButton.setButtonText("OPTIONS");
@@ -215,8 +224,12 @@ void OctoShifterProcessorEditor::resized()
     multiflex.flexWrap = juce::FlexBox::Wrap::wrap;
     for (auto &c : multiSliders)
     {
-        multiflex.items.add(juce::FlexItem(*c).withFlex(1.0).withMargin(3));
+        if (c->groupname != "PAN/AZIMUTH" && c->groupname != "ELEVATION")
+        {
+            multiflex.items.add(juce::FlexItem(*c).withFlex(1.0).withMargin(3));
+        }
     }
+    multiflex.items.add(juce::FlexItem(spatializationTabs).withFlex(1).withMargin(3));
     juce::FlexBox miscflex;
     miscflex.flexDirection = juce::FlexBox::Direction::row;
     miscflex.items.add(

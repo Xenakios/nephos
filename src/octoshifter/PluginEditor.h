@@ -241,6 +241,7 @@ class OctoShifterProcessorEditor final : public juce::AudioProcessorEditor, publ
     std::vector<std::unique_ptr<LFOComponent>> lfo_comps;
 
     std::vector<std::unique_ptr<MultiSlider>> multiSliders;
+    juce::TabbedComponent spatializationTabs;
     std::unordered_map<uint32_t, XapSlider *> paridtoslidermap;
     juce::Label infoLabel;
     XapSlider pitchQualityDrop;

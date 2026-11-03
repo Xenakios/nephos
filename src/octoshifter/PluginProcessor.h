@@ -85,6 +85,7 @@ class PitchShifter
     float baseformant = 0.0f;
     float basefiltercutoff = 36.0f;
     float baseazimuth = 0.0f;
+    float base_elevation = 0.0f;
     float base_filter_reson = 0.0f;
 
     float base_in_volume = 0.0f;
@@ -412,10 +413,13 @@ class PitchShifter
             alignas(16) float newambicoeffs[64] = {0.0f};
             float azi_degrees = modulated_azi * 180.0f;
             float azi_radians = degreesToRadians(azi_degrees);
+            float modulated_elev = base_elevation + modsums[MT_ELEVATION];
+            modulated_elev = std::clamp(modulated_elev, -1.0f, 1.0f) * 180.0f;
+            float elev_radians = degreesToRadians(modulated_elev);
             float x = 0.0f;
             float y = 0.0f;
             float z = 0.0f;
-            sphericalToCartesian(azi_radians, 0.0f, x, y, z);
+            sphericalToCartesian(azi_radians, elev_radians, x, y, z);
             SHEval3(x, y, z, newambicoeffs);
             for (int i = 0; i < 16; ++i)
                 newambicoeffs[i] *= n3d2sn3d[i];
@@ -533,6 +537,7 @@ class OctoShifterProcessor final : public juce::AudioProcessor
         PAR_FILTERCUTOFF = 500,
         PAR_FILTERRESON = 600,
         PAR_AZIMUTH = 700,
+        PAR_ELEVATION = 750,
         PAR_PITCHQUALITY = 800,
         PAR_OUTPUTMODE = 900,
         PAR_LFOSHAPES = 10000,
@@ -547,7 +552,8 @@ class OctoShifterProcessor final : public juce::AudioProcessor
         PAR_DELAYFB_LFOAMOUNTS = 54000,
         PAR_INVOLUME_LFOAMOUNTS = 55000,
         PAR_RESON0_LFOAMOUNTS = 56000,
-        PAR_OUTVOLUME_LFOAMOUNTS = 57000
+        PAR_OUTVOLUME_LFOAMOUNTS = 57000,
+        PAR_ELEVATION_LFOAMOUNTS = 58000
     };
     void set_initialpatch();
     std::vector<pmd> param_metadatas;

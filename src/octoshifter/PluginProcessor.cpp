@@ -86,6 +86,12 @@ OctoShifterProcessor::OctoShifterProcessor()
                                       .withDefault(0.0)
                                       .withLinearScaleFormatting("%", 100.0)
                                       .withID(PAR_AZIMUTH + i));
+        param_metadatas.push_back(pmd()
+                                      .withName(fmt::format("Elevation {}", i + 1))
+                                      .withRange(-1.0f, 1.0f)
+                                      .withDefault(0.0)
+                                      .withLinearScaleFormatting("%", 100.0)
+                                      .withID(PAR_ELEVATION + i));
     }
     param_metadatas.push_back(
         pmd()
@@ -147,6 +153,11 @@ OctoShifterProcessor::OctoShifterProcessor()
                                       .withRange(-1.0f, 1.0f)
                                       .withLinearScaleFormatting("%", 100.0)
                                       .withID(PAR_AZIMUTHLFOAMOUNTS + i));
+        param_metadatas.push_back(pmd()
+                                      .withName(fmt::format("LFO {} AMOUNT", i + 1))
+                                      .withRange(-1.0f, 1.0f)
+                                      .withLinearScaleFormatting("%", 100.0)
+                                      .withID(PAR_ELEVATION_LFOAMOUNTS + i));
         param_metadatas.push_back(pmd()
                                       .withName(fmt::format("LFO {} AMOUNT", i + 1))
                                       .withRange(-1.0f, 1.0f)
@@ -505,6 +516,9 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 float azimod = *par_id_to_value_pointer[PAR_AZIMUTHLFOAMOUNTS + i];
                 shifters[shindex].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_AZI] =
                     azimod;
+                float elevmod = *par_id_to_value_pointer[PAR_ELEVATION_LFOAMOUNTS + i];
+                shifters[shindex].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_ELEVATION] =
+                    elevmod;
                 shifters[shindex].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_FORMANT] =
                     *par_id_to_value_pointer[PAR_FORMANT_LFOAMOUNTS + i];
                 shifters[shindex].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_F0CUTOFF] =
@@ -661,6 +675,10 @@ void OctoShifterProcessor::set_parameter_value(uint32_t id, float value)
     if (id >= PAR_AZIMUTH && id < PAR_AZIMUTH + numshifters)
     {
         shifters[id - PAR_AZIMUTH].baseazimuth = value;
+    }
+    if (id >= PAR_ELEVATION && id < PAR_ELEVATION + numshifters)
+    {
+        shifters[id - PAR_ELEVATION].base_elevation = value;
     }
     if (id >= PAR_DELAYFEEDBACK && id < PAR_DELAYFEEDBACK + numshifters)
     {
