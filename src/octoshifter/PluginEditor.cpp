@@ -96,6 +96,18 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
                 Log::info("{}", e.what());
             }
         });
+        menu.addItem("Paste JSON state from clipboard", true, false, [this]() {
+            try
+            {
+                auto txt = juce::SystemClipboard::getTextFromClipboard().toStdString();
+                auto ob = choc::json::parse(txt);
+                processorRef.set_state(ob);
+            }
+            catch (std::exception &e)
+            {
+                Log::info("{}", e.what());
+            }
+        });
         menu.showMenuAsync({});
     };
     addAndMakeVisible(infoLabel);
@@ -191,6 +203,22 @@ void OctoShifterProcessorEditor::timerCallback()
         if (it != paridtoslidermap.end())
         {
             it->second->setValue(msg.val);
+        }
+        bool fullbreak = false;
+        for (auto &m : multiSliders)
+        {
+            for (auto &p : m->paraminfos)
+            {
+                if (p.id == msg.id)
+                {
+                    p.value = msg.val;
+                    m->repaint();
+                    fullbreak = true;
+                    break;
+                }
+            }
+            if (fullbreak)
+                break;
         }
     }
     FilterModeMessage fmsg;

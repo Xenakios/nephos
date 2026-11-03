@@ -773,8 +773,6 @@ void OctoShifterProcessor::set_state(choc::value::ValueView view)
         }
     }
 
-    //[{"shifter": 0, "src": 0, "dest": 4, "curveid": 5}, {"shifter": 0, "src": 0, "dest": 6,
-    //"curveid": 31}]
     if (view.hasObjectMember("parameters"))
     {
         auto params = view["parameters"];
