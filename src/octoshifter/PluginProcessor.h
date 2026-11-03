@@ -8,6 +8,7 @@
 #include "juce_audio_basics/juce_audio_basics.h"
 #include "juce_audio_processors_headless/juce_audio_processors_headless.h"
 #include "juce_core/juce_core.h"
+#include "modcurves.h"
 #include "signalsmith-stretch.h"
 #include "sst/basic-blocks/modulators/SimpleLFO.h"
 #include "sst/basic-blocks/dsp/EllipticBlepOscillators.h"
@@ -151,25 +152,30 @@ class PitchShifter
     alignas(16) float feedbackaudio[BLOCKSIZE] = {0.0f};
 
     alignas(16) float modmatrix[MS_COUNT][MT_COUNT];
-    alignas(16) std::function<float(float)> modmatrixcurves[MS_COUNT][MT_COUNT];
+    struct CurveInfo
+    {
+        int id = -1;
+        std::function<float(float)> func;
+    };
+    alignas(16) CurveInfo modmatrixcurves[MS_COUNT][MT_COUNT];
     std::atomic<int> pending_quality_change{-1};
     std::atomic<int> latency_in;
     std::atomic<int> latency_out;
-
-    PitchShifter()
+    void reset_mod_curves()
     {
         for (int i = 0; i < MS_COUNT; ++i)
         {
             for (int j = 0; j < MT_COUNT; ++j)
             {
                 modmatrix[i][j] = 0.0f;
-                modmatrixcurves[i][j] = [](float x) { return x; };
+                modmatrixcurves[i][j] = {CURVE_LINEAR, [](float x) { return x; }};
             }
         }
-        modmatrixcurves[MS_LFO0][MT_DELAYFEEDBACK] = [](float x) {
-            return std::clamp((x + 1.0f) * 0.5f, 0.0f, 1.0f);
-        };
-        // modmatrixcurves[MS_LFO1][MT_PITCH] = [](float x) { return xor_curve(x, 17844); };
+    }
+    PitchShifter()
+    {
+        reset_mod_curves();
+
         stretch = std::make_unique<signalsmith::stretch::SignalsmithStretch<>>();
         ingainlag.setRateInMilliseconds(5.0, 44100.0, 1.0f);
         ingainlag.snapTo(0.0);
@@ -326,7 +332,7 @@ class PitchShifter
                 if (std::abs(modmatrix[i][j]) > 0.0f)
                 {
                     float msval = mod_source_values[i];
-                    msval = modmatrixcurves[i][j](msval);
+                    msval = modmatrixcurves[i][j].func(msval);
                     modsums[j] += modmatrix[i][j] * msval;
                 }
             }
@@ -607,7 +613,7 @@ class OctoShifterProcessor final : public juce::AudioProcessor
     std::atomic<bool> dc_blocker_enabled = true;
     std::atomic<bool> formant_compensation = false;
     std::unordered_map<int, float> mod_ranges;
-    
+
     FilterModeMessage current_filter_mode;
 
   private:

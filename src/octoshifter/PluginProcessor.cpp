@@ -8,6 +8,7 @@
 #include "juce_core/juce_core.h"
 #include "modcurves.h"
 #include "sst/filters++/api.h"
+#include "text/choc_JSON.h"
 #include <unordered_map>
 
 //==============================================================================
@@ -24,6 +25,7 @@ OctoShifterProcessor::OctoShifterProcessor()
     filter_mode_from_gui_fifo.reset(32);
     filter_mode_to_gui_fifo.reset(32);
     curve_from_gui_fifo.reset(32);
+
     for (int i = 0; i < numshifters; ++i)
     {
         param_metadatas.push_back(pmd()
@@ -459,11 +461,7 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         assert(func);
         assert(curmsg.shifter_index >= 0);
         shifters[curmsg.shifter_index]
-            .modmatrixcurves[curmsg.lfoindex][curmsg.shifter_param_target] = func;
-        for (auto &sh : shifters)
-        {
-            // sh.modmatrixcurves[curmsg.lfoindex][curmsg.shifter_param_target] = func;
-        }
+            .modmatrixcurves[curmsg.lfoindex][curmsg.shifter_param_target] = {curmsg.curveid, func};
     }
     ParamChangeMessage msg;
     while (params_from_gui_fifo.pop(msg))
@@ -532,7 +530,7 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 shifters[shindex].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_F0RESON] =
                     *par_id_to_value_pointer[PAR_RESON0_LFOAMOUNTS + i];
             }
-            
+
             for (int i = 0; i < BLOCKSIZE; ++i)
             {
                 procbuf[i * max_output_channels] = inputbuffer[shindex % 2][i];
@@ -706,7 +704,29 @@ choc::value::Value OctoShifterProcessor::get_state()
     filterstate.setMember("dt", (int64_t)current_filter_mode.config.dt);
     filterstate.setMember("mt", (int64_t)current_filter_mode.config.mt);
     state.setMember("filter0state", filterstate);
-    
+    auto modcurves_state = choc::value::createEmptyArray();
+    for (int shindex = 0; shindex < shifters.size(); ++shindex)
+    {
+        for (int i = 0; i < PitchShifter::MS_COUNT; ++i)
+        {
+            for (int j = 0; j < PitchShifter::MT_COUNT; ++j)
+            {
+                auto info = shifters[shindex].modmatrixcurves[i][j];
+                if (info.id != CURVE_LINEAR)
+                {
+                    // Log::info("storing non-default curve {} {} {} {}", shindex, i, j, info.id);
+                    auto ob = choc::value::createObject("curvefunc");
+                    ob.setMember("shifter", shindex);
+                    ob.setMember("src", i);
+                    ob.setMember("dest", j);
+                    ob.setMember("curveid", info.id);
+                    modcurves_state.addArrayElement(ob);
+                }
+            }
+        }
+    }
+    state.setMember("modcurves", modcurves_state);
+    DBG(choc::json::toString(modcurves_state));
     return state;
 }
 
@@ -724,7 +744,37 @@ void OctoShifterProcessor::set_state(choc::value::ValueView view)
         fm.config.pt = (decltype(fm.config.pt))filterstate["pt"].getWithDefault(0);
         filter_mode_from_gui_fifo.push(fm);
     }
-    
+    if (view.hasObjectMember("modcurves"))
+    {
+        auto modar = view["modcurves"];
+        for (auto &sh : shifters)
+            sh.reset_mod_curves();
+        for (int i = 0; i < modar.size(); ++i)
+        {
+            auto ob = modar[i];
+            int shifter = ob["shifter"].getWithDefault(-1);
+            if (shifter >= 0 && shifter < numshifters)
+            {
+                int src = ob["src"].getWithDefault(-1);
+                int dest = ob["dest"].getWithDefault(-1);
+                if (src >= 0 && src < PitchShifter::MS_COUNT && dest >= 0 &&
+                    dest < PitchShifter::MT_COUNT)
+                {
+                    int id = ob["curveid"].getWithDefault(-1);
+                    if (id >= CURVE_LINEAR && id < NUM_CURVES)
+                    {
+                        auto func = getCurveOperator(id);
+                        if (func)
+                            shifters[shifter].modmatrixcurves[src][dest] = {id,
+                                                                            getCurveOperator(id)};
+                    }
+                }
+            }
+        }
+    }
+
+    //[{"shifter": 0, "src": 0, "dest": 4, "curveid": 5}, {"shifter": 0, "src": 0, "dest": 6,
+    //"curveid": 31}]
     if (view.hasObjectMember("parameters"))
     {
         auto params = view["parameters"];
