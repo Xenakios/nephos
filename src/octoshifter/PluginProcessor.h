@@ -439,7 +439,7 @@ class PitchShifter
                 azilag.process();
             }
         }
-        else if (ochanmode == OCM_AMBISONICS_3RD)
+        else if (ochanmode >= OCM_AMBISONICS_1ST && ochanmode <= OCM_AMBISONICS_3RD)
         {
             alignas(16) float newambicoeffs[64] = {0.0f};
             float azi_degrees = modulated_azi * 180.0f;
@@ -451,8 +451,13 @@ class PitchShifter
             float y = 0.0f;
             float z = 0.0f;
             sphericalToCartesian(azi_radians, elev_radians, x, y, z);
-            SHEval3(x, y, z, newambicoeffs);
-            for (int i = 0; i < 16; ++i)
+            if (ochanmode == OCM_AMBISONICS_1ST)
+                SHEval1(x, y, z, newambicoeffs);
+            else if (ochanmode == OCM_AMBISONICS_2ND)
+                SHEval2(x, y, z, newambicoeffs);
+            else if (ochanmode == OCM_AMBISONICS_3RD)
+                SHEval3(x, y, z, newambicoeffs);
+            for (int i = 0; i < numoutchans; ++i)
                 newambicoeffs[i] *= n3d2sn3d[i];
             // obviously this could be optimized in various ways, but
             // will suffice for now...
@@ -460,7 +465,7 @@ class PitchShifter
             {
                 float interpos = 1.0f / BLOCKSIZE * i;
                 float ain = tempoutbuffer[i];
-                for (int j = 0; j < 16; ++j)
+                for (int j = 0; j < numoutchans; ++j)
                 {
                     float coeffa = spatcoeffs[j];
                     float coeffb = newambicoeffs[j];
@@ -468,7 +473,7 @@ class PitchShifter
                     audio_inout[i * 64 + j] = ain * interpcoeff;
                 }
             }
-            for (int j = 0; j < 16; ++j)
+            for (int j = 0; j < numoutchans; ++j)
             {
                 spatcoeffs[j] = newambicoeffs[j];
             }
