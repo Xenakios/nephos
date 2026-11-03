@@ -63,7 +63,15 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
     {
         addAndMakeVisible(*c);
     }
-
+    addAndMakeVisible(optionsMenuButton);
+    optionsMenuButton.setButtonText("OPTIONS");
+    optionsMenuButton.onClick = [this]() {
+        juce::PopupMenu menu;
+        menu.addItem("DC blocker enabled", true, processorRef.dc_blocker_enabled, [this]() {
+            processorRef.dc_blocker_enabled = !processorRef.dc_blocker_enabled;
+        });
+        menu.showMenuAsync({});
+    };
     addAndMakeVisible(infoLabel);
     add_xapslider(p, *this, pitchQualityDrop);
     add_xapslider(p, *this, outputModeDrop);
@@ -209,11 +217,14 @@ void OctoShifterProcessorEditor::resized()
     juce::FlexBox miscflex;
     miscflex.flexDirection = juce::FlexBox::Direction::row;
     miscflex.items.add(
+        juce::FlexItem(optionsMenuButton).withFlex(0.3).withMaxHeight(25).withMargin(2));
+    miscflex.items.add(
         juce::FlexItem(pitchQualityDrop).withFlex(1).withMaxHeight(25).withMargin(2));
     miscflex.items.add(juce::FlexItem(outputModeDrop).withFlex(1).withMaxHeight(25).withMargin(2));
     miscflex.items.add(
         juce::FlexItem(filterPicker.showButton).withFlex(1).withMaxHeight(25).withMargin(2));
-    miscflex.items.add(juce::FlexItem(infoLabel).withFlex(1).withMaxHeight(25));
+    miscflex.items.add(juce::FlexItem(infoLabel).withFlex(0.7).withMaxHeight(25));
+
     flex.items.add(juce::FlexItem(miscflex).withFlex(0.4).withMargin(1));
     for (auto &e : multiflex.items)
     {

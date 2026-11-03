@@ -530,6 +530,7 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             {
                 procbuf[i * max_output_channels] = inputbuffer[shindex % 2][i];
             }
+            shifters[shindex].dcblocker_enabled = dc_blocker_enabled;
             shifters[shindex].process_block(procbuf);
             if (gui_visible && callbackcount % 8 == 0)
             {

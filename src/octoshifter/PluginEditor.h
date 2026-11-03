@@ -224,62 +224,6 @@ class LFOComponent : public juce::Component
     }
 };
 
-class ShifterComponent : public juce::Component
-{
-  public:
-    OctoShifterProcessor &procRef;
-    ShifterComponent(OctoShifterProcessor &p, int shifter_index)
-        : procRef(p),
-          enabledButton(XapSlider::SS_HorizontalSlider,
-                        *p.par_id_to_metadata[OctoShifterProcessor::PAR_ENABLED + shifter_index]),
-          inputGainKnob(
-              XapSlider::SS_Knob,
-              *p.par_id_to_metadata[OctoShifterProcessor::PAR_INPUT_GAIN + shifter_index]),
-          delayKnob(XapSlider::SS_Knob,
-                    *p.par_id_to_metadata[OctoShifterProcessor::PAR_DELAYTIME + shifter_index]),
-          pitchKnob(XapSlider::SS_Knob,
-                    *p.par_id_to_metadata[OctoShifterProcessor::PAR_PITCH + shifter_index]),
-          formantKnob(XapSlider::SS_Knob,
-                      *p.par_id_to_metadata[OctoShifterProcessor::PAR_FORMANT + shifter_index]),
-          cutoffKnob(XapSlider::SS_Knob,
-                     *p.par_id_to_metadata[OctoShifterProcessor::PAR_FILTERCUTOFF + shifter_index])
-    {
-        addAndMakeVisible(lab);
-        lab.setText(juce::String(shifter_index + 1), juce::dontSendNotification);
-        add_xapslider(p, *this, enabledButton);
-        add_xapslider(p, *this, delayKnob);
-        add_xapslider(p, *this, inputGainKnob);
-        add_xapslider(p, *this, pitchKnob);
-        add_xapslider(p, *this, formantKnob);
-        add_xapslider(p, *this, cutoffKnob);
-    }
-    void resized() override
-    {
-        juce::FlexBox flex;
-        flex.flexDirection = juce::FlexBox::Direction::row;
-        // flex.items.add(juce::FlexItem(lab).withFlex(0.1));
-        flex.items.add(juce::FlexItem(enabledButton).withFlex(0.5).withMaxHeight(25));
-        flex.items.add(juce::FlexItem(inputGainKnob).withFlex(1));
-        flex.items.add(juce::FlexItem(delayKnob).withFlex(1));
-        flex.items.add(juce::FlexItem(pitchKnob).withFlex(1));
-        flex.items.add(juce::FlexItem(formantKnob).withFlex(1));
-        flex.items.add(juce::FlexItem(cutoffKnob).withFlex(1));
-        for (auto &i : flex.items)
-        {
-            i = i.withMargin(2.0f);
-        }
-        flex.performLayout(getLocalBounds());
-    }
-    juce::Label lab;
-    XapSlider enabledButton;
-    XapSlider inputGainKnob;
-    XapSlider pitchKnob;
-    XapSlider formantKnob;
-    XapSlider delayKnob;
-    XapSlider cutoffKnob;
-    // XapSlider spatKnob;
-};
-
 class OctoShifterProcessorEditor final : public juce::AudioProcessorEditor, public juce::Timer
 {
   public:
@@ -293,7 +237,7 @@ class OctoShifterProcessorEditor final : public juce::AudioProcessorEditor, publ
 
   private:
     OctoShifterProcessor &processorRef;
-    std::vector<std::unique_ptr<ShifterComponent>> shiftercomps;
+    
     std::vector<std::unique_ptr<LFOComponent>> lfo_comps;
 
     std::vector<std::unique_ptr<MultiSlider>> multiSliders;
@@ -301,6 +245,7 @@ class OctoShifterProcessorEditor final : public juce::AudioProcessorEditor, publ
     juce::Label infoLabel;
     XapSlider pitchQualityDrop;
     XapSlider outputModeDrop;
+    juce::TextButton optionsMenuButton;
     GalleryPicker filterPicker;
     std::unordered_map<int64_t, FilterModeMessage> id_to_filter_mode;
     void update_filter_button(int64_t id);

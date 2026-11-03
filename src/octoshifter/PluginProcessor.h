@@ -100,6 +100,7 @@ class PitchShifter
     alignas(16) std::array<float, 64> spatcoeffs = {0.0f};
     alignas(16) sst::filtersplusplus::Filter sstfilter;
     alignas(16) sst::basic_blocks::dsp::DCBlocker<BLOCKSIZE> dcfilter;
+    bool dcblocker_enabled = true;
     int numoutchans = 2;
     sst::basic_blocks::dsp::OnePoleLag<float, true> ingainlag;
     sst::basic_blocks::dsp::OnePoleLag<float, true> outgainlag;
@@ -313,10 +314,13 @@ class PitchShifter
         {
             float insample = audio_inout[i * 64] * ingainlag.getValue();
             insample += feedbackaudio[i] * fblag.getValue();
-            insample = dcfilter.step(insample);
             processinbuffer[0][i] = insample;
             ingainlag.process();
             fblag.process();
+        }
+        if (dcblocker_enabled)
+        {
+            dcfilter.filter(processinbuffer[0], processinbuffer[0]);
         }
         float modulatedpitch = basepitch + modsums[MT_PITCH] * 12.0;
         stretch->setTransposeSemitones(modulatedpitch);
@@ -526,6 +530,7 @@ class OctoShifterProcessor final : public juce::AudioProcessor
     std::atomic<int> outfifoavail = 0;
     std::atomic<int> infifoavail = 0;
     std::atomic<int> outsilencecount = 0;
+    std::atomic<bool> dc_blocker_enabled = true;
     std::unordered_map<int, float> mod_ranges;
     // since we are not crazy enough to allow separate modulation amounts for each parameter
     // of each shifter, we have these patterns that can still produce different modulation
