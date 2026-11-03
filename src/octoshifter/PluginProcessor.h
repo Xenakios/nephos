@@ -419,15 +419,18 @@ class PitchShifter
             SHEval3(x, y, z, newambicoeffs);
             for (int i = 0; i < 16; ++i)
                 newambicoeffs[i] *= n3d2sn3d[i];
+            // obviously this could be optimized in various ways, but
+            // will suffice for now...
             for (int i = 0; i < BLOCKSIZE; ++i)
             {
-                float interpos = 1.0 / BLOCKSIZE * i;
+                float interpos = 1.0f / BLOCKSIZE * i;
+                float ain = tempoutbuffer[i];
                 for (int j = 0; j < 16; ++j)
                 {
                     float coeffa = spatcoeffs[j];
                     float coeffb = newambicoeffs[j];
                     float interpcoeff = coeffa + (coeffb - coeffa) * interpos;
-                    audio_inout[i * 64 + j] = tempoutbuffer[i] * interpcoeff;
+                    audio_inout[i * 64 + j] = ain * interpcoeff;
                 }
             }
             for (int j = 0; j < 16; ++j)
