@@ -341,31 +341,10 @@ void MultiSlider::mouseDown(const juce::MouseEvent &ev)
                 }
                 menu.addSubMenu("LFO " + juce::String(i + 1) + " curve", curvemenu);
             }
-            // menu.addSectionHeader("LFO " + juce::String(paraminfos[paramindex].lfoindex + 1) +
-            //                       " modulation curve");
-
             menu.showMenuAsync({});
             return;
         }
-        if (paraminfos[paramindex].lfoindex == -1)
-        {
-            juce::PopupMenu menu;
-            menu.addSectionHeader("Per shifter modulation pattern");
-            for (int i = 0; i < OctoShifterProcessor::num_modulation_patterns; ++i)
-            {
-                std::string txt;
-                for (int j = 0; j < 8; ++j)
-                {
-                    txt += fmt::format("{} ", pref.modulation_patterns[i][j]);
-                }
-                int curpat = pref.modtarget_to_modpattern[shifter_modulation_target];
-                menu.addItem(txt, true, i == curpat, [this, i]() {
-                    pref.modtarget_to_modpattern[shifter_modulation_target] = i;
-                });
-            }
-            menu.showMenuAsync({});
-            return;
-        }
+        
     }
 
     draggedindex = -1;

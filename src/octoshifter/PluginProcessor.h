@@ -211,8 +211,9 @@ class PitchShifter
     OUTCHANSMODE ochanmode = OCM_STEREO;
     void set_output_mode(OUTCHANSMODE om)
     {
+        if (om == ochanmode)
+            return;
 
-        numoutchans = 0;
         if (om == OCM_STEREO)
             numoutchans = 2;
         else if (om == OCM_MONODISCRETE)
@@ -222,15 +223,11 @@ class PitchShifter
         else if (om == OCM_AMBISONICS_2ND)
             numoutchans = 9;
         else if (om == OCM_AMBISONICS_3RD)
-        {
             numoutchans = 16;
-            if (ochanmode != OCM_AMBISONICS_3RD)
-            {
-                for (int i = 0; i < 16; ++i)
-                {
-                    spatcoeffs[i] = 0.0f;
-                }
-            }
+
+        for (int i = 0; i < numoutchans; ++i)
+        {
+            spatcoeffs[i] = 0.0f;
         }
         ochanmode = om;
         assert(numoutchans > 0);
@@ -610,15 +607,7 @@ class OctoShifterProcessor final : public juce::AudioProcessor
     std::atomic<bool> dc_blocker_enabled = true;
     std::atomic<bool> formant_compensation = false;
     std::unordered_map<int, float> mod_ranges;
-    // since we are not crazy enough to allow separate modulation amounts for each parameter
-    // of each shifter, we have these patterns that can still produce different modulation
-    // amounts per shifter
-    static const size_t num_modulation_patterns = 4;
-    const int8_t modulation_patterns[num_modulation_patterns][8] = {{1, 1, 1, 1, 1, 1, 1, 1},
-                                                                    {1, -1, 1, -1, 1, -1, 1, -1},
-                                                                    {-1, 1, -1, 1, -1, 1, -1, 1},
-                                                                    {1, 0, 0, 0, 0, 0, 0, 0}};
-    std::array<int, PitchShifter::MT_COUNT> modtarget_to_modpattern = {0};
+    
     FilterModeMessage current_filter_mode;
 
   private:

@@ -100,13 +100,16 @@ OctoShifterProcessor::OctoShifterProcessor()
                 {{0, "Default"}, {1, "Cheap"}, {2, "Borken"}, {3, "Slow and high CPU"}}, true)
             .withDefault(0)
             .withID(PAR_PITCHQUALITY));
-    param_metadatas.push_back(
-        pmd()
-            .withName("OUTPUT MODE")
-            .withUnorderedMapFormatting(
-                {{0, "Stereo"}, {1, "Discrete 8 ch"}, {2, "3rd oAmbisonics"}}, true)
-            .withDefault(0)
-            .withID(PAR_OUTPUTMODE));
+    param_metadatas.push_back(pmd()
+                                  .withName("OUTPUT MODE")
+                                  .withUnorderedMapFormatting({{0, "Stereo"},
+                                                               {1, "Discrete 8 ch"},
+                                                               {2, "1OA(mbisonics)"},
+                                                               {3, "2OA(mbisonics)"},
+                                                               {4, "3OA(mbisonics)"}},
+                                                              true)
+                                  .withDefault(0)
+                                  .withID(PAR_OUTPUTMODE));
     for (int i = 0; i < numLFOs; ++i)
     {
         param_metadatas.push_back(pmd()
@@ -367,7 +370,6 @@ bool OctoShifterProcessor::isBusesLayoutSupported(const BusesLayout &layouts) co
     return true;
 }
 
-
 void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                                         juce::MidiBuffer &midiMessages)
 {
@@ -423,6 +425,16 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         shifteroutmode = PitchShifter::OCM_MONODISCRETE;
     }
     else if (omode == 2)
+    {
+        engineOutChannels = 4;
+        shifteroutmode = PitchShifter::OCM_AMBISONICS_1ST;
+    }
+    else if (omode == 3)
+    {
+        engineOutChannels = 9;
+        shifteroutmode = PitchShifter::OCM_AMBISONICS_2ND;
+    }
+    else if (omode == 4)
     {
         engineOutChannels = 16;
         shifteroutmode = PitchShifter::OCM_AMBISONICS_3RD;
@@ -520,14 +532,7 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 shifters[shindex].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_F0RESON] =
                     *par_id_to_value_pointer[PAR_RESON0_LFOAMOUNTS + i];
             }
-            for (int i = 0; i < PitchShifter::MS_COUNT; ++i)
-            {
-                for (int j = 0; j < PitchShifter::MT_COUNT; ++j)
-                {
-                    int modpat = modtarget_to_modpattern[j];
-                    shifters[shindex].modmatrix[i][j] *= modulation_patterns[modpat][shindex];
-                }
-            }
+            
             for (int i = 0; i < BLOCKSIZE; ++i)
             {
                 procbuf[i * max_output_channels] = inputbuffer[shindex % 2][i];
@@ -701,12 +706,7 @@ choc::value::Value OctoShifterProcessor::get_state()
     filterstate.setMember("dt", (int64_t)current_filter_mode.config.dt);
     filterstate.setMember("mt", (int64_t)current_filter_mode.config.mt);
     state.setMember("filter0state", filterstate);
-    auto modpatterns_state = choc::value::createEmptyArray();
-    for (int i = 0; i < PitchShifter::MT_COUNT; ++i)
-    {
-        modpatterns_state.addArrayElement((int64_t)modtarget_to_modpattern[i]);
-    }
-    state.setMember("parametermodpatterns", modpatterns_state);
+    
     return state;
 }
 
@@ -724,17 +724,7 @@ void OctoShifterProcessor::set_state(choc::value::ValueView view)
         fm.config.pt = (decltype(fm.config.pt))filterstate["pt"].getWithDefault(0);
         filter_mode_from_gui_fifo.push(fm);
     }
-    if (view.hasObjectMember("parametermodpatterns"))
-    {
-        auto patar = view["parametermodpatterns"];
-        for (int i = 0; i < patar.size(); ++i)
-        {
-            if (i < PitchShifter::MT_COUNT)
-            {
-                modtarget_to_modpattern[i] = patar[i].getWithDefault(0);
-            }
-        }
-    }
+    
     if (view.hasObjectMember("parameters"))
     {
         auto params = view["parameters"];
