@@ -7,6 +7,8 @@
 #include "sst/filters++/api.h"
 #include "sst/filters++/enums.h"
 #include "sst/filters++/enums_to_string.h"
+#include "text/choc_JSON.h"
+#include <exception>
 #include "PluginEditor.h"
 
 template <typename CompType>
@@ -81,6 +83,18 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
             [this]() { processorRef.formant_compensation = !processorRef.formant_compensation; });
         menu.addItem("DC blocker enabled", true, processorRef.dc_blocker_enabled, [this]() {
             processorRef.dc_blocker_enabled = !processorRef.dc_blocker_enabled;
+        });
+        menu.addItem("Copy state to clipboard as JSON", true, false, [this]() {
+            try
+            {
+                auto state = processorRef.get_state();
+                auto txt = choc::json::toString(state, true);
+                juce::SystemClipboard::copyTextToClipboard(txt);
+            }
+            catch (std::exception &e)
+            {
+                Log::info("{}", e.what());
+            }
         });
         menu.showMenuAsync({});
     };
@@ -344,7 +358,6 @@ void MultiSlider::mouseDown(const juce::MouseEvent &ev)
             menu.showMenuAsync({});
             return;
         }
-        
     }
 
     draggedindex = -1;
