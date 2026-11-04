@@ -26,6 +26,12 @@ OctoShifterProcessor::OctoShifterProcessor()
     filter_mode_to_gui_fifo.reset(32);
     curve_from_gui_fifo.reset(32);
 
+    input_routings.reserve(32);
+    input_routings.emplace_back(IN0, 0);
+    input_routings.emplace_back(IN0, 1);
+    input_routings.emplace_back(SAW0, 7);
+    input_routings.emplace_back(SINE0, 6);
+    input_routings.emplace_back(NOISE0, 3);
     for (int i = 0; i < numshifters; ++i)
     {
         param_metadatas.push_back(pmd()
@@ -336,6 +342,8 @@ void OctoShifterProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     initTables();
     workbuffer.setSize(max_output_channels, samplesPerBlock);
     workbuffer.clear();
+    synthbuffer.setSize(8, samplesPerBlock);
+    synthbuffer.clear();
     current_filter_mode.model = shifters[0].sstfilter.getFilterModel();
     current_filter_mode.config = shifters[0].sstfilter.getModelConfiguration();
 }
@@ -397,44 +405,34 @@ bool OctoShifterProcessor::isBusesLayoutSupported(const BusesLayout &layouts) co
     return true;
 }
 
-void OctoShifterProcessor::process_test_signal(int numframes)
+void OctoShifterProcessor::process_synth_signals(int numframes)
 {
     const double oscinc0 = 2 * M_PI / getSampleRate() * 80.0;
     const double oscinc1 = 2 * M_PI / getSampleRate() * 80.0 * (21.0 / 9);
     const float TWO_PI = 6.28318530718f;
     std::array<float, max_input_channels> fifoframe;
+    auto synthbuf = synthbuffer.getArrayOfWritePointers();
+    float oscgain = 0.5;
     for (int i = 0; i < numframes; ++i)
     {
-        float phase = osc0phase / TWO_PI;                      // 0..1 if osc0phase is radians
-        float saw = 2.0f * (phase - std::floor(phase + 0.5f)); // -1..1
-        float osc0 = 0.5f * saw;
-        // float osc0 = 0.5 * reflect_value_no_loop(-1.0, std::sin(osc0phase) * 8, 1.0);
-        float osc1 = 0.5 * reflect_value_no_loop(-1.0, std::sin(osc1phase) * 8, 1.0);
-        if (test_signal_choice == 0)
-        {
-            fifoframe[0] = osc0;
-            fifoframe[1] = osc0;
-        }
-        else if (test_signal_choice == 1)
-        {
-            fifoframe[0] = osc1;
-            fifoframe[1] = osc1;
-        }
-        else if (test_signal_choice == 2)
-        {
-            float s = rng.nextFloatInRange(-0.5, 0.5);
-            fifoframe[0] = s;
-            fifoframe[1] = s;
-        }
-        else if (test_signal_choice == 3)
-        {
-
-            fifoframe[0] = rng.nextFloatInRange(-0.5, 0.5);
-            fifoframe[1] = rng.nextFloatInRange(-0.5, 0.5);
-        }
+        float sine0 = std::sin(osc0phase);
+        float sine1 = std::sin(osc1phase);
+        float phase = osc0phase / TWO_PI;
+        float saw0 = 2.0f * (phase - std::floor(phase + 0.5f));
+        phase = osc1phase / TWO_PI;
+        float saw1 = 2.0f * (phase - std::floor(phase + 0.5f));
+        synthbuf[0][i] = sine0 * oscgain;
+        synthbuf[1][i] = sine1 * oscgain;
+        synthbuf[2][i] = saw0 * oscgain;
+        synthbuf[3][i] = saw1 * oscgain;
+        synthbuf[4][i] = reflect_value_no_loop(-1.0f, sine0 * 8, 1.0f) * oscgain;
+        synthbuf[5][i] = reflect_value_no_loop(-1.0f, sine1 * 8, 1.0f) * oscgain;
+        float noise0 = rng.nextFloatInRange(-0.5, 0.5);
+        float noise1 = rng.nextFloatInRange(-0.5, 0.5);
+        synthbuf[6][i] = noise0;
+        synthbuf[7][i] = noise1;
         osc0phase += oscinc0;
         osc1phase += oscinc1;
-        input_fifo.push(fifoframe);
     }
 }
 
@@ -449,22 +447,39 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
     auto writepointers = buffer.getArrayOfWritePointers();
-    // test with a synth tone in standalone mode as it's painful to get any proper
-    // sound input otherwise...
-    if (wrapperType == wrapperType_Standalone && test_signal_choice != 4)
+    workbuffer.clear();
+    auto workpointers = workbuffer.getArrayOfWritePointers();
+    process_synth_signals(buffer.getNumSamples());
+    for (auto &r : input_routings)
     {
-        process_test_signal(buffer.getNumSamples());
-    }
-    else
-    {
-        std::array<float, max_input_channels> fifoframe;
-        for (int i = 0; i < buffer.getNumSamples(); ++i)
+        int srchan = r.input;
+        int destchan = r.output;
+        if (srchan >= IN0 && srchan <= IN7 && srchan < totalNumInputChannels)
         {
-            fifoframe[0] = writepointers[0][i];
-            fifoframe[1] = writepointers[1][i];
-            input_fifo.push(fifoframe);
+            for (int i = 0; i < buffer.getNumSamples(); ++i)
+            {
+                workpointers[destchan][i] += writepointers[srchan][i];
+            }
+        }
+        else if (srchan >= SINE0 && srchan < NUMINPUTSIGNALS)
+        {
+            auto synthpointers = synthbuffer.getArrayOfWritePointers();
+            for (int i = 0; i < buffer.getNumSamples(); ++i)
+            {
+                workpointers[destchan][i] += synthpointers[srchan - SINE0][i];
+            }
         }
     }
+    std::array<float, max_input_channels> fifoframe;
+    for (int i = 0; i < buffer.getNumSamples(); ++i)
+    {
+        for (int j = 0; j < 8; ++j)
+        {
+            fifoframe[j] = workpointers[j][i];
+        }
+        input_fifo.push(fifoframe);
+    }
+
     int omode = *par_id_to_value_pointer[PAR_OUTPUTMODE];
     int engineInChannels = 2;
     int engineOutChannels = 2;
@@ -551,7 +566,7 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         {
             std::array<float, max_input_channels> frame;
             input_fifo.pop(frame);
-            for (int j = 0; j < 2; ++j)
+            for (int j = 0; j < max_input_channels; ++j)
             {
                 inputbuffer[j][i] = frame[j];
             }
@@ -604,7 +619,7 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
 
             for (int i = 0; i < BLOCKSIZE; ++i)
             {
-                procbuf[i * max_output_channels] = inputbuffer[shindex % 2][i];
+                procbuf[i * max_output_channels] = inputbuffer[shindex][i];
             }
             shifters[shindex].dcblocker_enabled = dc_blocker_enabled;
             shifters[shindex].compensate_formants = formant_compensation;

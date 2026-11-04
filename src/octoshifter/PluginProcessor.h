@@ -528,7 +528,7 @@ class OctoShifterProcessor final : public juce::AudioProcessor,
     OctoShifterProcessor();
     ~OctoShifterProcessor() override;
     void parameterValueChanged(int parameterIndex, float newValue) override;
-    void parameterGestureChanged (int parameterIndex, bool gestureIsStarting) override;
+    void parameterGestureChanged(int parameterIndex, bool gestureIsStarting) override;
     //==============================================================================
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
@@ -622,13 +622,42 @@ class OctoShifterProcessor final : public juce::AudioProcessor,
     std::unordered_map<int, float> mod_ranges;
     std::atomic<int> test_signal_choice;
     FilterModeMessage current_filter_mode;
-    void process_test_signal(int numframes);
+    void process_synth_signals(int numframes);
+    enum AUDIOINPUT
+    {
+        IN0,
+        IN1,
+        IN2,
+        IN3,
+        IN4,
+        IN5,
+        IN6,
+        IN7,
+        SILENCE,
+        SINE0,
+        SINE1,
+        SAW0,
+        SAW1,
+        FOLDED0,
+        FOLDED1,
+        NOISE0,
+        NOISE1,
+        NUMINPUTSIGNALS
+    };
+    struct AudioRouting
+    {
+        AUDIOINPUT input = SILENCE;
+        int output = 0;
+    };
+    std::vector<AudioRouting> input_routings;
+    
   private:
     std::unordered_map<uint32_t, juce::RangedAudioParameter *> clap_id_to_juce_param;
     std::unordered_map<juce::RangedAudioParameter *, uint32_t> juce_param_to_clap_id;
     double osc0phase = 0.0;
     double osc1phase = 0.0;
     juce::AudioBuffer<float> workbuffer;
+    juce::AudioBuffer<float> synthbuffer;
     alignas(16) SingleThreadedFifo<std::array<float, max_input_channels>> input_fifo{4096};
     alignas(16) SingleThreadedFifo<std::array<float, max_output_channels>> output_fifo{4096};
     alignas(16) int callbackcount = 0;
