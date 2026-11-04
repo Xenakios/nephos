@@ -151,46 +151,27 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
         processorRef.filter_mode_from_gui_fifo.push(msg);
         update_filter_button(id);
     };
-    startTimerHz(10);
     setSize(1100, 700);
     vblankAttachment = std::make_unique<juce::VBlankAttachment>(this, [this]() {
-        if (paint_throttle_counter == 0)
+        if (paint_throttle_counter % 1 == 0)
         {
             update_components_with_modulation();
         }
+        if (paint_throttle_counter % 2 == 0)
+        {
+            update_components();
+        }
         ++paint_throttle_counter;
-        if (paint_throttle_counter == 1)
-            paint_throttle_counter = 0;
+        
     });
     p.gui_visible = true;
 }
 
 OctoShifterProcessorEditor::~OctoShifterProcessorEditor() { processorRef.gui_visible = false; }
 
-void OctoShifterProcessorEditor::update_components_with_modulation()
+void OctoShifterProcessorEditor::update_components()
 {
-    ModulationMessage modmsg;
-    while (processorRef.modulations_to_gui_fifo.pop(modmsg))
-    {
-        for (auto &c : multiSliders)
-        {
-            if (c->shifter_modulation_target >= 0)
-            {
-                auto it = processorRef.mod_ranges.find(c->shifter_modulation_target);
-                if (it != processorRef.mod_ranges.end())
-                {
-                    c->paraminfos[modmsg.shifterindex].modulatedvalue =
-                        modmsg.values[c->shifter_modulation_target] * it->second;
-                }
-            }
-            c->repaint();
-        }
-    }
-}
-
-void OctoShifterProcessorEditor::timerCallback()
-{
-    juce::String txt;
+juce::String txt;
     txt += juce::String(processorRef.infifoavail) + " " + juce::String(processorRef.outfifoavail);
     txt += " " + juce::String(processorRef.outsilencecount);
     txt += " " + juce::String(processorRef.shifters[0].latency_in);
@@ -232,6 +213,27 @@ void OctoShifterProcessorEditor::timerCallback()
                 update_filter_button(e.first);
                 break;
             }
+        }
+    }
+}
+
+void OctoShifterProcessorEditor::update_components_with_modulation()
+{
+    ModulationMessage modmsg;
+    while (processorRef.modulations_to_gui_fifo.pop(modmsg))
+    {
+        for (auto &c : multiSliders)
+        {
+            if (c->shifter_modulation_target >= 0)
+            {
+                auto it = processorRef.mod_ranges.find(c->shifter_modulation_target);
+                if (it != processorRef.mod_ranges.end())
+                {
+                    c->paraminfos[modmsg.shifterindex].modulatedvalue =
+                        modmsg.values[c->shifter_modulation_target] * it->second;
+                }
+            }
+            c->repaint();
         }
     }
 }
@@ -399,7 +401,10 @@ void MultiSlider::mouseDown(const juce::MouseEvent &ev)
         }
         draggedindex = paramindex;
         if (!paraminfos[paramindex].notify_only_on_mouse_up)
+        {
             post_param_event(draggedindex, parval_from_mouse_y(draggedindex, ev.y));
+        }
+            
         repaint();
     }
 }

@@ -180,8 +180,9 @@ void XapSlider::mouseDown(const juce::MouseEvent &ev)
                   [](auto &lhs, auto &rhs) { return lhs.first < rhs.first; });
         for (auto &e : ordered_entries)
         {
-            menu.addItem(e.second, true, e.first == (int)m_value,
-                         [e, this]() { setValue(e.first, true); });
+            menu.addItem(e.second, true, e.first == (int)m_value, [e, this]() {
+                setValue(e.first, true);
+            });
         }
         menu.showMenuAsync(
             juce::PopupMenu::Options{}.withTargetComponent(this).withMousePosition());
@@ -195,6 +196,8 @@ void XapSlider::mouseDown(const juce::MouseEvent &ev)
 
     m_mousedown = true;
     was_started_in_fine_mode = ev.mods.isShiftDown();
+    if (OnGesture)
+        OnGesture(GEST_START);
     m_drag_start_pos = m_pardesc.naturalToNormalized01(m_value);
     mouseDragPos = ev.getPosition();
     repaint();
@@ -237,6 +240,8 @@ void XapSlider::mouseUp(const juce::MouseEvent &ev)
     setMouseCursor(juce::MouseCursor::NormalCursor);
     if (!isEnabled())
         return;
+    if (OnGesture)
+        OnGesture(GEST_END);
     m_mousedown = false;
     repaint();
 }
@@ -286,8 +291,7 @@ void XapSlider::paint(juce::Graphics &g)
         g.setColour(juce::Colours::lightgrey);
         g.drawRect(2, 0, getWidth() - 4, getHeight());
         g.setColour(juce::Colours::white);
-        g.drawText(m_labeltxt, 5, 0, getWidth() - 10, getHeight(),
-                   juce::Justification::centred);
+        g.drawText(m_labeltxt, 5, 0, getWidth() - 10, getHeight(), juce::Justification::centred);
         return;
     }
     double xforvalue = juce::jmap<double>(m_value, m_min_value, m_max_value, 2.0, getWidth() - 4.0);

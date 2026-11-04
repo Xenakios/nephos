@@ -597,7 +597,7 @@ class OctoShifterProcessor final : public juce::AudioProcessor,
     void set_initialpatch();
     std::vector<pmd> param_metadatas;
     std::unordered_map<uint32_t, pmd *> par_id_to_metadata;
-    std::array<float, 256> param_values;
+    alignas(16) std::array<float, 256> param_values;
     std::unordered_map<uint32_t, float *> par_id_to_value_pointer;
     choc::fifo::SingleReaderSingleWriterFIFO<ParamChangeMessage> params_from_gui_fifo;
     choc::fifo::SingleReaderSingleWriterFIFO<ParamChangeMessage> params_to_gui_fifo;

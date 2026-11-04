@@ -239,7 +239,7 @@ class LFOComponent : public juce::Component
     }
 };
 
-class OctoShifterProcessorEditor final : public juce::AudioProcessorEditor, public juce::Timer
+class OctoShifterProcessorEditor final : public juce::AudioProcessorEditor
 {
   public:
     explicit OctoShifterProcessorEditor(OctoShifterProcessor &);
@@ -248,7 +248,6 @@ class OctoShifterProcessorEditor final : public juce::AudioProcessorEditor, publ
     //==============================================================================
     void paint(juce::Graphics &) override;
     void resized() override;
-    void timerCallback() override;
 
   private:
     OctoShifterProcessor &processorRef;
@@ -267,6 +266,7 @@ class OctoShifterProcessorEditor final : public juce::AudioProcessorEditor, publ
     void update_filter_button(int64_t id);
     std::unique_ptr<juce::VBlankAttachment> vblankAttachment;
     int paint_throttle_counter = 0;
+    void update_components();
     void update_components_with_modulation();
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OctoShifterProcessorEditor)
 };

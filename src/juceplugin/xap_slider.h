@@ -90,7 +90,13 @@ class XapSlider : public juce::Component
         m_modulation_amt = amt;
         repaint();
     }
+    enum Gesture
+    {
+        GEST_START,
+        GEST_END
+    };
     std::function<void()> OnValueChanged;
+    std::function<void(Gesture)> OnGesture;
     void addMenuItemsCallback(std::function<void(juce::PopupMenu &)> f)
     {
         MenuAddCallbacks.push_back(f);
