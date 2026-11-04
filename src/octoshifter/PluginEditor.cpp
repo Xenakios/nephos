@@ -78,12 +78,22 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
     optionsMenuButton.setButtonText("OPTIONS");
     optionsMenuButton.onClick = [this]() {
         juce::PopupMenu menu;
+        menu.addSectionHeader("Audio processing");
         menu.addItem(
             "Formant compensation enabled", true, processorRef.formant_compensation,
             [this]() { processorRef.formant_compensation = !processorRef.formant_compensation; });
         menu.addItem("DC blocker enabled", true, processorRef.dc_blocker_enabled, [this]() {
             processorRef.dc_blocker_enabled = !processorRef.dc_blocker_enabled;
         });
+        juce::PopupMenu testsigmenu;
+        for (int i = 0; i < 5; ++i)
+        {
+            testsigmenu.addItem("Signal " + juce::String(i + 1), true,
+                                processorRef.test_signal_choice == i,
+                                [this, i]() { processorRef.test_signal_choice = i; });
+        }
+        menu.addSubMenu("Test signal input", testsigmenu);
+        menu.addSectionHeader("Plugin state");
         menu.addItem("Copy state to clipboard as JSON", true, false, [this]() {
             try
             {
@@ -162,7 +172,6 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
             update_components();
         }
         ++paint_throttle_counter;
-        
     });
     p.gui_visible = true;
 }
@@ -171,11 +180,19 @@ OctoShifterProcessorEditor::~OctoShifterProcessorEditor() { processorRef.gui_vis
 
 void OctoShifterProcessorEditor::update_components()
 {
-juce::String txt;
-    txt += juce::String(processorRef.infifoavail) + " " + juce::String(processorRef.outfifoavail);
-    txt += " " + juce::String(processorRef.outsilencecount);
-    txt += " " + juce::String(processorRef.shifters[0].latency_in);
-    txt += " " + juce::String(processorRef.shifters[0].latency_out);
+    juce::String txt;
+    // txt += juce::String(processorRef.infifoavail) + " " +
+    // juce::String(processorRef.outfifoavail);
+    if (processorRef.samplerate > 0.0)
+    {
+        txt += " " + juce::String(processorRef.shifters[0].latency_in / processorRef.samplerate);
+        txt += " " + juce::String(processorRef.shifters[0].latency_out / processorRef.samplerate);
+    }
+    else
+    {
+        txt += "Audio not prepared yet";
+    }
+
     infoLabel.setText(txt, juce::dontSendNotification);
     ParamChangeMessage msg;
     while (processorRef.params_to_gui_fifo.pop(msg))
@@ -297,7 +314,7 @@ void OctoShifterProcessorEditor::resized()
     {
         lfoflex.items.add(juce::FlexItem(*c).withFlex(1.0).withMargin(1));
     }
-    flex.items.add(juce::FlexItem(lfoflex).withFlex(1.0));
+    flex.items.add(juce::FlexItem(lfoflex).withFlex(0.8));
     flex.performLayout(getLocalBounds());
 }
 void MultiSlider::paint(juce::Graphics &g)
@@ -404,7 +421,7 @@ void MultiSlider::mouseDown(const juce::MouseEvent &ev)
         {
             post_param_event(draggedindex, parval_from_mouse_y(draggedindex, ev.y));
         }
-            
+
         repaint();
     }
 }

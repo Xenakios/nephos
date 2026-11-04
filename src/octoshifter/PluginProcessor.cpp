@@ -183,11 +183,12 @@ OctoShifterProcessor::OctoShifterProcessor()
                                       .withRange(-1.0f, 1.0f)
                                       .withLinearScaleFormatting("%", 100.0)
                                       .withID(PAR_OUTVOLUME_LFOAMOUNTS + i));
-        param_metadatas.push_back(pmd()
-                                      .withName(fmt::format("LFO {} FILTER 1 RESONANCE AMOUNT", i + 1))
-                                      .withRange(-1.0f, 1.0f)
-                                      .withLinearScaleFormatting("%", 100.0)
-                                      .withID(PAR_RESON0_LFOAMOUNTS + i));
+        param_metadatas.push_back(
+            pmd()
+                .withName(fmt::format("LFO {} FILTER 1 RESONANCE AMOUNT", i + 1))
+                .withRange(-1.0f, 1.0f)
+                .withLinearScaleFormatting("%", 100.0)
+                .withID(PAR_RESON0_LFOAMOUNTS + i));
     }
 
     for (int i = 0; i < param_metadatas.size(); ++i)
@@ -216,8 +217,8 @@ OctoShifterProcessor::OctoShifterProcessor()
     choicetolfoshapemap[4] = lfo_t::SH_NOISE;
 
     mod_ranges[PitchShifter::MT_PITCH] = 12.0f;
-    mod_ranges[PitchShifter::MT_INVOLUME] = 12.0f;
-    mod_ranges[PitchShifter::MT_OUTVOLUME] = 12.0f;
+    mod_ranges[PitchShifter::MT_INVOLUME] = 18.0f;
+    mod_ranges[PitchShifter::MT_OUTVOLUME] = 18.0f;
     mod_ranges[PitchShifter::MT_F0CUTOFF] = 36.0f;
     mod_ranges[PitchShifter::MT_FORMANT] = 12.0f;
     mod_ranges[PitchShifter::MT_F0RESON] = 1.0f;
@@ -396,6 +397,47 @@ bool OctoShifterProcessor::isBusesLayoutSupported(const BusesLayout &layouts) co
     return true;
 }
 
+void OctoShifterProcessor::process_test_signal(int numframes)
+{
+    const double oscinc0 = 2 * M_PI / getSampleRate() * 80.0;
+    const double oscinc1 = 2 * M_PI / getSampleRate() * 80.0 * (21.0 / 9);
+    const float TWO_PI = 6.28318530718f;
+    std::array<float, max_input_channels> fifoframe;
+    for (int i = 0; i < numframes; ++i)
+    {
+        float phase = osc0phase / TWO_PI;                      // 0..1 if osc0phase is radians
+        float saw = 2.0f * (phase - std::floor(phase + 0.5f)); // -1..1
+        float osc0 = 0.5f * saw;
+        // float osc0 = 0.5 * reflect_value_no_loop(-1.0, std::sin(osc0phase) * 8, 1.0);
+        float osc1 = 0.5 * reflect_value_no_loop(-1.0, std::sin(osc1phase) * 8, 1.0);
+        if (test_signal_choice == 0)
+        {
+            fifoframe[0] = osc0;
+            fifoframe[1] = osc0;
+        }
+        else if (test_signal_choice == 1)
+        {
+            fifoframe[0] = osc1;
+            fifoframe[1] = osc1;
+        }
+        else if (test_signal_choice == 2)
+        {
+            float s = rng.nextFloatInRange(-0.5, 0.5);
+            fifoframe[0] = s;
+            fifoframe[1] = s;
+        }
+        else if (test_signal_choice == 3)
+        {
+
+            fifoframe[0] = rng.nextFloatInRange(-0.5, 0.5);
+            fifoframe[1] = rng.nextFloatInRange(-0.5, 0.5);
+        }
+        osc0phase += oscinc0;
+        osc1phase += oscinc1;
+        input_fifo.push(fifoframe);
+    }
+}
+
 void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                                         juce::MidiBuffer &midiMessages)
 {
@@ -409,26 +451,9 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     auto writepointers = buffer.getArrayOfWritePointers();
     // test with a synth tone in standalone mode as it's painful to get any proper
     // sound input otherwise...
-    if (wrapperType == wrapperType_Standalone)
+    if (wrapperType == wrapperType_Standalone && test_signal_choice != 4)
     {
-        const double oscinc0 = 2 * M_PI / getSampleRate() * 80.0;
-        const double oscinc1 = 2 * M_PI / getSampleRate() * 80.0 * (21.0 / 9);
-        const float TWO_PI = 6.28318530718f;
-        std::array<float, max_input_channels> fifoframe;
-        for (int i = 0; i < buffer.getNumSamples(); ++i)
-        {
-            float phase = osc0phase / TWO_PI;                      // 0..1 if osc0phase is radians
-            float saw = 2.0f * (phase - std::floor(phase + 0.5f)); // -1..1
-            float osc0 = 0.5f * saw;
-            // float osc0 = 0.5 * reflect_value_no_loop(-1.0, std::sin(osc0phase) * 8, 1.0);
-            float osc1 = 0.5 * reflect_value_no_loop(-1.0, std::sin(osc1phase) * 8, 1.0);
-            fifoframe[0] = osc0;
-            fifoframe[1] = osc1;
-            osc0phase += oscinc0;
-            osc1phase += oscinc1;
-            // if (input_fifo.usedSlots() <= BLOCKSIZE)
-            input_fifo.push(fifoframe);
-        }
+        process_test_signal(buffer.getNumSamples());
     }
     else
     {

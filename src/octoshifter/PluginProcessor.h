@@ -617,13 +617,12 @@ class OctoShifterProcessor final : public juce::AudioProcessor,
     static constexpr size_t max_output_channels = 64;
     std::atomic<int> outfifoavail = 0;
     std::atomic<int> infifoavail = 0;
-    std::atomic<int> outsilencecount = 0;
     std::atomic<bool> dc_blocker_enabled = true;
     std::atomic<bool> formant_compensation = false;
     std::unordered_map<int, float> mod_ranges;
-
+    std::atomic<int> test_signal_choice;
     FilterModeMessage current_filter_mode;
-
+    void process_test_signal(int numframes);
   private:
     std::unordered_map<uint32_t, juce::RangedAudioParameter *> clap_id_to_juce_param;
     std::unordered_map<juce::RangedAudioParameter *, uint32_t> juce_param_to_clap_id;
