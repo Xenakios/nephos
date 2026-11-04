@@ -449,7 +449,17 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     auto writepointers = buffer.getArrayOfWritePointers();
     workbuffer.clear();
     auto workpointers = workbuffer.getArrayOfWritePointers();
-    process_synth_signals(buffer.getNumSamples());
+    bool any_synth_active = false;
+    for (auto &r : input_routings)
+    {
+        if (r.input >= SINE0 && r.input < NUMINPUTSIGNALS)
+        {
+            any_synth_active = true;
+            break;
+        }
+    }
+    if (any_synth_active)
+        process_synth_signals(buffer.getNumSamples());
     for (auto &r : input_routings)
     {
         int srchan = r.input;
