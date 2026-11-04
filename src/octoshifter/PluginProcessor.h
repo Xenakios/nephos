@@ -644,13 +644,57 @@ class OctoShifterProcessor final : public juce::AudioProcessor,
         NOISE1,
         NUMINPUTSIGNALS
     };
+    static std::string get_input_name(AUDIOINPUT inp)
+    {
+        switch (inp)
+        {
+        case IN0:
+            return "IN1";
+        case IN1:
+            return "IN2";
+        case IN2:
+            return "IN3";
+        case IN3:
+            return "IN4";
+        case IN4:
+            return "IN5";
+        case IN5:
+            return "IN6";
+        case IN6:
+            return "IN7";
+        case IN7:
+            return "IN8";
+        case SILENCE:
+            return "Silence";
+        case SINE0:
+            return "Sine 1";
+        case SINE1:
+            return "Sine 2";
+        case SAW0:
+            return "Saw 1";
+        case SAW1:
+            return "Saw 2";
+        case FOLDED0:
+            return "Folded 1";
+        case FOLDED1:
+            return "Folded 2";
+        case NOISE0:
+            return "Noise 1";
+        case NOISE1:
+            return "Noise 2";
+        case NUMINPUTSIGNALS:
+        default:
+            return "N/A";
+        }
+    }
     struct AudioRouting
     {
         AUDIOINPUT input = SILENCE;
         int output = 0;
     };
+
     std::vector<AudioRouting> input_routings;
-    
+
   private:
     std::unordered_map<uint32_t, juce::RangedAudioParameter *> clap_id_to_juce_param;
     std::unordered_map<juce::RangedAudioParameter *, uint32_t> juce_param_to_clap_id;

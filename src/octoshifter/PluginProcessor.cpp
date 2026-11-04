@@ -446,13 +446,13 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
 
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
-    auto writepointers = buffer.getArrayOfWritePointers();
+    auto pluginbufferpointers = buffer.getArrayOfWritePointers();
     workbuffer.clear();
     auto workpointers = workbuffer.getArrayOfWritePointers();
     bool any_synth_active = false;
     for (auto &r : input_routings)
     {
-        if (r.input >= SINE0 && r.input < NUMINPUTSIGNALS)
+        if (r.input >= SINE0 && r.input <= NOISE1)
         {
             any_synth_active = true;
             break;
@@ -463,15 +463,15 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     for (auto &r : input_routings)
     {
         int srchan = r.input;
-        int destchan = r.output;
+        int destchan = std::clamp(r.output, 0, (int)numshifters - 1);
         if (srchan >= IN0 && srchan <= IN7 && srchan < totalNumInputChannels)
         {
             for (int i = 0; i < buffer.getNumSamples(); ++i)
             {
-                workpointers[destchan][i] += writepointers[srchan][i];
+                workpointers[destchan][i] += pluginbufferpointers[srchan][i];
             }
         }
-        else if (srchan >= SINE0 && srchan < NUMINPUTSIGNALS)
+        else if (srchan >= SINE0 && srchan <= NOISE1)
         {
             auto synthpointers = synthbuffer.getArrayOfWritePointers();
             for (int i = 0; i < buffer.getNumSamples(); ++i)
@@ -681,7 +681,7 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         output_fifo.pop(outframe);
         for (int j = 0; j < final_out_chans; ++j)
         {
-            writepointers[j][i] = std::clamp(outframe[j] * 0.5f, -1.0f, 1.0f);
+            pluginbufferpointers[j][i] = std::clamp(outframe[j] * 0.5f, -1.0f, 1.0f);
         }
     }
 

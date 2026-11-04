@@ -30,7 +30,7 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
                        *p.par_id_to_metadata[OctoShifterProcessor::PAR_PITCHQUALITY]),
       outputModeDrop(XapSlider::SS_HorizontalSlider,
                      *p.par_id_to_metadata[OctoShifterProcessor::PAR_OUTPUTMODE]),
-      spatializationTabs(juce::TabbedButtonBar::Orientation::TabsAtTop)
+      spatializationTabs(juce::TabbedButtonBar::Orientation::TabsAtTop), inputMatrix(p)
 {
     addAndMakeVisible(spatializationTabs);
     spatializationTabs.setTabBarDepth(16);
@@ -75,6 +75,8 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
             addAndMakeVisible(*c);
     }
     addAndMakeVisible(optionsMenuButton);
+    addChildComponent(inputMatrix);
+    inputMatrix.setBounds(1, 30, 300, 370);
     optionsMenuButton.setButtonText("OPTIONS");
     optionsMenuButton.onClick = [this]() {
         juce::PopupMenu menu;
@@ -85,14 +87,8 @@ OctoShifterProcessorEditor::OctoShifterProcessorEditor(OctoShifterProcessor &p)
         menu.addItem("DC blocker enabled", true, processorRef.dc_blocker_enabled, [this]() {
             processorRef.dc_blocker_enabled = !processorRef.dc_blocker_enabled;
         });
-        juce::PopupMenu testsigmenu;
-        for (int i = 0; i < 5; ++i)
-        {
-            testsigmenu.addItem("Signal " + juce::String(i + 1), true,
-                                processorRef.test_signal_choice == i,
-                                [this, i]() { processorRef.test_signal_choice = i; });
-        }
-        menu.addSubMenu("Test signal input", testsigmenu);
+        menu.addItem("Show input routing matrix", true, inputMatrix.isVisible(),
+                     [this]() { inputMatrix.setVisible(!inputMatrix.isVisible()); });
         menu.addSectionHeader("Plugin state");
         menu.addItem("Copy state to clipboard as JSON", true, false, [this]() {
             try

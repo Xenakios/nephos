@@ -239,6 +239,40 @@ class LFOComponent : public juce::Component
     }
 };
 
+class ModMatrixComponent : public juce::Component
+{
+  public:
+    OctoShifterProcessor &proc;
+    ModMatrixComponent(OctoShifterProcessor &p) : proc(p) {}
+    void paint(juce::Graphics &g) override
+    {
+        g.fillAll(juce::Colours::black);
+        float cellsize = 20.0;
+        g.setColour(juce::Colours::grey);
+        juce::Rectangle<int> gridrect(80, 20, 8 * cellsize,
+                                      (int)OctoShifterProcessor::NUMINPUTSIGNALS * cellsize);
+        g.drawRect(gridrect, 2.0);
+        g.setColour(juce::Colours::white);
+        int j = 0;
+        for (int i = 0; i < OctoShifterProcessor::NUMINPUTSIGNALS; ++i)
+        {
+            //if (i != OctoShifterProcessor::SILENCE)
+            {
+                g.drawText(proc.get_input_name((OctoShifterProcessor::AUDIOINPUT)i), 0,
+                           gridrect.getY() + j * cellsize, gridrect.getX() - 2, cellsize,
+                           juce::Justification::centredRight);
+                ++j;
+            }
+        }
+        for (auto &r : proc.input_routings)
+        {
+            float xcor = gridrect.getX() + r.output * cellsize;
+            float ycor = gridrect.getY() + (int)r.input * cellsize;
+            g.fillRect(xcor + 1.0f, ycor + 1.0f, cellsize - 2.0f, cellsize - 2.0f);
+        }
+    }
+};
+
 class OctoShifterProcessorEditor final : public juce::AudioProcessorEditor
 {
   public:
@@ -268,5 +302,6 @@ class OctoShifterProcessorEditor final : public juce::AudioProcessorEditor
     int paint_throttle_counter = 0;
     void update_components();
     void update_components_with_modulation();
+    ModMatrixComponent inputMatrix;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OctoShifterProcessorEditor)
 };
