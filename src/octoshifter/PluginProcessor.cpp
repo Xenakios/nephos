@@ -840,12 +840,37 @@ choc::value::Value OctoShifterProcessor::get_state()
         }
     }
     state.setMember("modcurves", modcurves_state);
-    DBG(choc::json::toString(modcurves_state));
+    auto inputroutingsstate = choc::value::createEmptyArray();
+    for (auto &r : input_routings)
+    {
+        auto o = choc::value::createObject("");
+        o.setMember("in", (int64_t)r.input);
+        o.setMember("out", (int64_t)r.output);
+        inputroutingsstate.addArrayElement(o);
+    }
+    state.setMember("input_routings", inputroutingsstate);
+    DBG(choc::json::toString(inputroutingsstate));
     return state;
 }
 
 void OctoShifterProcessor::set_state(choc::value::ValueView view)
 {
+    juce::ScopedLock locker(cs);
+    if (view.hasObjectMember("input_routings"))
+    {
+        input_routings.clear();
+        auto irouts = view["input_routings"];
+        for (int i = 0; i < irouts.size(); ++i)
+        {
+            auto o = irouts[i];
+            auto in = (AUDIOINPUT)o["in"].getWithDefault(0);
+            auto out = o["out"].getWithDefault(0);
+            AudioRouting rt;
+            rt.input = in;
+            rt.output = out;
+            input_routings.push_back(rt);
+        }
+    }
     if (view.hasObjectMember("filter0state"))
     {
         namespace sfpp = sst::filtersplusplus;
