@@ -244,25 +244,38 @@ class ModMatrixComponent : public juce::Component
   public:
     OctoShifterProcessor &proc;
     ModMatrixComponent(OctoShifterProcessor &p) : proc(p) {}
+    float cellsize = 20.0;
+    juce::Rectangle<float> gridrect;
+    void resized() override
+    {
+        gridrect = {80, 20, 8 * cellsize, (int)OctoShifterProcessor::NUMINPUTSIGNALS * cellsize};
+    }
+    void mouseDown(const juce::MouseEvent &e) override
+    {
+        int x = juce::jmap<float>(e.x, gridrect.getX(), gridrect.getRight(), 0, 8);
+        int y = juce::jmap<float>(e.y, gridrect.getY(), gridrect.getBottom(), 0,
+                                  OctoShifterProcessor::NUMINPUTSIGNALS);
+        if (x >= 0 && x < 8 && y >= 0 && y < OctoShifterProcessor::NUMINPUTSIGNALS)
+        {
+            DBG(x << " " << y);
+            proc.toggle_input_routing(y, x);
+            repaint();
+        }
+    }
     void paint(juce::Graphics &g) override
     {
         g.fillAll(juce::Colours::black);
-        float cellsize = 20.0;
+
         g.setColour(juce::Colours::grey);
-        juce::Rectangle<int> gridrect(80, 20, 8 * cellsize,
-                                      (int)OctoShifterProcessor::NUMINPUTSIGNALS * cellsize);
         g.drawRect(gridrect, 2.0);
         g.setColour(juce::Colours::white);
         int j = 0;
         for (int i = 0; i < OctoShifterProcessor::NUMINPUTSIGNALS; ++i)
         {
-            //if (i != OctoShifterProcessor::SILENCE)
-            {
-                g.drawText(proc.get_input_name((OctoShifterProcessor::AUDIOINPUT)i), 0,
-                           gridrect.getY() + j * cellsize, gridrect.getX() - 2, cellsize,
-                           juce::Justification::centredRight);
-                ++j;
-            }
+            g.drawText(proc.get_input_name((OctoShifterProcessor::AUDIOINPUT)i), 0,
+                       gridrect.getY() + j * cellsize, gridrect.getX() - 2, cellsize,
+                       juce::Justification::centredRight);
+            ++j;
         }
         for (auto &r : proc.input_routings)
         {

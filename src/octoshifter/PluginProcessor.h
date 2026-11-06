@@ -692,9 +692,9 @@ class OctoShifterProcessor final : public juce::AudioProcessor,
         AUDIOINPUT input = SILENCE;
         int output = 0;
     };
-
+    juce::CriticalSection cs;
     std::vector<AudioRouting> input_routings;
-
+    void toggle_input_routing(int input, int destination);
   private:
     std::unordered_map<uint32_t, juce::RangedAudioParameter *> clap_id_to_juce_param;
     std::unordered_map<juce::RangedAudioParameter *, uint32_t> juce_param_to_clap_id;

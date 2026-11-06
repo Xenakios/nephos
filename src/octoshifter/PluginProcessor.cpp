@@ -11,6 +11,23 @@
 #include "text/choc_JSON.h"
 #include <unordered_map>
 
+void OctoShifterProcessor::toggle_input_routing(int input, int destination)
+{
+    juce::ScopedLock locker(cs);
+    for (int i = 0; i < input_routings.size(); ++i)
+    {
+        if (input_routings[i].input == input && input_routings[i].output == destination)
+        {
+            input_routings.erase(input_routings.begin() + i);
+            return;
+        }
+    }
+    AudioRouting rt;
+    rt.input = (AUDIOINPUT)input;
+    rt.output = destination;
+    input_routings.push_back(rt);
+}
+
 //==============================================================================
 OctoShifterProcessor::OctoShifterProcessor()
     : AudioProcessor(BusesProperties()
@@ -440,7 +457,7 @@ void OctoShifterProcessor::process_synth_signals(int numframes)
 void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                                         juce::MidiBuffer &midiMessages)
 {
-    juce::ignoreUnused(midiMessages);
+    juce::ScopedLock locker(cs);
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
