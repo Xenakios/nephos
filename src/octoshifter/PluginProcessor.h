@@ -698,8 +698,7 @@ class OctoShifterProcessor final : public juce::AudioProcessor,
   private:
     std::unordered_map<uint32_t, juce::RangedAudioParameter *> clap_id_to_juce_param;
     std::unordered_map<juce::RangedAudioParameter *, uint32_t> juce_param_to_clap_id;
-    double osc0phase = 0.0;
-    double osc1phase = 0.0;
+    double oscphases[4] = {0.0};
     juce::AudioBuffer<float> workbuffer;
     juce::AudioBuffer<float> synthbuffer;
     alignas(16) SingleThreadedFifo<std::array<float, max_input_channels>> input_fifo{4096};

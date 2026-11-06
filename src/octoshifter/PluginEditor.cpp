@@ -407,7 +407,7 @@ void MultiSlider::mouseDown(const juce::MouseEvent &ev)
 
     if (paramindex >= 0 && paramindex < paraminfos.size())
     {
-        if (ev.y > sliders_area.getBottom() - 5)
+        if (ev.y > sliders_area.getBottom() - 0)
         {
             show_value_editor(paramindex, ev.x);
             return;

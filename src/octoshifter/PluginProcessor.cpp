@@ -409,17 +409,17 @@ void OctoShifterProcessor::process_synth_signals(int numframes)
 {
     const double oscinc0 = 2 * M_PI / getSampleRate() * 80.0;
     const double oscinc1 = 2 * M_PI / getSampleRate() * 80.0 * (21.0 / 9);
+    const double oscinc2 = 2 * M_PI / getSampleRate() * 440.0;
     const float TWO_PI = 6.28318530718f;
-    std::array<float, max_input_channels> fifoframe;
     auto synthbuf = synthbuffer.getArrayOfWritePointers();
     float oscgain = 0.5;
     for (int i = 0; i < numframes; ++i)
     {
-        float sine0 = std::sin(osc0phase);
-        float sine1 = std::sin(osc1phase);
-        float phase = osc0phase / TWO_PI;
+        float sine0 = std::sin(oscphases[1]);
+        float sine1 = std::sin(oscphases[2]);
+        float phase = oscphases[0] / TWO_PI;
         float saw0 = 2.0f * (phase - std::floor(phase + 0.5f));
-        phase = osc1phase / TWO_PI;
+        phase = oscphases[1] / TWO_PI;
         float saw1 = 2.0f * (phase - std::floor(phase + 0.5f));
         synthbuf[0][i] = sine0 * oscgain;
         synthbuf[1][i] = sine1 * oscgain;
@@ -431,8 +431,9 @@ void OctoShifterProcessor::process_synth_signals(int numframes)
         float noise1 = rng.nextFloatInRange(-0.5, 0.5);
         synthbuf[6][i] = noise0;
         synthbuf[7][i] = noise1;
-        osc0phase += oscinc0;
-        osc1phase += oscinc1;
+        oscphases[0] += oscinc0;
+        oscphases[1] += oscinc1;
+        oscphases[2] += oscinc2;
     }
 }
 
