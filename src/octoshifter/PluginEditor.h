@@ -203,8 +203,8 @@ class LFOComponent : public juce::Component
     OctoShifterProcessor &procref;
     XapSlider shapeDrop;
     XapSlider rateKnob;
+    XapSlider shiftKnob;
     XapSlider deformKnob;
-    // XapSlider deformKnob;
     XapSlider warpKnob;
     int index = -1;
     LFOComponent(OctoShifterProcessor &p, int lfoindex)
@@ -213,6 +213,8 @@ class LFOComponent : public juce::Component
                     *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFOSHAPES + lfoindex]),
           rateKnob(XapSlider::SS_Knob,
                    *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFORATES + lfoindex]),
+          shiftKnob(XapSlider::SS_Knob,
+                    *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFOSHIFTS + lfoindex]),
           deformKnob(XapSlider::SS_Knob,
                      *p.par_id_to_metadata[OctoShifterProcessor::PAR_LFODEFORMS + lfoindex]),
           warpKnob(XapSlider::SS_Knob,
@@ -220,6 +222,7 @@ class LFOComponent : public juce::Component
     {
         add_xapslider(p, *this, shapeDrop);
         add_xapslider(p, *this, rateKnob);
+        add_xapslider(p, *this, shiftKnob);
         add_xapslider(p, *this, deformKnob);
         add_xapslider(p, *this, warpKnob);
     }
@@ -229,6 +232,7 @@ class LFOComponent : public juce::Component
         flex.flexDirection = juce::FlexBox::Direction::row;
         flex.items.add(juce::FlexItem(shapeDrop).withFlex(2).withMaxHeight(25));
         flex.items.add(juce::FlexItem(rateKnob).withFlex(1.0));
+        flex.items.add(juce::FlexItem(shiftKnob).withFlex(1.0));
         flex.items.add(juce::FlexItem(deformKnob).withFlex(1.0));
         flex.items.add(juce::FlexItem(warpKnob).withFlex(1.0));
         for (auto &e : flex.items)

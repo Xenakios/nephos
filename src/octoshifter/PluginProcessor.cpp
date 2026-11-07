@@ -613,6 +613,8 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             float lfo0rate = *par_id_to_value_pointer[PAR_LFORATES + i];
             float lfo0deform = *par_id_to_value_pointer[PAR_LFODEFORMS + i];
             float lfo0warp = *par_id_to_value_pointer[PAR_LFOWARPS + i];
+            float shift_spread = *par_id_to_value_pointer[PAR_LFOSHIFTS + i];
+            lfos[i].shift_spread = shift_spread;
             lfos[i].process_block(lfo0rate, lfo0deform, lfo0shape, false, 1.0, lfo0warp);
         }
 
@@ -623,8 +625,10 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 continue;
             }
 
-            shifters[shindex].mod_source_values[PitchShifter::MS_LFO0] = lfos[0].LFOS[shindex].outputBlock[0];
-            shifters[shindex].mod_source_values[PitchShifter::MS_LFO1] = lfos[1].LFOS[shindex].outputBlock[0];
+            shifters[shindex].mod_source_values[PitchShifter::MS_LFO0] =
+                lfos[0].LFOS[shindex].outputBlock[0];
+            shifters[shindex].mod_source_values[PitchShifter::MS_LFO1] =
+                lfos[1].LFOS[shindex].outputBlock[0];
             for (int i = 0; i < numLFOs; ++i)
             {
                 shifters[shindex].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_PITCH] =

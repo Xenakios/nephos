@@ -528,12 +528,15 @@ class LFOBank
         return (1 - a) * table_envrate_linear[e & 0x1ff] +
                a * table_envrate_linear[(e + 1) & 0x1ff];
     }
+    float shift_spread = 0.0f;
     void process_block(float rate, float deform, int shape, bool reverse, float temposync,
                        float warp)
     {
-        for (auto &lfo : LFOS)
+        for (size_t i = 0; i < LFOS.size(); ++i)
         {
-            lfo.process_block(rate, deform, shape, false, 1.0, warp);
+            float shift = 1.0 / LFOS.size() * i * shift_spread;
+            LFOS[i].applyPhaseOffset(shift);
+            LFOS[i].process_block(rate, deform, shape, false, 1.0, warp);
         }
     }
 };
