@@ -361,7 +361,8 @@ void OctoShifterProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
         lfo.samplerate = sampleRate;
         lfo.initTables();
     }
-
+    if (samplesPerBlock < BLOCKSIZE)
+        samplesPerBlock = BLOCKSIZE;
     workbuffer.setSize(max_output_channels, samplesPerBlock);
     workbuffer.clear();
     synthbuffer.setSize(8, samplesPerBlock);
@@ -503,7 +504,7 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             }
         }
     }
-    std::array<float, max_input_channels> fifoframe;
+    std::array<float, max_input_channels> fifoframe = {0.0f};
     for (int i = 0; i < buffer.getNumSamples(); ++i)
     {
         for (int j = 0; j < 8; ++j)
@@ -520,7 +521,7 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     PitchShifter::OUTCHANSMODE shifteroutmode = PitchShifter::OCM_STEREO;
     if (omode == 1)
     {
-        engineOutChannels = 1;
+        engineOutChannels = numshifters;
         shifteroutmode = PitchShifter::OCM_MONODISCRETE;
     }
     else if (omode == 2)
@@ -598,7 +599,7 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         alignas(16) float inputbuffer[max_input_channels][BLOCKSIZE];
         for (int i = 0; i < BLOCKSIZE; ++i)
         {
-            std::array<float, max_input_channels> frame;
+            std::array<float, max_input_channels> frame = {0.0f};
             input_fifo.pop(frame);
             for (int j = 0; j < max_input_channels; ++j)
             {
@@ -693,7 +694,7 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         std::array<float, max_output_channels> outframe;
         for (int i = 0; i < BLOCKSIZE; ++i)
         {
-            for (int j = 0; j < engineOutChannels; ++j)
+            for (int j = 0; j < max_output_channels; ++j)
             {
                 outframe[j] = sumpointers[j][i];
             }
