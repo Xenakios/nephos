@@ -470,9 +470,8 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
     workbuffer.clear();
-    auto pluginbufferpointers = buffer.getArrayOfWritePointers();
-
     auto workpointers = workbuffer.getArrayOfWritePointers();
+    auto pluginbufferpointers = buffer.getArrayOfWritePointers();
     bool any_synth_active = false;
     for (auto &r : input_routings)
     {
