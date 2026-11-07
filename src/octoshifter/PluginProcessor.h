@@ -16,6 +16,7 @@
 #include "sst/basic-blocks/params/ParamMetadata.h"
 #include "sst/basic-blocks/dsp/PanLaws.h"
 #include "sst/basic-blocks/dsp/OnePoles.h"
+#include "sst/cpputils/constructors.h"
 #include "sst/filters++.h"
 #include <span>
 #include "../../Common/xap_utils.h"
@@ -497,13 +498,15 @@ struct ModulationMessage
     float values[PitchShifter::MT_COUNT];
 };
 
-class OctoShifterProcessor final : public juce::AudioProcessor,
-                                   public juce::AudioProcessorParameter::Listener
+class LFOBank
 {
   public:
-    using lfo_t = sst::basic_blocks::modulators::SimpleLFO<OctoShifterProcessor, BLOCKSIZE>;
+    using lfo_t = sst::basic_blocks::modulators::SimpleLFO<LFOBank, BLOCKSIZE>;
+    static constexpr size_t max_num_lfos = 8;
+    std::array<lfo_t, max_num_lfos> LFOS;
     double samplerate = 0.0;
     alignas(32) float table_envrate_linear[512];
+    LFOBank() : LFOS{sst::cpputils::make_array<lfo_t, max_num_lfos>(this)} {};
     void initTables()
     {
         double dsamplerate_os = samplerate * 2;
@@ -525,6 +528,20 @@ class OctoShifterProcessor final : public juce::AudioProcessor,
         return (1 - a) * table_envrate_linear[e & 0x1ff] +
                a * table_envrate_linear[(e + 1) & 0x1ff];
     }
+    void process_block(float rate, float deform, int shape, bool reverse, float temposync,
+                       float warp)
+    {
+        for (auto &lfo : LFOS)
+        {
+            lfo.process_block(rate, deform, shape, false, 1.0, warp);
+        }
+    }
+};
+
+class OctoShifterProcessor final : public juce::AudioProcessor,
+                                   public juce::AudioProcessorParameter::Listener
+{
+  public:
     OctoShifterProcessor();
     ~OctoShifterProcessor() override;
     void parameterValueChanged(int parameterIndex, float newValue) override;
@@ -563,7 +580,8 @@ class OctoShifterProcessor final : public juce::AudioProcessor,
     static constexpr size_t numshifters = 8;
     alignas(16) std::array<PitchShifter, numshifters> shifters;
     static constexpr size_t numLFOs = 2;
-    alignas(!6) std::array<lfo_t, numLFOs> lfos{lfo_t(this), lfo_t(this)};
+    alignas(!6) std::array<LFOBank, numLFOs> lfos{};
+    double samplerate = 0.0;
     enum PARAMS
     {
         PAR_ENABLED = 50,
@@ -695,6 +713,7 @@ class OctoShifterProcessor final : public juce::AudioProcessor,
     juce::CriticalSection cs;
     std::vector<AudioRouting> input_routings;
     void toggle_input_routing(int input, int destination);
+
   private:
     std::unordered_map<uint32_t, juce::RangedAudioParameter *> clap_id_to_juce_param;
     std::unordered_map<juce::RangedAudioParameter *, uint32_t> juce_param_to_clap_id;

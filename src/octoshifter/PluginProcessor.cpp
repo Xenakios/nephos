@@ -233,11 +233,11 @@ OctoShifterProcessor::OctoShifterProcessor()
         set_parameter_value(id, param_metadatas[i].defaultVal);
     }
 
-    choicetolfoshapemap[0] = lfo_t::SINE;
-    choicetolfoshapemap[1] = lfo_t::PULSE;
-    choicetolfoshapemap[2] = lfo_t::SAW_TRI_RAMP;
-    choicetolfoshapemap[3] = lfo_t::SMOOTH_NOISE;
-    choicetolfoshapemap[4] = lfo_t::SH_NOISE;
+    choicetolfoshapemap[0] = LFOBank::lfo_t::SINE;
+    choicetolfoshapemap[1] = LFOBank::lfo_t::PULSE;
+    choicetolfoshapemap[2] = LFOBank::lfo_t::SAW_TRI_RAMP;
+    choicetolfoshapemap[3] = LFOBank::lfo_t::SMOOTH_NOISE;
+    choicetolfoshapemap[4] = LFOBank::lfo_t::SH_NOISE;
 
     mod_ranges[PitchShifter::MT_PITCH] = 12.0f;
     mod_ranges[PitchShifter::MT_INVOLUME] = 18.0f;
@@ -356,7 +356,12 @@ void OctoShifterProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
         shifters[i].set_sample_rate(sampleRate);
     }
     samplerate = sampleRate;
-    initTables();
+    for (auto &lfo : lfos)
+    {
+        lfo.samplerate = sampleRate;
+        lfo.initTables();
+    }
+
     workbuffer.setSize(max_output_channels, samplesPerBlock);
     workbuffer.clear();
     synthbuffer.setSize(8, samplesPerBlock);
@@ -618,8 +623,8 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 continue;
             }
 
-            shifters[shindex].mod_source_values[PitchShifter::MS_LFO0] = lfos[0].outputBlock[0];
-            shifters[shindex].mod_source_values[PitchShifter::MS_LFO1] = lfos[1].outputBlock[0];
+            shifters[shindex].mod_source_values[PitchShifter::MS_LFO0] = lfos[0].LFOS[shindex].outputBlock[0];
+            shifters[shindex].mod_source_values[PitchShifter::MS_LFO1] = lfos[1].LFOS[shindex].outputBlock[0];
             for (int i = 0; i < numLFOs; ++i)
             {
                 shifters[shindex].modmatrix[PitchShifter::MS_LFO0 + i][PitchShifter::MT_PITCH] =
