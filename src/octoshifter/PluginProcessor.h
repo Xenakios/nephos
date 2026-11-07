@@ -209,13 +209,14 @@ class PitchShifter
     }
     enum OUTCHANSMODE
     {
+        OCM_NOTSET,
         OCM_STEREO,
         OCM_MONODISCRETE,
         OCM_AMBISONICS_1ST,
         OCM_AMBISONICS_2ND,
         OCM_AMBISONICS_3RD
     };
-    OUTCHANSMODE ochanmode = OCM_STEREO;
+    OUTCHANSMODE ochanmode = OCM_NOTSET;
     void set_output_mode(OUTCHANSMODE om)
     {
         if (om == ochanmode)
@@ -343,12 +344,12 @@ class PitchShifter
         modulatedfeedback = std::clamp(modulatedfeedback, 0.0f, 0.999f);
         fblag.setTarget(modulatedfeedback);
 
-        float modulated_in_volume = base_in_volume + modsums[MT_INVOLUME] * 12.0;
+        float modulated_in_volume = base_in_volume + modsums[MT_INVOLUME] * 18.0;
         modulated_in_volume = std::clamp(modulated_in_volume, -48.0f, 0.0f);
         modulated_in_volume = juce::Decibels::decibelsToGain(modulated_in_volume);
         ingainlag.setTarget(modulated_in_volume);
 
-        float modulated_out_volume = base_out_volume + modsums[MT_OUTVOLUME] * 12.0;
+        float modulated_out_volume = base_out_volume + modsums[MT_OUTVOLUME] * 18.0;
         modulated_out_volume = std::clamp(modulated_out_volume, -48.0f, 0.0f);
         modulated_out_volume = juce::Decibels::decibelsToGain(modulated_out_volume);
         outgainlag.setTarget(modulated_out_volume);
@@ -385,7 +386,7 @@ class PitchShifter
         azilag.setTarget(modulated_azi);
 
         sstfilter.prepareBlock();
-        alignas(16) sst::basic_blocks::dsp::pan_laws::panmatrix_t mat = {0.0f};
+        
         alignas(16) float tempoutbuffer[BLOCKSIZE];
         for (int i = 0; i < BLOCKSIZE; ++i)
         {
@@ -434,6 +435,7 @@ class PitchShifter
                 // coefficients is going to be a lot lot worse...
                 // we may need to look into some kind of look up table thing
                 float panpos = (azilag.getValue() + 1.0) * 0.5;
+                alignas(16) sst::basic_blocks::dsp::pan_laws::panmatrix_t mat = {0.0f};
                 sst::basic_blocks::dsp::pan_laws::stereoEqualPower(panpos, mat);
                 audio_inout[i * 64 + 0] = tempoutbuffer[i] * mat[0];
                 audio_inout[i * 64 + 1] = tempoutbuffer[i] * mat[1];

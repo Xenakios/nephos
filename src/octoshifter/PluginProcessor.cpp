@@ -469,8 +469,9 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
 
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
-    auto pluginbufferpointers = buffer.getArrayOfWritePointers();
     workbuffer.clear();
+    auto pluginbufferpointers = buffer.getArrayOfWritePointers();
+
     auto workpointers = workbuffer.getArrayOfWritePointers();
     bool any_synth_active = false;
     for (auto &r : input_routings)
@@ -514,7 +515,7 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     }
 
     int omode = *par_id_to_value_pointer[PAR_OUTPUTMODE];
-    int engineInChannels = 2;
+
     int engineOutChannels = 2;
 
     PitchShifter::OUTCHANSMODE shifteroutmode = PitchShifter::OCM_STEREO;
@@ -592,8 +593,9 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     while (output_fifo.usedSlots() < buffer.getNumSamples())
     {
         int shifterstouse = numshifters;
-        auto sumpointers = workbuffer.getArrayOfWritePointers();
         workbuffer.clear();
+        auto sumpointers = workbuffer.getArrayOfWritePointers();
+
         alignas(16) float inputbuffer[max_input_channels][BLOCKSIZE];
         for (int i = 0; i < BLOCKSIZE; ++i)
         {
@@ -605,7 +607,7 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             }
         }
         alignas(16) float procbuf[BLOCKSIZE * max_output_channels];
-        memset(procbuf, 0, BLOCKSIZE * max_output_channels * sizeof(float));
+
         for (int i = 0; i < numLFOs; ++i)
         {
             int lfo0shape = *par_id_to_value_pointer[PAR_LFOSHAPES + i];
@@ -624,7 +626,7 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             {
                 continue;
             }
-
+            memset(procbuf, 0, BLOCKSIZE * max_output_channels * sizeof(float));
             shifters[shindex].mod_source_values[PitchShifter::MS_LFO0] =
                 lfos[0].LFOS[shindex].outputBlock[0];
             shifters[shindex].mod_source_values[PitchShifter::MS_LFO1] =
@@ -692,7 +694,7 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         std::array<float, max_output_channels> outframe;
         for (int i = 0; i < BLOCKSIZE; ++i)
         {
-            for (int j = 0; j < 16; ++j)
+            for (int j = 0; j < engineOutChannels; ++j)
             {
                 outframe[j] = sumpointers[j][i];
             }
@@ -858,7 +860,7 @@ choc::value::Value OctoShifterProcessor::get_state()
         inputroutingsstate.addArrayElement(o);
     }
     state.setMember("input_routings", inputroutingsstate);
-    DBG(choc::json::toString(inputroutingsstate));
+    Log::info("{}", choc::json::toString(inputroutingsstate));
     return state;
 }
 
