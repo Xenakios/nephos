@@ -690,6 +690,15 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                 }
                 modulations_to_gui_fifo.push(msg);
             }
+            if (gui_visible && callbackcount % 64 == 0)
+            {
+                ParamChangeMessage msg;
+                msg.latencychanged = true;
+                msg.id = PAR_DELAYTIME + shindex;
+                msg.val =
+                    (shifters[shindex].latency_in + shifters[shindex].latency_out) / samplerate;
+                // params_to_gui_fifo.push(msg);
+            }
             if (shifteroutmode != PitchShifter::OCM_MONODISCRETE)
             {
                 for (int k = 0; k < engineOutChannels; ++k)

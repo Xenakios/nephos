@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "clap/id.h"
+#include "fmt/format.h"
 #include "juce_core/juce_core.h"
 #include "juce_events/juce_events.h"
 #include "juce_gui_basics/juce_gui_basics.h"
@@ -9,6 +10,7 @@
 #include "sst/filters++/enums_to_string.h"
 #include "text/choc_JSON.h"
 #include <exception>
+#include <optional>
 #include "PluginEditor.h"
 
 template <typename CompType>
@@ -188,8 +190,8 @@ void OctoShifterProcessorEditor::update_components()
     {
         txt += "Audio not prepared yet";
     }
-
     infoLabel.setText(txt, juce::dontSendNotification);
+
     ParamChangeMessage msg;
     while (processorRef.params_to_gui_fifo.pop(msg))
     {
@@ -203,12 +205,20 @@ void OctoShifterProcessorEditor::update_components()
         {
             for (auto &p : m->paraminfos)
             {
-                if (p.id == msg.id)
+                if (p.id == msg.id && !msg.latencychanged)
                 {
                     p.value = msg.val;
                     m->repaint();
                     fullbreak = true;
                     break;
+                }
+                else if (msg.id >= OctoShifterProcessor::PAR_DELAYTIME &&
+                         msg.id < OctoShifterProcessor::PAR_DELAYTIME +
+                                      OctoShifterProcessor::numshifters &&
+                         msg.latencychanged)
+                {
+                    p.latency_seconds = msg.val;
+                    m->repaint();
                 }
             }
             if (fullbreak)
@@ -334,7 +344,20 @@ void MultiSlider::paint(juce::Graphics &g)
         uint32_t pid = paraminfos[i].id;
         if (pid != CLAP_INVALID_ID)
         {
-            auto partxt = pref.par_id_to_metadata[pid]->valueToString(v);
+            std::optional<std::string> partxt;
+            if (pid >= OctoShifterProcessor::PAR_DELAYTIME &&
+                pid < OctoShifterProcessor::PAR_DELAYTIME + OctoShifterProcessor::numshifters)
+            {
+                // v = paraminfos[i].value;
+                // v = v * v * v;
+                // v += paraminfos[i].latency_seconds * 1000.0f;
+                // partxt = fmt::format("{:.0f} ms", v);
+            }
+            else
+            {
+                
+            }
+            partxt = pref.par_id_to_metadata[pid]->valueToString(v);
             if (partxt)
             {
                 g.setColour(juce::Colours::white);

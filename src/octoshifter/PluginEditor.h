@@ -36,6 +36,7 @@ class MultiSlider : public juce::Component
         float value = 0.0f;
         bool notify_only_on_mouse_up = false;
         float modulatedvalue = 0.0f;
+        float latency_seconds = 0.0f;
     };
     std::vector<ParamInfo> paraminfos;
     int shifter_modulation_target = -1;

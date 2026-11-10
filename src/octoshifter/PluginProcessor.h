@@ -493,6 +493,7 @@ struct ParamChangeMessage
     uint32_t id = CLAP_INVALID_ID;
     float val = 0.0f;
     bool ishostautomation = false;
+    bool latencychanged = false;
 };
 
 struct ModulationMessage
