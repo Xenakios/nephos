@@ -468,6 +468,23 @@ void OctoShifterProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
+    juce::AudioPlayHead::CurrentPositionInfo posInfo;
+    if (auto *playHead = getPlayHead())
+    {
+        if (playHead->getCurrentPosition(posInfo))
+        {
+            // Check for the transition from "not playing" to "playing"
+            if (posInfo.isPlaying && !was_playing)
+            {
+                for (auto &sh : shifters)
+                {
+                    sh.reset();
+                }
+            }
+            was_playing = posInfo.isPlaying; // Update the state for the next block
+        }
+    }
+
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
     workbuffer.clear();

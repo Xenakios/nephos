@@ -206,6 +206,7 @@ class PitchShifter
         for (int i = 0; i < MT_COUNT; ++i)
             modsums[i] = 0.0f;
         std::fill(delaybuffer.begin(), delaybuffer.end(), 0.0f);
+        stretch->reset();
     }
     enum OUTCHANSMODE
     {
@@ -728,7 +729,7 @@ class OctoShifterProcessor final : public juce::AudioProcessor,
     alignas(16) SingleThreadedFifo<std::array<float, max_input_channels>> input_fifo{4096};
     alignas(16) SingleThreadedFifo<std::array<float, max_output_channels>> output_fifo{4096};
     alignas(16) int callbackcount = 0;
-
+    bool was_playing = false;
     std::unordered_map<int, int> choicetolfoshapemap;
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OctoShifterProcessor)
