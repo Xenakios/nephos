@@ -111,7 +111,8 @@ bool AudioPluginAudioProcessorEditor::keyPressed(const juce::KeyPress &ev)
         auto state = processorRef.getState();
         try
         {
-            insertPreset(processorRef.presetsDataBase, "quick save", "Quick saves", state);
+            if (processorRef.presetsDataBase)
+                insertPreset(*processorRef.presetsDataBase, "quick save", "Quick saves", state);
         }
         catch (std::exception &ex)
         {
@@ -437,16 +438,19 @@ MacrosPresetsComponent::MacrosPresetsComponent(AudioPluginAudioProcessor &p) : p
         menu.addItem("Reset to default state",
                      [this]() { processorRef.loadPreset(processorRef.factoryResetID); });
         menu.addItem("Delete current preset", [this]() {
-            auto success =
-                presetsDeletePreset(processorRef.presetsDataBase, presetsPicker.get_selected_ID());
-            if (!success)
+            if (processorRef.presetsDataBase)
             {
-                DBG("coult not delete preset with id " << presetsPicker.get_selected_ID());
-            }
-            else
-            {
-                presetsPicker.set_selected_ID(-1);
-                presetsPicker.showButton.setButtonText("No preset selected");
+                auto success = presetsDeletePreset(*processorRef.presetsDataBase,
+                                                   presetsPicker.get_selected_ID());
+                if (!success)
+                {
+                    DBG("coult not delete preset with id " << presetsPicker.get_selected_ID());
+                }
+                else
+                {
+                    presetsPicker.set_selected_ID(-1);
+                    presetsPicker.showButton.setButtonText("No preset selected");
+                }
             }
             populatePresetsPicker();
         });
@@ -454,7 +458,8 @@ MacrosPresetsComponent::MacrosPresetsComponent(AudioPluginAudioProcessor &p) : p
             auto state = processorRef.getState();
             try
             {
-                insertPreset(processorRef.presetsDataBase, "quick save", "Quick saves", state);
+                if (processorRef.presetsDataBase)
+                    insertPreset(*processorRef.presetsDataBase, "quick save", "Quick saves", state);
                 populatePresetsPicker();
             }
             catch (std::exception &ex)
@@ -487,17 +492,21 @@ MacrosPresetsComponent::MacrosPresetsComponent(AudioPluginAudioProcessor &p) : p
                 DBG(ex.what());
             }
         });
-        menu.addSectionHeader("Presets");
-        auto presets = listPresets(processorRef.presetsDataBase);
-        for (auto &e : presets)
+        if (processorRef.presetsDataBase)
         {
-            menu.addItem(e.category + "/" + e.name, [this, e]() {
-                processorRef.loadPreset(e.id);
-                auto txt = presetsPicker.get_text_from_id(e.id);
-                if (txt)
-                    presetsPicker.showButton.setButtonText(*txt);
-            });
+            menu.addSectionHeader("Presets");
+            auto presets = listPresets(*processorRef.presetsDataBase);
+            for (auto &e : presets)
+            {
+                menu.addItem(e.category + "/" + e.name, [this, e]() {
+                    processorRef.loadPreset(e.id);
+                    auto txt = presetsPicker.get_text_from_id(e.id);
+                    if (txt)
+                        presetsPicker.showButton.setButtonText(*txt);
+                });
+            }
         }
+
         menu.showMenuAsync({});
     };
     populatePresetsPicker();
@@ -511,8 +520,10 @@ MacrosPresetsComponent::MacrosPresetsComponent(AudioPluginAudioProcessor &p) : p
 
 void MacrosPresetsComponent::populatePresetsPicker()
 {
+    if (!processorRef.presetsDataBase)
+        return;
     presetsPicker.categories.clear();
-    auto presets = listPresets(processorRef.presetsDataBase);
+    auto presets = listPresets(*processorRef.presetsDataBase);
     for (auto &e : presets)
     {
         presetsPicker.add_entry(e.category, e.id, e.name);

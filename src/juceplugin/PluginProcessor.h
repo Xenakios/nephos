@@ -192,14 +192,8 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     // for testing
     std::atomic<bool> corruptAudioOnPurpose{false};
     void processRemoteControlMessages();
-    // SqliteDb presetsDataBase{R"(C:\develop\nephos\granulatorpresets\presets.dat)"};
-    juce::File dbFile{
-        juce::File::getSpecialLocation(juce::File::SpecialLocationType::userDocumentsDirectory)
-            .getChildFile("nephos_data")
-            .getChildFile("nephos_presets.dat")};
-    std::string dbFileName{dbFile.getFullPathName().toStdString()};
-    SqliteDb presetsDataBase{dbFileName};
-
+    std::unique_ptr<SqliteDb> presetsDataBase;
+    void init_sqlite_database();
   private:
     alignas(32) std::vector<float> workBuffer;
     alignas(32) SingleThreadedFifo<

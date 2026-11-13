@@ -76,32 +76,37 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
       avisComponent(2)
 {
     // init_clouds(granulator);
-    try
+    init_sqlite_database();
+    if (presetsDataBase)
     {
-        presetsInitSchema(presetsDataBase);
-    }
-    catch (std::exception &ex)
-    {
-        DBG(ex.what());
-    }
-    auto snaps = listPresets(presetsDataBase);
-    for (auto &e : snaps)
-    {
-        if (e.category == "snapshot")
+        try
         {
-            try
-            {
-                int index = std::stoi(e.name);
-                snapIndexToPresetID[index] = e.id;
-            }
-            catch (std::exception &ex)
-            {
-                DBG(ex.what());
-            }
+            presetsInitSchema(*presetsDataBase);
         }
-        else if (e.category == "Factory Presets" && e.name == "Factory Reset")
+        catch (std::exception &ex)
         {
-            factoryResetID = e.id;
+            DBG(ex.what());
+        }
+
+        auto snaps = listPresets(*presetsDataBase);
+        for (auto &e : snaps)
+        {
+            if (e.category == "snapshot")
+            {
+                try
+                {
+                    int index = std::stoi(e.name);
+                    snapIndexToPresetID[index] = e.id;
+                }
+                catch (std::exception &ex)
+                {
+                    DBG(ex.what());
+                }
+            }
+            else if (e.category == "Factory Presets" && e.name == "Factory Reset")
+            {
+                factoryResetID = e.id;
+            }
         }
     }
     rc_fifo.reset(512);
@@ -162,18 +167,21 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     }
     */
     granulator.set_grain_modulation_routing(0, 0, GranulatorVoice::MT_PITCH, false);
-    try
+    if (presetsDataBase)
     {
-        if (factoryResetID == -1)
-            factoryResetID =
-                insertPreset(presetsDataBase, "Factory Reset", "Factory Presets", getState());
-        else
-            updatePreset(presetsDataBase, factoryResetID, "Factory Reset", "Factory Presets",
-                         getState());
-    }
-    catch (std::exception &ex)
-    {
-        DBG(ex.what());
+        try
+        {
+            if (factoryResetID == -1)
+                factoryResetID =
+                    insertPreset(*presetsDataBase, "Factory Reset", "Factory Presets", getState());
+            else
+                updatePreset(*presetsDataBase, factoryResetID, "Factory Reset", "Factory Presets",
+                             getState());
+        }
+        catch (std::exception &ex)
+        {
+            DBG(ex.what());
+        }
     }
 }
 
@@ -181,21 +189,24 @@ AudioPluginAudioProcessor::~AudioPluginAudioProcessor() {}
 
 void AudioPluginAudioProcessor::saveSnapShot(int index, choc::value::ValueView state)
 {
+    if (!presetsDataBase)
+        return;
     if (index >= 0 && index < maxNumSnapshots)
     {
         std::lock_guard<choc::threading::SpinLock> locker(stateLock);
         try
         {
             auto found =
-                findPresetWithNameCategory(presetsDataBase, std::to_string(index), "snapshot");
+                findPresetWithNameCategory(*presetsDataBase, std::to_string(index), "snapshot");
             if (found >= 0)
             {
-                updatePreset(presetsDataBase, found, std::to_string(index), "snapshot", getState());
+                updatePreset(*presetsDataBase, found, std::to_string(index), "snapshot",
+                             getState());
             }
             else
             {
                 auto inserted =
-                    insertPreset(presetsDataBase, std::to_string(index), "snapshot", getState());
+                    insertPreset(*presetsDataBase, std::to_string(index), "snapshot", getState());
                 snapIndexToPresetID[index] = inserted;
             }
         }
@@ -208,9 +219,11 @@ void AudioPluginAudioProcessor::saveSnapShot(int index, choc::value::ValueView s
 
 void AudioPluginAudioProcessor::loadPreset(int64_t presetID)
 {
+    if (!presetsDataBase)
+        return;
     try
     {
-        auto dbstate = presetsLoadPreset(presetsDataBase, presetID);
+        auto dbstate = presetsLoadPreset(*presetsDataBase, presetID);
         if (dbstate)
         {
             if (dbstate->data.size() < 1)
@@ -1209,6 +1222,16 @@ void AudioPluginAudioProcessor::loadMacroKnobs(std::string filename)
     }
 }
 
+void AudioPluginAudioProcessor::init_sqlite_database()
+{
+    juce::File dbFile{
+        juce::File::getSpecialLocation(juce::File::SpecialLocationType::userDocumentsDirectory)
+            .getChildFile("nephos_data")
+            .getChildFile("nephos_presets.dat")};
+    std::string dbFileName{dbFile.getFullPathName().toStdString()};
+    presetsDataBase = std::make_unique<SqliteDb>(dbFileName);
+}
+
 void AudioPluginAudioProcessor::handleMacroKnob(int knobindex, float value, bool is_audio_thread)
 {
     if (knobindex >= 0 && knobindex < macroBindings.size())
@@ -1242,4 +1265,5 @@ void AudioPluginAudioProcessor::handleMacroKnob(int knobindex, float value, bool
 
 //==============================================================================
 // This creates new instances of the plugin..
+
 juce::AudioProcessor *JUCE_CALLTYPE createPluginFilter() { return new AudioPluginAudioProcessor(); }
