@@ -136,7 +136,7 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
     ToneGranulator granulator;
     choc::fifo::SingleReaderSingleWriterFIFO<ThreadMessage> from_gui_fifo;
     choc::fifo::SingleReaderSingleWriterFIFO<ParameterMessage> params_from_gui_fifo;
-    
+
     choc::fifo::SingleReaderSingleWriterFIFO<ThreadMessage> to_gui_fifo;
     // This is multiple writer because remote messages may be coming from GUI macro knobs or MIDI in
     // the audio thread. In the future we may also handle OSC messages, which
@@ -202,8 +202,8 @@ class AudioPluginAudioProcessor final : public juce::AudioProcessor
 
   private:
     alignas(32) std::vector<float> workBuffer;
-    alignas(32) choc::fifo::SingleReaderSingleWriterFIFO<
-        std::array<float, ambisonicOrderNumChannels(maxAmbiSonicOrder)>> buffer_adapter;
+    alignas(32) SingleThreadedFifo<
+        std::array<float, ambisonicOrderNumChannels(maxAmbiSonicOrder)>> buffer_adapter{1024};
     void setStateDirtyHack();
     void init_clouds(ToneGranulator &g);
     std::unordered_map<juce::AudioProcessorParameter *, int> jucepartoindex;

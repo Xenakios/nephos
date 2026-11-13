@@ -121,7 +121,6 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         macroMidiMappings[41 + i] = 8 + i;
     }
 
-    buffer_adapter.reset(1024);
     from_gui_fifo.reset(1024);
     params_from_gui_fifo.reset(2048);
     granulator.params_to_gui_fifo.reset(2048);
@@ -668,7 +667,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     int opos = 0;
     int numoutsamples = buffer.getNumSamples();
 
-    while (buffer_adapter.getUsedSlots() < numoutsamples)
+    while (buffer_adapter.usedSlots() < numoutsamples)
     {
         // ok so this is a bit dodgy, can't be bothered to do input side
         // buffering that adapts to the granulator internal block size
