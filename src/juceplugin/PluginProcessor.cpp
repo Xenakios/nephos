@@ -1229,7 +1229,14 @@ void AudioPluginAudioProcessor::init_sqlite_database()
             .getChildFile("nephos_data")
             .getChildFile("nephos_presets.dat")};
     std::string dbFileName{dbFile.getFullPathName().toStdString()};
-    presetsDataBase = std::make_unique<SqliteDb>(dbFileName);
+    try
+    {
+        presetsDataBase = std::make_unique<SqliteDb>(dbFileName);
+    }
+    catch (std::exception &ex)
+    {
+        DBG("could not create sqlite database : " << ex.what());
+    }
 }
 
 void AudioPluginAudioProcessor::handleMacroKnob(int knobindex, float value, bool is_audio_thread)
