@@ -1459,7 +1459,6 @@ class ToneGranulator
             spinLock.unlock();
     }
     std::atomic<float> compensationgainforgui{1.0f};
-    std::atomic<float> mixgainforgui{1.0f};
     std::atomic<float> omnilevelforgui{1.0f};
     using pmd = sst::basic_blocks::params::ParamMetaData;
     std::vector<pmd> parmetadatas;
