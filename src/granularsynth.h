@@ -182,6 +182,10 @@ struct GranulatorModConfig
 
     using RoutingExtraPayload = int;
     using CurveIdentifier = CurveIdentifier;
+    // if this mod config class doesn't have this function, the matrix
+    // won't do modulation curves, obviously it's a bit annoyig we have
+    // a static function with the same name in the global namespace,
+    // but this will have to do for now...
     static std::function<float(float)> getCurveOperator(CurveIdentifier id)
     {
         return ::getCurveOperator(id);

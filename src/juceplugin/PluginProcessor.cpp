@@ -819,6 +819,7 @@ choc::value::Value AudioPluginAudioProcessor::getState()
     auto tuningstate = choc::value::createObject("tuning");
     tuningstate.setMember("scala_string", granulator.tuning.scale.rawText);
     tuningstate.setMember("scala_file", granulator.currentScalaFile);
+    tuningstate.setMember("quantmode", (int64_t)granulator.pitchquantizemode);
     rootstate.setMember("tuning", tuningstate);
 
     auto filterstates = choc::value::createEmptyArray();

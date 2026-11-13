@@ -738,6 +738,7 @@ void ToneGranulator::set_state(choc::value::ValueView state)
         {
             std::cout << err << std::endl;
         }
+        pitchquantizemode = tunstate["quantmode"].getWithDefault(0);
     }
     if (state.hasObjectMember("trigrandstates"))
     {
@@ -1733,4 +1734,3 @@ void GranulatorVoice::start(GrainEvent &evpars)
     envendtype = std::clamp<uint8_t>(evpars.envelope_end_type, 0, EasingLUTS::numFunctions);
     envshape = std::clamp(evpars.envelope_shape, 0.0f, 1.0f);
 }
-
