@@ -45,7 +45,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
             std::make_unique<baconpaul::six_sines::ui::SpectrumAnalyzerComponent>(44100.0);
     }
     */
-    
+
     addAndMakeVisible(macrosPresetsComp);
     addChildComponent(overlaylabel);
     mainTabs.addTab("MAIN", juce::Colours::grey, &mainPage, false);
@@ -328,7 +328,6 @@ void MainPageComponent::resized()
     insertComponents[1]->setBounds(insertComponents[0]->getRight() + 1,
                                    spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 125);
 
-    
     // processorRef.xenAvisComponent.setBounds(getWidth() - 501, stackModuleComponent.getBottom() +
     // 2,
     //                                         500, 250);
@@ -562,7 +561,7 @@ void MacrosPresetsComponent::updateButtonColors()
 
 void ModulationRowComponent::fillPickerWithCurves(GalleryPicker &picker)
 {
-    auto curves = GranulatorModConfig::get_curve_metadata();
+    auto curves = get_curve_metadata();
     for (auto &md : curves)
     {
         picker.add_entry(md.groupname, md.id, md.name);
@@ -628,8 +627,7 @@ ModulationRowComponent::ModulationRowComponent(AudioPluginAudioProcessor &proc, 
     curvePicker.DrawThumb = [this](int64_t id, juce::Graphics &g, juce::Rectangle<float> area) {
         g.setColour(juce::Colours::lightgreen);
         juce::Path path;
-        auto curvefunc =
-            GranulatorModConfig::getCurveOperator(GranulatorModConfig::CurveIdentifier{(int)id});
+        auto curvefunc = getCurveOperator(GranulatorModConfig::CurveIdentifier{(int)id});
         for (int i = 0; i < (int)area.getWidth(); ++i)
         {
             float norm = juce::jmap<float>(i, 0, area.getWidth() - 1, -1.0f, 1.0f);

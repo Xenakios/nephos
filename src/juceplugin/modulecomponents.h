@@ -33,7 +33,7 @@ inline void addMidiLearnToMenu(juce::PopupMenu &menu, AudioPluginAudioProcessor 
     if (assigned != CLAP_INVALID_ID)
     {
         juce::PopupMenu curvemenu;
-        auto curveinfos = GranulatorModConfig::get_curve_metadata();
+        auto curveinfos = get_curve_metadata();
         for (auto &ci : curveinfos)
         {
             curvemenu.addItem(ci.groupname + "/" + ci.name,

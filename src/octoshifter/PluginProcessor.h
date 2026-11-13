@@ -47,29 +47,6 @@ template <typename T> inline T reflect_value_no_loop(const T minval, const T val
     return (temp <= range) ? minval + temp : maxval - (temp - range);
 }
 
-template <typename T>
-[[nodiscard]] inline T wrap_value_no_loop(const T minval, const T val, const T maxval) noexcept
-{
-    assert(maxval > minval);
-    const T range = maxval - minval;
-
-    if constexpr (std::is_floating_point_v<T>)
-    {
-        T temp = std::fmod(val - minval, range);
-        if (temp < T(0))
-            temp += range;
-        return temp + minval;
-    }
-    else
-    {
-        static_assert(std::is_signed_v<T>, "Use a signed integer type");
-        T temp = (val - minval) % range;
-        if (temp < T(0))
-            temp += range;
-        return temp + minval;
-    }
-}
-
 struct ModulationEntry
 {
     int source_index = -1;

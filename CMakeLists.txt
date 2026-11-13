@@ -139,6 +139,7 @@ target_sources(NephosPlugin
         src/grainfx.cpp
         src/js_impl.cpp
         src/easing.cpp
+        src/octoshifter/modcurves.cpp
         src/juceplugin/xap_slider.cpp
         src/juceplugin/modulecomponents.cpp
         src/juceplugin/audiovisualizercomponent.cpp

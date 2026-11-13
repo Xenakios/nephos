@@ -530,7 +530,32 @@ template <typename T, size_t Size> class SimpleRingBuffer
     int m_read_index = 0;
     int m_available = 0;
 };
+/*
+template <typename T>
+[[nodiscard]] inline T wrap_value_no_loop(const T minval, const T val, const T maxval) noexcept
+{
+    assert(maxval > minval);
+    const T range = maxval - minval;
 
+    if constexpr (std::is_floating_point_v<T>)
+    {
+        T temp = std::fmod(val - minval, range);
+        if (temp < T(0))
+            temp += range;
+        return temp + minval;
+    }
+    else
+    {
+        static_assert(std::is_signed_v<T>, "Use a signed integer type");
+        T temp = (val - minval) % range;
+        if (temp < T(0))
+            temp += range;
+        return temp + minval;
+    }
+}
+*/
+// assuming the no loop version above actually works properly, we should remove this 
+// looping version...
 // note that limits can't be the same and the loop may run for long!
 // looks like this is broken...need to explore further
 template <typename T> inline T wrap_value(const T minval, const T val, const T maxval)

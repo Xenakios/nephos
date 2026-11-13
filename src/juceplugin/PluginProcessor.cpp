@@ -566,8 +566,8 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         }
         if (msg.opcode == ThreadMessage::OP_MIDILEARNCURVE)
         {
-            midiBindings[msg.modslot].mapfunction = GranulatorModConfig::getCurveOperator(
-                GranulatorModConfig::CurveIdentifier{msg.modcurve});
+            midiBindings[msg.modslot].mapfunction =
+                getCurveOperator(GranulatorModConfig::CurveIdentifier{msg.modcurve});
             midiBindings[msg.modslot].mapfunctionid = msg.modcurve;
         }
         if (msg.opcode == ThreadMessage::OP_UNLEARNMIDI)
@@ -622,7 +622,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             mm.rt.updateRoutingAt(msg.modslot,
                                   GranulatorModConfig::SourceIdentifier{(uint32_t)msg.modsource},
                                   GranulatorModConfig::SourceIdentifier{(uint32_t)msg.modvia},
-                                  GranulatorModConfig::MyCurve{msg.modcurve, msg.modcurvepar0},
+                                  GranulatorModConfig::CurveIdentifier{msg.modcurve},
                                   GranulatorModConfig::TargetIdentifier{msg.moddest}, msg.depth);
             if (msg.modvia == 0)
             {
@@ -903,7 +903,7 @@ choc::value::Value AudioPluginAudioProcessor::getState()
             if (mm.rt.routes[i].target)
                 routingstate.setMember("dest", (int)(mm.rt.routes[i].target->target));
             if (mm.rt.routes[i].curve)
-                routingstate.setMember("curve", mm.rt.routes[i].curve->id);
+                routingstate.setMember("curve", *mm.rt.routes[i].curve);
             modroutings.addArrayElement(routingstate);
         }
     }
@@ -970,7 +970,7 @@ void AudioPluginAudioProcessor::changeStateImpl(choc::value::ValueView state)
                     if (curveid > 0)
                     {
                         binding.mapfunctionid = curveid;
-                        binding.mapfunction = GranulatorModConfig::getCurveOperator({curveid});
+                        binding.mapfunction = getCurveOperator(curveid);
                     }
                     midiBindings.emplace_back(binding);
                 }
@@ -1050,7 +1050,7 @@ void AudioPluginAudioProcessor::sendExtraStatesToGUI()
             msg.depth = mm.rt.routes[i].depth;
             msg.moddest = mm.rt.routes[i].target->target;
             if (mm.rt.routes[i].curve)
-                msg.modcurve = mm.rt.routes[i].curve->id;
+                msg.modcurve = *mm.rt.routes[i].curve;
             auto it = granulator.modRanges.find(msg.moddest);
             if (it != granulator.modRanges.end())
                 msg.depth /= it->second;
