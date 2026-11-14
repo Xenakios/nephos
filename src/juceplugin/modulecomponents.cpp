@@ -697,6 +697,7 @@ OscillatorModuleComponent::OscillatorModuleComponent(AudioPluginAudioProcessor &
             XapSlider::SS_Knob,
             *p.granulator.idtoparmetadata[ToneGranulator::PAR_GRAINMODSLOTAMOUNT0 + i]);
         initSlider(p, *this, *knob);
+        knob->texth = 15.0;
         modDepthKnobs.push_back(std::move(knob));
         auto srccombo = std::make_unique<juce::ComboBox>();
         addAndMakeVisible(*srccombo);

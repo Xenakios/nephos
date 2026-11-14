@@ -78,7 +78,7 @@ class XapSlider : public juce::Component
     void showTextEditor();
     juce::String m_err_msg;
     float dropdownXpercent = 0.5f;
-
+    float texth = 25.0;
     void mouseDown(const juce::MouseEvent &ev) override;
     void mouseDrag(const juce::MouseEvent &ev) override;
     void mouseUp(const juce::MouseEvent &ev) override;

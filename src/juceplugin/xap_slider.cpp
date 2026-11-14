@@ -389,8 +389,6 @@ void XapSlider::paintKnob(juce::Graphics &g)
 {
     g.fillAll(juce::Colours::black);
     g.setColour(juce::Colours::white);
-    float texth = 25.0;
-
     if (!m_mousedown)
     {
         std::string display_name = m_pardesc.name;
