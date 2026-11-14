@@ -437,14 +437,20 @@ void DashBoardComponent::paint(juce::Graphics &g)
 
     float mindb = -60.0f;
     float maxdb = 12.0f;
-    g.setColour(juce::Colours::orange);
-    float h = safe_gain_to_db(gr->compensationgainforgui.load());
-    // g.drawText(juce::String(h), 60, 0, 45, 20, juce::Justification::centredRight);
-    h = std::clamp(h, mindb, maxdb);
-    h = juce::jmap<float>(h, mindb, maxdb, 0.0, getHeight());
-    g.fillRect(juce::Rectangle<float>{0.0f, (float)getHeight() - h, 14.0f, h});
 
-    h = safe_gain_to_db(gr->omnilevelforgui.load());
+    // y-position of the 0 dB line on the existing scale
+    const float zeroDbY =
+        (float)getHeight() - juce::jmap<float>(0.0f, mindb, maxdb, 0.0f, (float)getHeight());
+
+    g.setColour(juce::Colours::orange);
+    float grDb = safe_gain_to_db(gr->compensationgainforgui.load());
+    grDb = std::clamp(grDb, mindb, 0.0f); // GR is never above 0 dB
+
+    // 0 dB -> height 0, mindb -> fills all space below the 0 dB line
+    float grHeight = juce::jmap<float>(grDb, mindb, 0.0f, (float)getHeight() - zeroDbY, 0.0f);
+    g.fillRect(juce::Rectangle<float>{0.0f, zeroDbY, 14.0f, grHeight});
+    
+    float h = safe_gain_to_db(gr->omnilevelforgui.load());
     h = std::clamp(h, mindb, maxdb);
     h = juce::jmap<float>(h, mindb, maxdb, 0.0, getHeight());
     g.setColour(juce::Colours::salmon);
