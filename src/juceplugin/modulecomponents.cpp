@@ -696,37 +696,6 @@ OscillatorModuleComponent::OscillatorModuleComponent(AudioPluginAudioProcessor &
         auto knob = std::make_unique<XapSlider>(
             XapSlider::SS_Knob,
             *p.granulator.idtoparmetadata[ToneGranulator::PAR_GRAINMODSLOTAMOUNT0 + i]);
-        knob->addMenuItemsCallback([this, i](juce::PopupMenu &menu) {
-            menu.addSectionHeader("Routing");
-            juce::PopupMenu sourcemenu;
-            auto cursource = processorRef.granulator.voices[0]->modulation_slots[i].source_id;
-            sourcemenu.addItem("None", true, cursource == CLAP_INVALID_ID, [this, i] {
-                processorRef.granulator.set_grain_modulation_routing(i, CLAP_INVALID_ID, {}, false);
-            });
-            for (int j = 0; j < 4; ++j)
-            {
-                sourcemenu.addItem(
-                    "Envelope " + juce::String(j + 1), true, cursource == j, [this, i, j]() {
-                        processorRef.granulator.set_grain_modulation_routing(i, j, {}, false);
-                    });
-            }
-            menu.addSubMenu("Modulation source", sourcemenu);
-            juce::PopupMenu targetmenu;
-            auto curtarget = processorRef.granulator.voices[0]->modulation_slots[i].target_id;
-            targetmenu.addItem("None", true, curtarget == CLAP_INVALID_ID, [this, i] {
-                processorRef.granulator.set_grain_modulation_routing(i, {}, CLAP_INVALID_ID, false);
-            });
-            for (int j = 0; j < GranulatorVoice::NUMMODTARGETS; ++j)
-            {
-                targetmenu.addItem(processorRef.granulator.voices[0]->get_mod_target_name(
-                                       (GranulatorVoice::MODTARGET)j),
-                                   true, curtarget == j, [this, i, j]() {
-                                       processorRef.granulator.set_grain_modulation_routing(
-                                           i, {}, j, false);
-                                   });
-            }
-            menu.addSubMenu("Modulation target", targetmenu);
-        });
         initSlider(p, *this, *knob);
         modDepthKnobs.push_back(std::move(knob));
         auto srccombo = std::make_unique<juce::ComboBox>();
@@ -786,6 +755,9 @@ OscillatorModuleComponent::OscillatorModuleComponent(AudioPluginAudioProcessor &
 
 void OscillatorModuleComponent::timerCallback()
 {
+    // we update at 1 Hz now so not worth it doing checks if the values actually changed
+    // also getting the mod sources and targets is not thread safe anyway
+    // a proper fifo based solution will have to wait for now...
     for (int i = 0; i < GrainEvent::max_grain_mod_slots; ++i)
     {
         auto cursource = processorRef.granulator.voices[0]->modulation_slots[i].source_id;
