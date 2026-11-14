@@ -729,6 +729,30 @@ OscillatorModuleComponent::OscillatorModuleComponent(AudioPluginAudioProcessor &
         });
         initSlider(p, *this, *knob);
         modDepthKnobs.push_back(std::move(knob));
+        auto srccombo = std::make_unique<juce::ComboBox>();
+        addAndMakeVisible(*srccombo);
+        srccombo->addItem("None", 1);
+        for (int j = 0; j < 4; ++j)
+        {
+            srccombo->addItem("ENV" + juce::String(j + 1), j + 2);
+        }
+        srccombo->onChange = [this, i, cptr = srccombo.get()]() {
+            uint32_t srcid = CLAP_INVALID_ID;
+            if (cptr->getSelectedId() >= 2)
+                srcid = cptr->getSelectedId() - 2;
+            processorRef.granulator.set_grain_modulation_routing(i, srcid, {}, false);
+        };
+        modSourceCombos.push_back(std::move(srccombo));
+        auto targcombo = std::make_unique<juce::ComboBox>();
+        targcombo->addItem("None", 1);
+        for (int i = 0; i < GranulatorVoice::NUMMODTARGETS; ++i)
+        {
+            targcombo->addItem(processorRef.granulator.voices[0]->get_mod_target_name(
+                                   (GranulatorVoice::MODTARGET)i),
+                               i + 2);
+        }
+        addAndMakeVisible(*targcombo);
+        modTargetCombos.push_back(std::move(targcombo));
     }
 
     initSlider(p, *this, pitchEnvWarpKnob);
@@ -826,15 +850,23 @@ void OscillatorModuleComponent::resized()
     quantizePitchKnob.setBounds(oscPitchKnob.getRight() + 2, oscTypeComponent.getBottom() + 1, 100,
                                 120);
     scalaPicker.showButton.setBounds(oscPitchKnob.getX(), oscPitchKnob.getBottom() + 2, 250, 25);
-
+    juce::FlexBox modflex;
+    modflex.flexDirection = juce::FlexBox::Direction::column;
+    std::array<juce::FlexBox, 4> rowflexes;
     for (int i = 0; i < modDepthKnobs.size(); ++i)
     {
-        modDepthKnobs[i]->setBounds(scalaPicker.showButton.getRight() + 1,
-                                    oscTypeComponent.getBottom() + 1 + i * 51, 80, 50);
+        rowflexes[i].flexDirection = juce::FlexBox::Direction::row;
+        rowflexes[i].items.add(
+            juce::FlexItem(*modSourceCombos[i]).withFlex(1).withMargin(1).withMaxHeight(25));
+        rowflexes[i].items.add(juce::FlexItem(*modDepthKnobs[i]).withFlex(1).withMargin(1));
+        rowflexes[i].items.add(
+            juce::FlexItem(*modTargetCombos[i]).withFlex(1).withMargin(1).withMaxHeight(25));
+        modflex.items.add(juce::FlexItem(rowflexes[i]).withFlex(1));
     }
-
-    pitchEnvelopeComponent.setBounds(modDepthKnobs[0]->getRight() + 2, oscTypeComponent.getBottom(),
-                                     200, 200);
+    modflex.performLayout(juce::Rectangle(scalaPicker.showButton.getRight() + 1,
+                                          oscTypeComponent.getBottom() + 1, 250, 200));
+    pitchEnvelopeComponent.setBounds(modTargetCombos[0]->getRight() + 2,
+                                     oscTypeComponent.getBottom(), 200, 200);
     grainModComponent.setBounds(pitchEnvelopeComponent.getRight() + 2, oscTypeComponent.getBottom(),
                                 200, 200);
 

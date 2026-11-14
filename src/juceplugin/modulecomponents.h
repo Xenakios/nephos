@@ -349,6 +349,8 @@ class OscillatorModuleComponent : public juce::GroupComponent
     OscTypeComponent oscTypeComponent;
     XapSlider oscPitchKnob;
     std::vector<std::unique_ptr<XapSlider>> modDepthKnobs;
+    std::vector<std::unique_ptr<juce::ComboBox>> modSourceCombos;
+    std::vector<std::unique_ptr<juce::ComboBox>> modTargetCombos;
     XapSlider pitchEnvWarpKnob;
     XapSlider oscSyncKnob;
     XapSlider oscPWKnob;
