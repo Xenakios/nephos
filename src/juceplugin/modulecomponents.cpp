@@ -745,6 +745,12 @@ OscillatorModuleComponent::OscillatorModuleComponent(AudioPluginAudioProcessor &
         modSourceCombos.push_back(std::move(srccombo));
         auto targcombo = std::make_unique<juce::ComboBox>();
         targcombo->addItem("None", 1);
+        targcombo->onChange = [this, i, cptr = targcombo.get()] {
+            uint32_t targid = CLAP_INVALID_ID;
+            if (cptr->getSelectedId() >= 2)
+                targid = cptr->getSelectedId() - 2;
+            processorRef.granulator.set_grain_modulation_routing(i, {}, targid, false);
+        };
         for (int i = 0; i < GranulatorVoice::NUMMODTARGETS; ++i)
         {
             targcombo->addItem(processorRef.granulator.voices[0]->get_mod_target_name(
@@ -775,6 +781,24 @@ OscillatorModuleComponent::OscillatorModuleComponent(AudioPluginAudioProcessor &
     addAndMakeVisible(pitchEnvelopeComponent);
     addChildComponent(oscTypeEditor);
     oscTypeEditor.setBounds(2, 2, 200, 25);
+    startTimerHz(1);
+}
+
+void OscillatorModuleComponent::timerCallback()
+{
+    for (int i = 0; i < GrainEvent::max_grain_mod_slots; ++i)
+    {
+        auto cursource = processorRef.granulator.voices[0]->modulation_slots[i].source_id;
+        if (cursource != CLAP_INVALID_ID)
+            modSourceCombos[i]->setSelectedId(cursource + 2);
+        else
+            modSourceCombos[i]->setSelectedId(1);
+        auto curtarget = processorRef.granulator.voices[0]->modulation_slots[i].target_id;
+        if (curtarget != CLAP_INVALID_ID)
+            modTargetCombos[i]->setSelectedId(curtarget + 2);
+        else
+            modTargetCombos[i]->setSelectedId(1);
+    }
 }
 
 void OscillatorModuleComponent::updateScalaDropFromPath(std::string path)

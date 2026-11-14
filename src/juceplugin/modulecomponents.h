@@ -342,7 +342,7 @@ class OscTypeComponent : public juce::Component, public juce::Timer
     void mouseDown(const juce::MouseEvent &ev) override;
 };
 
-class OscillatorModuleComponent : public juce::GroupComponent
+class OscillatorModuleComponent : public juce::GroupComponent, public juce::Timer
 {
   public:
     AudioPluginAudioProcessor &processorRef;
@@ -367,6 +367,7 @@ class OscillatorModuleComponent : public juce::GroupComponent
     juce::TextEditor oscTypeEditor;
     std::map<int, std::string> scalaIdToPath;
     OscillatorModuleComponent(AudioPluginAudioProcessor &p);
+    void timerCallback() override;
     void resized() override;
     void populateScalaDrop();
     void updateScalaDropFromPath(std::string path);
