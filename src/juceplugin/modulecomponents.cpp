@@ -852,11 +852,17 @@ void OscillatorModuleComponent::resized()
     for (int i = 0; i < modDepthKnobs.size(); ++i)
     {
         rowflexes[i].flexDirection = juce::FlexBox::Direction::row;
-        rowflexes[i].items.add(
-            juce::FlexItem(*modSourceCombos[i]).withFlex(1).withMargin(1).withMaxHeight(25));
+        rowflexes[i].items.add(juce::FlexItem(*modSourceCombos[i])
+                                   .withFlex(1)
+                                   .withHeight(20)
+                                   .withMargin(1)
+                                   .withAlignSelf(juce::FlexItem::AlignSelf::center));
         rowflexes[i].items.add(juce::FlexItem(*modDepthKnobs[i]).withFlex(1).withMargin(1));
-        rowflexes[i].items.add(
-            juce::FlexItem(*modTargetCombos[i]).withFlex(1).withMargin(1).withMaxHeight(25));
+        rowflexes[i].items.add(juce::FlexItem(*modTargetCombos[i])
+                                   .withFlex(1)
+                                   .withMargin(1)
+                                   .withHeight(20)
+                                   .withAlignSelf(juce::FlexItem::AlignSelf::center));
         modflex.items.add(juce::FlexItem(rowflexes[i]).withFlex(1));
     }
     modflex.performLayout(juce::Rectangle(scalaPicker.showButton.getRight() + 1,
