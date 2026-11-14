@@ -865,15 +865,16 @@ void OscillatorModuleComponent::resized()
                                      oscTypeComponent.getBottom(), 200, 200);
     grainModComponent.setBounds(pitchEnvelopeComponent.getRight() + 2, oscTypeComponent.getBottom(),
                                 200, 200);
-
-    oscSyncKnob.setBounds(grainModComponent.getRight() + 2, oscTypeComponent.getBottom() + 1, 80,
-                          50);
-    oscPWKnob.setBounds(grainModComponent.getRight() + 2, oscSyncKnob.getBottom() + 1, 80, 50);
-    oscFMPitchKnob.setBounds(oscSyncKnob.getRight() + 2, oscTypeComponent.getBottom() + 1, 80, 50);
-    oscFMDepthKnob.setBounds(oscFMPitchKnob.getRight() + 2, oscTypeComponent.getBottom() + 1, 80,
-                             50);
-    oscFMFeedbackKnob.setBounds(oscFMPitchKnob.getX(), oscFMPitchKnob.getBottom() + 1, 80, 50);
-    oscNoiseCorrelationKnob.setBounds(oscPWKnob.getX(), oscPWKnob.getBottom() + 1, 80, 50);
+    juce::FlexBox oscparsflex;
+    oscparsflex.flexDirection = juce::FlexBox::Direction::row;
+    oscparsflex.items.add(juce::FlexItem(oscSyncKnob).withFlex(1).withMargin(1));
+    oscparsflex.items.add(juce::FlexItem(oscPWKnob).withFlex(1).withMargin(1));
+    oscparsflex.items.add(juce::FlexItem(oscFMPitchKnob).withFlex(1).withMargin(1));
+    oscparsflex.items.add(juce::FlexItem(oscFMDepthKnob).withFlex(1).withMargin(1));
+    oscparsflex.items.add(juce::FlexItem(oscFMFeedbackKnob).withFlex(1).withMargin(1));
+    oscparsflex.items.add(juce::FlexItem(oscNoiseCorrelationKnob).withFlex(1).withMargin(1));
+    oscparsflex.performLayout(juce::Rectangle<int>(oscTypeComponent.getRight() + 1, 17,
+                                                   getWidth() - oscTypeComponent.getWidth(), 50));
     oscNoiseModeDrop.setBounds(oscNoiseCorrelationKnob.getX(),
                                oscNoiseCorrelationKnob.getBottom() + 1, 250, 25);
 }
