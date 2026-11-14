@@ -941,20 +941,12 @@ class ToneGranulator
             }
         }
 #endif
-        float maingain =
-            modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_MAINVOLUME});
-        maingain = std::clamp(maingain, -96.0f, 0.0f);
-        maingain = xenakios::decibelsToGain(maingain);
-        gainlag.setTarget(maingain);
         for (int k = 0; k < granul_block_size; ++k)
         {
-            gainlag.process();
-            float gain = gainlag.getValue();
-            float safefadegain = ambiofadebuf[k]; // fadeForLargeStateChange.step();
-            gain *= safefadegain;
+            float safefadegain = ambiofadebuf[k];
             for (int chan = 0; chan < num_out_chans; ++chan)
             {
-                outputbuffer[k * num_out_chans + chan] = mixsum[k][chan] * gain;
+                outputbuffer[k * num_out_chans + chan] = mixsum[k][chan] * safefadegain;
             }
         }
         if (mixvolumemode != MVM_OFF)
@@ -964,6 +956,21 @@ class ToneGranulator
             masterCompressor.setFloatParam(comptype::fpThreshold, th);
             masterCompressor.processMultiChannel(outputbuffer, 60.0);
         }
+        float maingain =
+            modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_MAINVOLUME});
+        maingain = std::clamp(maingain, -96.0f, 0.0f);
+        maingain = xenakios::decibelsToGain(maingain);
+        gainlag.setTarget(maingain);
+        for (int k = 0; k < granul_block_size; ++k)
+        {
+            gainlag.process();
+            float gain = gainlag.getValue();
+            for (int chan = 0; chan < num_out_chans; ++chan)
+            {
+                outputbuffer[k * num_out_chans + chan] *= gain;
+            }
+        }
+        
         float maxlevel = 0.0f;
         for (int k = 0; k < granul_block_size; ++k)
         {
