@@ -118,8 +118,8 @@ void GalleryPicker::paint(juce::Graphics &g)
     ++paintcount;
     g.fillAll(juce::Colours::black);
     g.setFont(font);
-    g.setColour(juce::Colours::magenta);
-    g.drawRect(g.getClipBounds());
+    // g.setColour(juce::Colours::magenta);
+    // g.drawRect(g.getClipBounds());
     
     for (size_t i = 0; i < categories.size(); ++i)
     {

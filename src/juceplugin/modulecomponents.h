@@ -360,6 +360,7 @@ class OscillatorModuleComponent : public juce::GroupComponent, public juce::Time
     XapSlider oscNoiseCorrelationKnob;
     XapSlider oscNoiseModeDrop;
     XapSlider quantizePitchKnob;
+    XapSlider tuningOffsetKnob;
     GalleryPicker scalaPicker;
 
     GrainEnvelopeEditorComponent pitchEnvelopeComponent;

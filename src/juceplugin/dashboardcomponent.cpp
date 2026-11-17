@@ -349,25 +349,30 @@ void DashBoardComponent::paint(juce::Graphics &g)
 
     auto &tuning = processorRef.granulator.tuning;
     float prev_y = -1000.0f;
+    int tuning_offset =
+        processorRef.granulator.get_parameter_value(ToneGranulator::PAR_TUNINGDISCRETEOFFSET);
     for (int i = -256; i < 255; ++i)
     {
-        float y = tuning.logScaledFrequencyForMidiNote(i) * 12.0f - 60.0f;
+        int offsetted = i + tuning_offset;
+        float y =
+            tuning.logScaledFrequencyForMidiNote(offsetted) * 12.0f - (60.0f - -tuning_offset);
         if (y >= -48.0f && y <= 64.0f)
         {
             y = juce::jmap(y, -48.0f, 64.0f, cloudArea.getHeight() - 5.0f, 0.0f);
             y += 2.5f;
             float diff = std::abs(prev_y - y);
-            if (diff >= 2.0f || i == 60)
+            if (diff >= 2.0f)
             {
-                if (i != 60)
-                    g.setColour(juce::Colours::darkgrey);
-                else
-                    g.setColour(juce::Colours::green);
+                g.setColour(juce::Colours::darkgrey);
                 g.drawLine(cloudArea.getX(), y, cloudArea.getRight(), y, 1.5f);
                 prev_y = y;
             }
         }
     }
+    g.setColour(juce::Colours::green);
+    float y = juce::jmap(0.0f, -48.0f, 64.0f, cloudArea.getHeight() - 5.0f, 0.0f);
+    y += 2.5f;
+    g.drawLine(cloudArea.getX(), y, cloudArea.getRight(), y, 2.5f);
     g.saveState();
     g.reduceClipRegion(juce::Rectangle<int>(cloudArea.getX(), 0, getWidth(), getHeight()));
     for (auto &e : persisted_events)
@@ -449,7 +454,7 @@ void DashBoardComponent::paint(juce::Graphics &g)
     // 0 dB -> height 0, mindb -> fills all space below the 0 dB line
     float grHeight = juce::jmap<float>(grDb, mindb, 0.0f, (float)getHeight() - zeroDbY, 0.0f);
     g.fillRect(juce::Rectangle<float>{0.0f, zeroDbY, 14.0f, grHeight});
-    
+
     float h = safe_gain_to_db(gr->omnilevelforgui.load());
     h = std::clamp(h, mindb, maxdb);
     h = juce::jmap<float>(h, mindb, maxdb, 0.0, getHeight());

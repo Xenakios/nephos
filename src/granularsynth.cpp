@@ -212,6 +212,15 @@ ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
                                .withGroupName("Oscillator")
                                .withFlags(CLAP_PARAM_IS_MODULATABLE)
                                .withID(PAR_QUANTIZEPITCH));
+    parmetadatas.push_back(pmd()
+                               .withRange(-6.0f, 6.0f)
+                               .withDefault(0.0)
+                               .asInt()
+                               .withLinearScaleFormatting("")
+                               .withName("Tuning Offset")
+                               .withGroupName("Oscillator")
+                               .withFlags(CLAP_PARAM_IS_MODULATABLE)
+                               .withID(PAR_TUNINGDISCRETEOFFSET));
     for (int i = 0; i < 4; ++i)
     {
         parmetadatas.push_back(pmd()
@@ -644,6 +653,7 @@ void ToneGranulator::create_voices()
     {
         auto v = std::make_unique<GranulatorVoice>();
         v->tuning = &tuning;
+        v->tuning_offset = &tuning_offset;
         v->pitchquantizemode = &pitchquantizemode;
         v->aux_envelopes = &voiceaux_envelopes;
         v->pitchBandAttens = pitchBandAttensShared;
@@ -1535,13 +1545,16 @@ void GranulatorVoice::start(GrainEvent &evpars)
         if (*pitchquantizemode == PQM_MAGNETIC)
         {
             float quanamount = 1.0f - std::pow(1.0f - evpars.pitch_quantize_amount, 2.0f);
-            auto quantpitch = quantize_pitch_binary(*tuning, pitch_base + 60.0, quanamount) - 60.0;
+            auto quantpitch =
+                quantize_pitch_binary(*tuning, pitch_base + 60.0, quanamount, 0.0f) - 60.0;
             pitch_base = quantpitch;
         }
         else if (*pitchquantizemode == PQM_MIX)
         {
             float quanamount = evpars.pitch_quantize_amount;
-            auto quantpitch = quantize_pitch_binary(*tuning, pitch_base + 60.0, 1.0) - 60.0;
+            auto quantpitch =
+                quantize_pitch_binary(*tuning, pitch_base + 60.0 + *tuning_offset, 1.0, 0) -
+                (60.0 - -*tuning_offset);
             pitch_base = pitch_base * (1.0f - quanamount) + quantpitch * quanamount;
         }
     }
