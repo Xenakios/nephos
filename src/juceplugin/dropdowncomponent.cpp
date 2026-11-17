@@ -57,18 +57,17 @@ GalleryPicker::GalleryPicker()
             first_show = false;
             parentToCover->addChildComponent(this);
         }
+        setBounds(0, 0, parentToCover->getWidth(), parentToCover->getHeight());
+        setVisible(!isVisible());
         // it might be best to require the data fill always happens
         // with the callback, but will have to see about that...
         // now the only picker that uses the callback is the modulation matrix
         // destinations
-        if (OnFillData)
+        if (OnFillData && isVisible())
         {
             OnFillData();
             update_layout();
         }
-            
-        setBounds(0, 0, parentToCover->getWidth(), parentToCover->getHeight());
-        setVisible(!isVisible());
         toFront(true);
     };
 }
