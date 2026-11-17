@@ -967,7 +967,7 @@ class ToneGranulator
             using comptype = decltype(masterCompressor);
             float th = *idtoparvalptr[PAR_MASTERCOMPTHRESHOLD];
             masterCompressor.setFloatParam(comptype::fpThreshold, th);
-            masterCompressor.processMultiChannel(std::span<float>(outputbuffer, num_out_chans), 60.0);
+            masterCompressor.processMultiChannel(outputbuffer, 60.0);
         }
         float maingain =
             modmatrix.m.getTargetValue(GranulatorModConfig::TargetIdentifier{PAR_MAINVOLUME});

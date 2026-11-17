@@ -183,7 +183,7 @@ template <typename VFXConfig> struct Compressor : core::VoiceEffectTemplateBase<
     }
     int num_active_channels = 0;
     float last_used_gain_change = 1.0f;
-    void processMultiChannel(std::span<float> audio_in_out, float pitch)
+    void processMultiChannel(float* __restrict audio_in_out, float pitch)
     {
         assert(num_active_channels > 0);
         assert(audio_in_out.size() >= VFXConfig::blockSize * num_active_channels);
