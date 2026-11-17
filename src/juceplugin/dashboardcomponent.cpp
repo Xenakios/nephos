@@ -349,7 +349,7 @@ void DashBoardComponent::paint(juce::Graphics &g)
 
     auto &tuning = processorRef.granulator.tuning;
     float prev_y = -1000.0f;
-    int tuning_offset =
+    float tuning_offset =
         processorRef.granulator.get_parameter_value(ToneGranulator::PAR_TUNINGDISCRETEOFFSET);
     for (int i = -256; i < 255; ++i)
     {

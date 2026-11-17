@@ -621,7 +621,7 @@ class GranulatorVoice
     int prior_osc_type = -1;
     EasingLUTS *eluts = nullptr;
     Tunings::Tuning *tuning = nullptr;
-    int *tuning_offset = nullptr;
+    float *tuning_offset = nullptr;
     enum PITCHQUANTIZEMODE
     {
         PQM_MIX,
@@ -1505,7 +1505,7 @@ class ToneGranulator
     choc::fifo::SingleReaderSingleWriterFIFO<StepModSource::Message> fifo;
     choc::fifo::SingleReaderSingleWriterFIFO<ParameterMessage> params_to_gui_fifo;
     alignas(16) Tunings::Tuning tuning;
-    int tuning_offset = 0;
+    float tuning_offset = 0;
     std::atomic<int> pitchquantizemode = GranulatorVoice::PQM_MIX;
     struct GrainRepeatsVisMessage
     {
