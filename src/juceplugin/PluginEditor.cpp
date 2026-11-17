@@ -90,7 +90,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
         c->OnInsertTypeChanged = [this]() {
             for (auto &modrow : modulationPage.modRowComps)
             {
-                modrow->initDestinationPickerAsync();
+                // modrow->initDestinationPickerAsync();
             }
         };
     }
@@ -661,6 +661,7 @@ ModulationRowComponent::ModulationRowComponent(AudioPluginAudioProcessor &proc, 
     addAndMakeVisible(destPicker.showButton);
     destPicker.showButton.setButtonText("None");
 
+    destPicker.OnFillData = [this]() { initDestinationPicker(); };
     initDestinationPicker();
     destPicker.OnSelected = [updatfunc, this](int64_t id) {
         if (id > 0)

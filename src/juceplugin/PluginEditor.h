@@ -36,13 +36,8 @@ struct MacrosPresetsComponent : public juce::Component
     std::vector<std::unique_ptr<XapSlider>> perfSliders;
 };
 
-struct ModulationRowComponent : public juce::Component, public juce::AsyncUpdater
+struct ModulationRowComponent : public juce::Component
 {
-    void handleAsyncUpdate() override
-    {
-        initDestinationPicker();
-        destPicker.update_layout();
-    };
     void fillPickerWithCurves(GalleryPicker &picker);
     void fillPickerWithSources(GalleryPicker &gal)
     {
@@ -108,7 +103,6 @@ struct ModulationRowComponent : public juce::Component, public juce::AsyncUpdate
             destPicker.showButton.setButtonText(*txt);
     }
 
-    void initDestinationPickerAsync() { triggerAsyncUpdate(); }
     void initDestinationPicker()
     {
         DBG("initdestinationpicker");
