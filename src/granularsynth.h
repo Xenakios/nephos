@@ -418,7 +418,7 @@ class GranulatorVoice
             modulation_slots[i] = {CLAP_INVALID_ID, 0.0f, CLAP_INVALID_ID};
     }
     void start(GrainEvent &evpars);
-    void process(std::span<float> outputs)
+    void process(float* __restrict outputs)
     {
         double normphase = (double)phase / grain_end_phase;
         alignas(16) float modulatedvalues[NUMMODTARGETS] = {0.0f};
