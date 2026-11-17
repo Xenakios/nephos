@@ -90,7 +90,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
         c->OnInsertTypeChanged = [this]() {
             for (auto &modrow : modulationPage.modRowComps)
             {
-                modrow->initDestinationPicker();
+                modrow->initDestinationPickerAsync();
             }
         };
     }

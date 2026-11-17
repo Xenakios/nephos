@@ -186,7 +186,7 @@ template <typename VFXConfig> struct Compressor : core::VoiceEffectTemplateBase<
     void processMultiChannel(float* __restrict audio_in_out, float pitch)
     {
         assert(num_active_channels > 0);
-        assert(audio_in_out.size() >= VFXConfig::blockSize * num_active_channels);
+        // assert(audio_in_out.size() >= VFXConfig::blockSize * num_active_channels);
         auto makeup = this->dbToLinear(this->getFloatParam(fpMakeUp));
         gainLerp.set_target(makeup);
 

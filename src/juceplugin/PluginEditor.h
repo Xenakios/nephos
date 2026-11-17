@@ -36,8 +36,13 @@ struct MacrosPresetsComponent : public juce::Component
     std::vector<std::unique_ptr<XapSlider>> perfSliders;
 };
 
-struct ModulationRowComponent : public juce::Component
+struct ModulationRowComponent : public juce::Component, public juce::AsyncUpdater
 {
+    void handleAsyncUpdate() override
+    {
+        initDestinationPicker();
+        destPicker.update_layout();
+    };
     void fillPickerWithCurves(GalleryPicker &picker);
     void fillPickerWithSources(GalleryPicker &gal)
     {
@@ -102,40 +107,22 @@ struct ModulationRowComponent : public juce::Component
         if (txt)
             destPicker.showButton.setButtonText(*txt);
     }
+
+    void initDestinationPickerAsync() { triggerAsyncUpdate(); }
     void initDestinationPicker()
     {
+        DBG("initdestinationpicker");
         destPicker.categories.clear();
-        destPicker.categories.reserve(64);
-        std::map<std::string, GalleryPicker::Category *> catmap;
-        destPicker.categories.emplace_back("");
-        destPicker.categories.back().items.push_back(GalleryPicker::Item(1, "None"));
+        destPicker.add_entry("", 1, "None");
         for (auto &pmd : gr->parmetadatas)
         {
             if (pmd.flags & CLAP_PARAM_IS_MODULATABLE && !pmd.groupName.empty())
             {
-                if (catmap.count(pmd.groupName) == 0)
-                {
-                    GalleryPicker::Category cat;
-                    cat.text = pmd.groupName;
-                    destPicker.categories.push_back(cat);
-                    catmap[pmd.groupName] = &destPicker.categories.back();
-                }
+                destPicker.add_entry(pmd.groupName, pmd.id, pmd.name);
             }
         }
-        for (auto &pmd : gr->parmetadatas)
-        {
-            if (pmd.flags & CLAP_PARAM_IS_MODULATABLE)
-            {
-                if (!pmd.groupName.empty())
-                {
-                    GalleryPicker::Item item;
-                    item.text = pmd.name;
-                    item.id = pmd.id;
-                    catmap[pmd.groupName]->items.push_back(item);
-                }
-            }
-        }
-        destPicker.set_selected_ID(1);
+        if (destPicker.get_selected_ID() == -1)
+            destPicker.set_selected_ID(1);
     }
     void setTarget(uint32_t parid)
     {
