@@ -850,7 +850,7 @@ void OscillatorModuleComponent::resized()
     quantizePitchKnob.setBounds(oscPitchKnob.getRight() + 2, oscTypeComponent.getBottom() + 1, 100,
                                 120);
     scalaPicker.showButton.setBounds(oscPitchKnob.getX(), oscPitchKnob.getBottom() + 2, 250, 25);
-    tuningOffsetKnob.setBounds(7, scalaPicker.showButton.getBottom() + 1, 80, 80);
+    tuningOffsetKnob.setBounds(7, scalaPicker.showButton.getBottom() + 1, 90, 55);
     juce::FlexBox modflex;
     modflex.flexDirection = juce::FlexBox::Direction::column;
     std::array<juce::FlexBox, 4> rowflexes;
