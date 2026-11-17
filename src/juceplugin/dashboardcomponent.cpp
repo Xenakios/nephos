@@ -369,10 +369,17 @@ void DashBoardComponent::paint(juce::Graphics &g)
             }
         }
     }
-    g.setColour(juce::Colours::green);
-    float y = juce::jmap(0.0f, -48.0f, 64.0f, cloudArea.getHeight() - 5.0f, 0.0f);
-    y += 2.5f;
-    g.drawLine(cloudArea.getX(), y, cloudArea.getRight(), y, 2.5f);
+    g.setColour(juce::Colours::white);
+    for (int i = -48; i < 65; i += 12)
+    {
+        float y = juce::jmap<float>(i, -48.0f, 64.0f, cloudArea.getHeight() - 5.0f, 0.0f);
+        y += 2.5f;
+        float hz = 440.0 * std::pow(2.0, (1.0 / 12) * (i - 9));
+        g.drawText(juce::String(hz, 1) + " Hz", cloudArea.getX(), y, 80.0f, 25.0f,
+                   juce::Justification::centred);
+        // g.drawLine(cloudArea.getX(), y, cloudArea.getRight(), y, 2.5f);
+    }
+
     g.saveState();
     g.reduceClipRegion(juce::Rectangle<int>(cloudArea.getX(), 0, getWidth(), getHeight()));
     for (auto &e : persisted_events)
