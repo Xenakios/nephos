@@ -18,7 +18,7 @@ void XapSlider::setParameterMetaData(ParamDesc md, bool updateCurrentValue)
     if (m_min_value < 0.0)
         m_is_bipolar = true;
     m_labeltxt = m_pardesc.name;
-    m_modulation_amt = 0.0;
+    m_modulated_value = 0.0;
     m_snap_positions.resize(9);
     for (int i = 0; i < 9; ++i)
         m_snap_positions[i] = m_min_value + (m_max_value - m_min_value) / 8 * i;
@@ -423,9 +423,8 @@ void XapSlider::paintKnob(juce::Graphics &g)
     if (RCS_MODULATED & remoteStatus)
     {
         angle =
-            juce::jmap<float>(m_modulation_amt, m_min_value, m_max_value, -anglerange, anglerange) -
+            juce::jmap<float>(m_modulated_value, m_min_value, m_max_value, -anglerange, anglerange) -
             90.0;
-        // angle = std::clamp(angle, -anglerange, anglerange);
         rads = juce::degreesToRadians(angle);
         x = circleCentX + (circleH / 2.0) * std::cos(rads);
         y = circleCentY + (circleH / 2.0) * std::sin(rads);
@@ -450,10 +449,7 @@ std::string XapSlider::getFormattedParamText()
     auto partext = valueToString(val);
     if (partext)
     {
-        // if (m_pardesc.displayScale != ParamDesc::UNORDERED_MAP)
-        {
-            return *partext;
-        }
+        return *partext;
     }
     return "no FMT, bug";
 }

@@ -28,7 +28,7 @@ class XapSlider : public juce::Component
 
   private:
     double m_value = 0.0;
-    double m_modulation_amt = 0.0;
+    double m_modulated_value = 0.0;
     double m_min_value = 0.0;
     double m_max_value = 1.0;
     double m_default_value = 0.0;
@@ -87,12 +87,9 @@ class XapSlider : public juce::Component
     double getValue() { return m_value; }
     void setModulationAmount(double amt)
     {
-        // some logic has been botched elsewhere if we are receiving
-        // modulation values but the slider has not been marked modulatable!
-        // jassert(remoteStatus & RCS_MODULATED);
         if (remoteStatus & RCS_MODULATED)
         {
-            m_modulation_amt = amt;
+            m_modulated_value = amt;
             repaint();
         }
     }
