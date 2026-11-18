@@ -87,8 +87,14 @@ class XapSlider : public juce::Component
     double getValue() { return m_value; }
     void setModulationAmount(double amt)
     {
-        m_modulation_amt = amt;
-        repaint();
+        // some logic has been botched elsewhere if we are receiving
+        // modulation values but the slider has not been marked modulatable!
+        jassert(remoteStatus & RCS_MODULATED);
+        if (remoteStatus & RCS_MODULATED)
+        {
+            m_modulation_amt = amt;
+            repaint();
+        }
     }
     enum Gesture
     {

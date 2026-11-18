@@ -129,6 +129,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     from_gui_fifo.reset(1024);
     params_from_gui_fifo.reset(2048);
     granulator.params_to_gui_fifo.reset(2048);
+    granulator.modulations_to_gui_fifo.reset(2048);
     to_gui_fifo.reset(1024);
     dirtyStateParam =
         new juce::AudioParameterFloat({"dirtystateparam", 1}, "Internal parameter", 0.0, 1.0, 0.0);

@@ -180,9 +180,8 @@ void XapSlider::mouseDown(const juce::MouseEvent &ev)
                   [](auto &lhs, auto &rhs) { return lhs.first < rhs.first; });
         for (auto &e : ordered_entries)
         {
-            menu.addItem(e.second, true, e.first == (int)m_value, [e, this]() {
-                setValue(e.first, true);
-            });
+            menu.addItem(e.second, true, e.first == (int)m_value,
+                         [e, this]() { setValue(e.first, true); });
         }
         menu.showMenuAsync(
             juce::PopupMenu::Options{}.withTargetComponent(this).withMousePosition());
@@ -413,7 +412,7 @@ void XapSlider::paintKnob(juce::Graphics &g)
     float circleCentY = (getHeight() - texth) / 2.0 + texth;
     float circleH = getHeight() - texth - 5.0;
     g.fillEllipse(circleCentX - (circleH / 2.0), texth, circleH, circleH);
-    float anglerange = 140.0;
+    const float anglerange = 140.0;
     float angle =
         juce::jmap<float>(m_value, m_min_value, m_max_value, -anglerange, anglerange) - 90.0;
     float rads = juce::degreesToRadians(angle);
@@ -421,17 +420,25 @@ void XapSlider::paintKnob(juce::Graphics &g)
     float y = circleCentY + (circleH / 2.0) * std::sin(rads);
     g.setColour(juce::Colours::green);
     g.fillEllipse(x - 4.0, y - 4.0, 8.0, 8.0);
+    if (RCS_MODULATED & remoteStatus)
+    {
+        angle =
+            juce::jmap<float>(m_modulation_amt, m_min_value, m_max_value, -anglerange, anglerange) -
+            90.0;
+        // angle = std::clamp(angle, -anglerange, anglerange);
+        rads = juce::degreesToRadians(angle);
+        x = circleCentX + (circleH / 2.0) * std::cos(rads);
+        y = circleCentY + (circleH / 2.0) * std::sin(rads);
+        g.setColour(juce::Colours::darkgrey);
+        g.fillEllipse(x - 3.0, y - 3.0, 6.0, 6.0);
 
+        g.setColour(juce::Colours::red);
+        g.fillRect(1, 8, 6, 6);
+    }
     if (remoteStatus & RCS_MIDI)
     {
         g.setColour(juce::Colours::yellow);
         g.fillRect(1, 1, 6, 6);
-    }
-
-    if (remoteStatus & RCS_MODULATED)
-    {
-        g.setColour(juce::Colours::red);
-        g.fillRect(1, 8, 6, 6);
     }
 }
 

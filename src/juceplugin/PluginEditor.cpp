@@ -192,6 +192,7 @@ void AudioPluginAudioProcessorEditor::timerCallback()
             xs->setValue(parmsg.value);
         }
     }
+
     for (auto &c : modulationPage.randComponents)
     {
         c->update_all();
@@ -240,6 +241,16 @@ void AudioPluginAudioProcessorEditor::timerCallback()
 
             modulationPage.modRowComps[msg.modslot]->setTarget(msg.moddest);
             modulationPage.modRowComps[msg.modslot]->update_curve(msg.modcurve);
+        }
+    }
+    ToneGranulator::ParameterModMessage modmsg;
+    while (processorRef.granulator.modulations_to_gui_fifo.pop(modmsg))
+    {
+        auto it = idToSlider.find(modmsg.parid);
+        if (it != idToSlider.end())
+        {
+            auto xs = it->second;
+            xs->setModulationAmount(modmsg.modulated_value);
         }
     }
 }

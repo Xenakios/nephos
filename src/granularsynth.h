@@ -418,7 +418,7 @@ class GranulatorVoice
             modulation_slots[i] = {CLAP_INVALID_ID, 0.0f, CLAP_INVALID_ID};
     }
     void start(GrainEvent &evpars);
-    void process(float* __restrict outputs)
+    void process(float *__restrict outputs)
     {
         double normphase = (double)phase / grain_end_phase;
         alignas(16) float modulatedvalues[NUMMODTARGETS] = {0.0f};
@@ -1041,6 +1041,17 @@ class ToneGranulator
         modmatrix.m.process();
         if (audiocallbackcount % 128 == 0)
         {
+            for (auto &rt : modmatrix.rt.routes)
+            {
+                if (rt.active && rt.target)
+                {
+                    float mv = modmatrix.m.getTargetValue(*rt.target);
+                    ParameterModMessage modmsg;
+                    modmsg.parid = rt.target->target;
+                    modmsg.modulated_value = mv;
+                    modulations_to_gui_fifo.push(modmsg);
+                }
+            }
             GrainRepeatsVisMessage repmsg;
             repmsg.modulatedvalues[0] = modmatrix.m.getTargetValue({PAR_STACKCOUNT});
             repmsg.modulatedvalues[1] = modmatrix.m.getTargetValue({PAR_STACKTIMESPAN});
@@ -1505,6 +1516,12 @@ class ToneGranulator
     alignas(16) Tunings::Tuning tuning;
     float tuning_offset = 0;
     std::atomic<int> pitchquantizemode = GranulatorVoice::PQM_MIX;
+    struct ParameterModMessage
+    {
+        uint32_t parid = CLAP_INVALID_ID;
+        float modulated_value = 0.0f;
+    };
+    choc::fifo::SingleReaderSingleWriterFIFO<ParameterModMessage> modulations_to_gui_fifo;
     struct GrainRepeatsVisMessage
     {
         std::array<float, 6> modulatedvalues = {0.0f};
