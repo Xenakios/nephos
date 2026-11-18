@@ -1039,8 +1039,10 @@ class ToneGranulator
             }
         }
         modmatrix.m.process();
-        if (audiocallbackcount % 128 == 0)
+        if (gatherParamModulationData && audiocallbackcount % 128 == 0)
         {
+            // this is obviously a bit inefficient when the same target appears
+            // multiple times in the routing, but this will have to do for now...
             for (auto &rt : modmatrix.rt.routes)
             {
                 if (rt.active && rt.target)
@@ -1050,6 +1052,8 @@ class ToneGranulator
                     if (pmdit != idtoparmetadata.end())
                     {
                         auto pmd = pmdit->second;
+                        // we should probably have some kind of central way to determine
+                        // the limiting mode for the parameters
                         if (rt.target->target == PAR_AZIMUTH || rt.target->target == PAR_ELEVATION)
                         {
                             mv = wrap_value_no_loop(pmd->minVal, mv, pmd->maxVal);
@@ -1572,6 +1576,7 @@ class ToneGranulator
     };
     GrainVisualizerSettings gvsettings;
     std::atomic<bool> gatherGrainVisData{false};
+    std::atomic<bool> gatherParamModulationData{false};
     choc::fifo::SingleReaderSingleWriterFIFO<GrainVisualizerMessage> visualizer_fifo;
 
     enum SI

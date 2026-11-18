@@ -102,6 +102,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
     }
     setSize(1500, 820);
     startTimerHz(20);
+    processorRef.granulator.gatherParamModulationData = true;
 }
 
 bool AudioPluginAudioProcessorEditor::keyPressed(const juce::KeyPress &ev)
@@ -134,7 +135,11 @@ void AudioPluginAudioProcessorEditor::addChildSlidersFrom(juce::Component &c)
     }
 }
 
-AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor() {}
+AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor() 
+{
+    processorRef.granulator.gatherParamModulationData = false;
+    processorRef.granulator.gatherGrainVisData = false;
+}
 
 void AudioPluginAudioProcessorEditor::updateParameterRemoteStates()
 {

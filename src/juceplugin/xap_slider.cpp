@@ -419,7 +419,7 @@ void XapSlider::paintKnob(juce::Graphics &g)
     float x = circleCentX + (circleH / 2.0) * std::cos(rads);
     float y = circleCentY + (circleH / 2.0) * std::sin(rads);
     g.setColour(juce::Colours::green);
-    g.fillEllipse(x - 4.0, y - 4.0, 8.0, 8.0);
+    g.fillEllipse(x - 5.0, y - 5.0, 10.0, 10.0);
     if (RCS_MODULATED & remoteStatus)
     {
         angle =
@@ -430,7 +430,7 @@ void XapSlider::paintKnob(juce::Graphics &g)
         x = circleCentX + (circleH / 2.0) * std::cos(rads);
         y = circleCentY + (circleH / 2.0) * std::sin(rads);
         g.setColour(juce::Colours::darkgrey);
-        g.fillEllipse(x - 3.0, y - 3.0, 6.0, 6.0);
+        g.fillEllipse(x - 4.0, y - 4.0, 8.0, 8.0);
 
         g.setColour(juce::Colours::red);
         g.fillRect(1, 8, 6, 6);

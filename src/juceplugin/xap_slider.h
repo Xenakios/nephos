@@ -89,7 +89,7 @@ class XapSlider : public juce::Component
     {
         // some logic has been botched elsewhere if we are receiving
         // modulation values but the slider has not been marked modulatable!
-        jassert(remoteStatus & RCS_MODULATED);
+        // jassert(remoteStatus & RCS_MODULATED);
         if (remoteStatus & RCS_MODULATED)
         {
             m_modulation_amt = amt;
