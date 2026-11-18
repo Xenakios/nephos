@@ -627,7 +627,7 @@ ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
         modSourceInfos.emplace_back(fmt::format("MIDI CC {}", i), "MIDI CC",
                                     GranulatorModConfig::SourceIdentifier{i + MIDICCSTART});
     }
-    std::cout << "num mod sources " << modSourceInfos.size() << "\n";
+    // std::cout << "num mod sources " << modSourceInfos.size() << "\n";
     for (auto &v : modSourceValues)
         v = 0.0f;
     for (uint32_t i = 0; i < modSourceInfos.size(); ++i)
@@ -638,6 +638,17 @@ ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
         modmatrix.m.bindSourceValue(modSourceInfos[i].id, modSourceValues[i]);
     }
     init_filter_infos();
+    modmatrix.rt.updateActiveAt(0, true);
+    modmatrix.rt.updateRoutingAt(0, GranulatorModConfig::SourceIdentifier{RANDOM0},
+                                 GranulatorModConfig::TargetIdentifier{PAR_PITCH}, 0.0f);
+    modmatrix.rt.updateActiveAt(1, true);
+    modmatrix.rt.updateRoutingAt(1, GranulatorModConfig::SourceIdentifier{LFO0},
+                                 GranulatorModConfig::TargetIdentifier{PAR_PITCH}, 0.0f);
+    modmatrix.rt.updateActiveAt(2, true);
+    modmatrix.rt.updateRoutingAt(2, GranulatorModConfig::SourceIdentifier{RANDOM1},
+                                 GranulatorModConfig::TargetIdentifier{PAR_AZIMUTH}, 0.0f);
+    randomModSources[0].set_distribution(TriggeredRandomSource::D_UNIFORM);
+    randomModSources[1].set_distribution(TriggeredRandomSource::D_BERNOUILLI);
 }
 void ToneGranulator::create_voices()
 {

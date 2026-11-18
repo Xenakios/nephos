@@ -422,9 +422,9 @@ void XapSlider::paintKnob(juce::Graphics &g)
     g.fillEllipse(x - 5.0, y - 5.0, 10.0, 10.0);
     if (RCS_MODULATED & remoteStatus)
     {
-        angle =
-            juce::jmap<float>(m_modulated_value, m_min_value, m_max_value, -anglerange, anglerange) -
-            90.0;
+        angle = juce::jmap<float>(m_modulated_value, m_min_value, m_max_value, -anglerange,
+                                  anglerange) -
+                90.0;
         rads = juce::degreesToRadians(angle);
         x = circleCentX + (circleH / 2.0) * std::cos(rads);
         y = circleCentY + (circleH / 2.0) * std::sin(rads);
@@ -452,4 +452,16 @@ std::string XapSlider::getFormattedParamText()
         return *partext;
     }
     return "no FMT, bug";
+}
+
+void XapSlider::setModulationAmount(double amt)
+{
+    if (remoteStatus & RCS_MODULATED)
+    {
+        if (!juce::approximatelyEqual(amt, m_modulated_value))
+        {
+            m_modulated_value = amt;
+            repaint();
+        }
+    }
 }

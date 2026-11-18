@@ -85,14 +85,8 @@ class XapSlider : public juce::Component
 
     void setValue(double v, bool notify = false);
     double getValue() { return m_value; }
-    void setModulationAmount(double amt)
-    {
-        if (remoteStatus & RCS_MODULATED)
-        {
-            m_modulated_value = amt;
-            repaint();
-        }
-    }
+    void setModulationAmount(double amt);
+    
     enum Gesture
     {
         GEST_START,
