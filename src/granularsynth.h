@@ -1046,10 +1046,23 @@ class ToneGranulator
                 if (rt.active && rt.target)
                 {
                     float mv = modmatrix.m.getTargetValue(*rt.target);
-                    ParameterModMessage modmsg;
-                    modmsg.parid = rt.target->target;
-                    modmsg.modulated_value = mv;
-                    modulations_to_gui_fifo.push(modmsg);
+                    auto pmdit = idtoparmetadata.find(rt.target->target);
+                    if (pmdit != idtoparmetadata.end())
+                    {
+                        auto pmd = pmdit->second;
+                        if (rt.target->target == PAR_AZIMUTH || rt.target->target == PAR_ELEVATION)
+                        {
+                            mv = wrap_value_no_loop(pmd->minVal, mv, pmd->maxVal);
+                        }
+                        else
+                        {
+                            mv = std::clamp(mv, pmd->minVal, pmd->maxVal);
+                        }
+                        ParameterModMessage modmsg;
+                        modmsg.parid = rt.target->target;
+                        modmsg.modulated_value = mv;
+                        modulations_to_gui_fifo.push(modmsg);
+                    }
                 }
             }
             GrainRepeatsVisMessage repmsg;

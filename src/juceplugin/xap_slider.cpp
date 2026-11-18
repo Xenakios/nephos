@@ -409,8 +409,8 @@ void XapSlider::paintKnob(juce::Graphics &g)
     else
         g.setColour(juce::Colours::lightgrey);
     float circleCentX = getWidth() / 2.0;
-    float circleCentY = (getHeight() - texth) / 2.0 + texth;
     float circleH = getHeight() - texth - 5.0;
+    float circleCentY = texth + (circleH / 2.0f);
     g.fillEllipse(circleCentX - (circleH / 2.0), texth, circleH, circleH);
     const float anglerange = 140.0;
     float angle =
