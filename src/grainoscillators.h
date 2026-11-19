@@ -153,7 +153,7 @@ class NoiseGen
             float x = (phase - gauss_center) / gauss_sigma;
             float impulse = gauss_amplitude * expf(-0.5f * x * x);
             phase += 1.0f;
-            return impulse;
+            return impulse * gauss_amplitude;
         }
     };
     GaussPulse gpulse;
@@ -181,6 +181,8 @@ class NoiseGen
             {
                 phase -= 1.0;
                 gpulse.reset();
+                gpulse.gauss_center = 64 + 64.0 * bpdist(rng);
+                gpulse.gauss_amplitude = 1.75 + 0.25 * bpdist(rng);
             }
             return gpulse.step();
         }
@@ -244,8 +246,6 @@ class NoiseGen
         nextvalue = 0.0;
         SmoothingStrategy::resetFirstRun(phaseinc);
         SmoothingStrategy::resetFirstRun(correlation);
-        // gpulse.gauss_center = 128.0 + 64.0 * bpdist(rng);
-        // gpulse.gauss_amplitude = 1.75 + 0.25 * bpdist(rng);
     }
     void setFrequency(double freq)
     {
