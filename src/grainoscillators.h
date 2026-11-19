@@ -136,9 +136,27 @@ class NoiseGen
     void setFrequencySmoothingRateMS(float ms) { phaseinc.setRateInMilliseconds(ms, sr, 1.0); }
     int tiltprocesscount = 0;
     float tiltfiltercoeff = 0.0f;
-    float gauss_sigma = 0.0f;
-    float gauss_center = 128.0f;
-    float gauss_amplitude = 2.0f;
+    struct GaussPulse
+    {
+        float gauss_sigma = 0.0f;
+        float gauss_center = 0.0f;
+        float gauss_amplitude = 2.0f;
+        double phase = 0.0;
+        void set_sigma(float bipolnorm)
+        {
+            gauss_sigma = xenakios::mapvalue<float>(bipolnorm, -1.0f, 1.0f, 0.0f, 1.0);
+            gauss_sigma = 1.0f + 15.0f * (gauss_sigma * gauss_sigma);
+        }
+        void reset() { phase = 0.0; }
+        float step()
+        {
+            float x = (phase - gauss_center) / gauss_sigma;
+            float impulse = gauss_amplitude * expf(-0.5f * x * x);
+            phase += 1.0f;
+            return impulse;
+        }
+    };
+    GaussPulse gpulse;
     float step()
     {
         // tilt noise with no interpolation
@@ -158,10 +176,13 @@ class NoiseGen
         // gaussian pulse
         if (imode == 5)
         {
-            float x = (phase - gauss_center) / gauss_sigma;
-            float impulse = gauss_amplitude * expf(-0.5f * x * x);
-            phase += 1.0f;
-            return impulse;
+            phase += phaseinc.getValue() * 0.25f;
+            if (phase >= 1.0)
+            {
+                phase -= 1.0;
+                gpulse.reset();
+            }
+            return gpulse.step();
         }
         phase += phaseinc.getValue();
         if (phase >= 1.0)
@@ -223,8 +244,8 @@ class NoiseGen
         nextvalue = 0.0;
         SmoothingStrategy::resetFirstRun(phaseinc);
         SmoothingStrategy::resetFirstRun(correlation);
-        gauss_center = 128.0 + 64.0 * bpdist(rng);
-        gauss_amplitude = 1.75 + 0.25 * bpdist(rng);
+        // gpulse.gauss_center = 128.0 + 64.0 * bpdist(rng);
+        // gpulse.gauss_amplitude = 1.75 + 0.25 * bpdist(rng);
     }
     void setFrequency(double freq)
     {
@@ -234,8 +255,8 @@ class NoiseGen
     float tilt_compen_gain = 1.0f;
     void setCorrelation(double c)
     {
-        gauss_sigma = xenakios::mapvalue<float>(c, -1.0f, 1.0f, 0.0f, 1.0);
-        gauss_sigma = 1.0f + 15.0f * (gauss_sigma * gauss_sigma);
+        gpulse.set_sigma(c);
+
         logisticr = xenakios::mapvalue(c, -1.0, 1.0, 3.4, 4.0);
         assert(logisticr >= 3.4 && logisticr <= 4.0);
         correlation.setTarget(c);
