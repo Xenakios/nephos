@@ -136,6 +136,7 @@ class NoiseGen
     void setFrequencySmoothingRateMS(float ms) { phaseinc.setRateInMilliseconds(ms, sr, 1.0); }
     int tiltprocesscount = 0;
     float tiltfiltercoeff = 0.0f;
+    float gauss_sigma = 0.0f;
     float step()
     {
         // tilt noise with no interpolation
@@ -155,11 +156,8 @@ class NoiseGen
         // gaussian pulse
         if (imode == 5)
         {
-            float center = 128.0f;
-            float sigma =
-                xenakios::mapvalue<float>(correlation.getTargetValue(), -1.0f, 1.0f, 0.0f, 1.0);
-            sigma = 1.0f + 15.0f * (sigma * sigma);
-            float x = (phase - center) / sigma;
+            const float center = 128.0f;
+            float x = (phase - center) / gauss_sigma;
             float amplitude = 2.0f;
             float impulse = amplitude * expf(-0.5f * x * x);
             phase += 1.0f;
@@ -243,6 +241,9 @@ class NoiseGen
         if (tilt_compen_gain > 0.0f)
             tilt_compen_gain *= -4.0f;
         tilt_compen_gain = xenakios::decibelsToGain(tilt_compen_gain);
+
+        gauss_sigma = xenakios::mapvalue<float>(c, -1.0f, 1.0f, 0.0f, 1.0);
+        gauss_sigma = 1.0f + 15.0f * (gauss_sigma * gauss_sigma);
     }
 
     void setSampleRate(double hz)
