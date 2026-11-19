@@ -152,14 +152,14 @@ class NoiseGen
             assert(std::isfinite(x));
             return x;
         }
-        // sinc pulse
+        // gaussian pulse
         if (imode == 5)
         {
             float center = 128.0f;
             float sigma =
-                xenakios::mapvalue<float>(correlation.getTargetValue(), -1.0f, 1.0f, 1.0f, 32.0);
+                xenakios::mapvalue<float>(correlation.getTargetValue(), -1.0f, 1.0f, 1.0f, 16.0);
             float x = (phase - center) / sigma;
-            float amplitude = 1.0f;
+            float amplitude = 2.0f;
             float impulse = amplitude * expf(-0.5f * x * x);
             phase += 1.0f;
             return impulse;
