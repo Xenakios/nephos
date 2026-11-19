@@ -79,6 +79,7 @@ add_executable(NephosCLI
     src/nephosmain.cpp
     src/easing.cpp
     src/grainfx.cpp
+    src/octoshifter/modcurves.cpp
 )
 
 juce_add_console_app(SpectralTesting

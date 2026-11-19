@@ -155,16 +155,14 @@ class NoiseGen
         // sinc pulse
         if (imode == 5)
         {
-            // int sincsize =
-            //     xenakios::mapvalue<float>(correlation.getTargetValue(), -1.0f, 1.0f, 64, 1024);
-            const int sincsize = 128;
-            if (phase >= sincsize)
-                return 0.0f;
-            float osample =
-                sst::basic_blocks::dsp::sincf(1.0 / sincsize * (phase - (sincsize / 2.0)));
-            osample *= sst::basic_blocks::dsp::blackman(phase, sincsize);
-            phase += 1.0;
-            return osample;
+            float center = 128.0f;
+            float sigma =
+                xenakios::mapvalue<float>(correlation.getTargetValue(), -1.0f, 1.0f, 1.0f, 32.0);
+            float x = (phase - center) / sigma;
+            float amplitude = 1.0f;
+            float impulse = amplitude * expf(-0.5f * x * x);
+            phase += 1.0f;
+            return impulse;
         }
         phase += phaseinc.getValue();
         if (phase >= 1.0)

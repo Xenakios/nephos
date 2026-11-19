@@ -3,6 +3,7 @@
 #include "juce_dsp/juce_dsp.h"
 #include <span>
 #include <fstream>
+#include "windows.h"
 /*
 // magnitude spectrum X[k], frequencies f[k], k = 0..N/2
 
@@ -174,4 +175,30 @@ inline void test_spectral_descriptors()
     }
 }
 
-int main() { test_spectral_descriptors(); }
+inline void test_juce_file_native_handle()
+{
+    juce::File f{R"(C:\MusicAudio\sourcesamples\_count.wav)"};
+    auto h = reinterpret_cast<HANDLE>(f.getFileIdentifier());
+    if (h != INVALID_HANDLE_VALUE)
+    {
+        std::vector<uint8_t> readbuffer;
+        readbuffer.resize(f.getSize());
+        DWORD numRead = 0;
+        if (ReadFile(h, readbuffer.data(), f.getSize(), &numRead, nullptr))
+        {
+            std::cout << "read " << numRead << " bytes from file using win32 ReadFile\n";
+        }
+        else
+        {
+            std::cout << "error reading from file using win32 ReadFile\n";
+        }
+    }
+    else
+        std::cout << "juce file has invalid handle value\n";
+}
+
+int main()
+{
+    test_juce_file_native_handle();
+    // test_spectral_descriptors();
+}

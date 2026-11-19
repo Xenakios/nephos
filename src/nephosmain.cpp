@@ -545,7 +545,7 @@ inline void test_quantize_tuning()
     auto start_time = std::chrono::high_resolution_clock::now();
     for (auto &e : testdata)
     {
-        e = quantize_pitch_binary(tuning, e, 1.0);
+        e = quantize_pitch_binary(tuning, e, 1.0, 0);
         // auto quantized = quantize_pitch_binary(tuning, x);
         // std::cout << fmt::format("{:4} {:.2f}\n", x, quantized);
     }
@@ -686,9 +686,66 @@ inline void test_sixsines_table()
     writer->appendFrames(outbuf.getView());
 }
 
+inline void test_gaussian_impulse()
+{
+    float sr = 44100.0;
+    int outlen = sr * 5.0;
+    choc::buffer::ChannelArrayBuffer<float> outbuf(1, outlen);
+    outbuf.clear();
+    NoiseGen gen;
+    gen.setSampleRate(sr);
+    gen.reset();
+    gen.imode = 5;
+    xenakios::Envelope env;
+    env.addPoint({0.0, 0.0});
+    env.addPoint({2.5, -1.0});
+    env.addPoint({4.0, -0.75});
+    env.addPoint({5.0, 1.0});
+    xenakios::Envelope tempoenv;
+    tempoenv.addPoint({0.0, 1.0});
+    tempoenv.addPoint({3.0, 7.0});
+    tempoenv.addPoint({5.0, 1.0});
+
+    int pulse = sr / 8.0;
+    int counter = 0;
+    float gain = 0.5f;
+    double trigphase = 1.0;
+    double trigphaseinc = 1.0 / sr * 6.0;
+    for (int i = 0; i < outlen; ++i)
+    {
+        float normtime = i / sr;
+        if (trigphase >= 1.0)
+        {
+            trigphase -= 1.0;
+            gen.reset();
+
+            gen.setCorrelation(env.getValueAtPosition(normtime));
+            if (gain >= 0.5f)
+                gain = -0.5f;
+            else
+                gain = 0.5f;
+        }
+        float s = gen.step() * gain;
+        // s = std::tanh(s * 4.0);
+        outbuf.getSample(0, i) = s * 0.9;
+        float tempo = std::pow(2.0, tempoenv.getValueAtPosition(normtime));
+        trigphaseinc = 1.0 / sr * tempo;
+        trigphase += trigphaseinc;
+    }
+    choc::audio::AudioFileProperties props;
+    props.bitDepth = choc::audio::BitDepth::float32;
+    props.numChannels = 1;
+    props.sampleRate = sr;
+    choc::audio::WAVAudioFileFormat<true> wavformat;
+    auto writer = wavformat.createWriter(
+        R"(E:\MusicAudio\sourcesamples\test_signals\nanobind\gaussian_impulse.wav)", props);
+    writer->appendFrames(outbuf.getView());
+}
+
 int main(int argc, char **argv)
 {
-    test_sixsines_table();
+    test_gaussian_impulse();
+    // test_sixsines_table();
     // test_tiltfilter();
     return 0;
     // // test_degrade();
