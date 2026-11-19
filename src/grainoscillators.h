@@ -157,7 +157,8 @@ class NoiseGen
         {
             float center = 128.0f;
             float sigma =
-                xenakios::mapvalue<float>(correlation.getTargetValue(), -1.0f, 1.0f, 1.0f, 16.0);
+                xenakios::mapvalue<float>(correlation.getTargetValue(), -1.0f, 1.0f, 0.0f, 1.0);
+            sigma = 1.0f + 15.0f * (sigma * sigma);
             float x = (phase - center) / sigma;
             float amplitude = 2.0f;
             float impulse = amplitude * expf(-0.5f * x * x);
