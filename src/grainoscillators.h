@@ -141,6 +141,7 @@ class NoiseGen
         float gauss_sigma = 0.0f;
         float gauss_center = 0.0f;
         float gauss_amplitude = 2.0f;
+        float delay_rand_amount = 0.0f;
         double phase = 0.0;
         void set_sigma(float bipolnorm)
         {
@@ -176,13 +177,14 @@ class NoiseGen
         // gaussian pulse
         if (imode == 5)
         {
-            phase += phaseinc.getValue() * 0.25f;
+            phase += phaseinc.getValue() * 0.25;
             if (phase >= 1.0)
             {
                 phase -= 1.0;
                 gpulse.reset();
-                gpulse.gauss_center = 64 + 64.0 * bpdist(rng);
-                gpulse.gauss_amplitude = 1.75 + 0.25 * bpdist(rng);
+                gpulse.gauss_center =
+                    gpulse.delay_rand_amount + gpulse.delay_rand_amount * bpdist(rng);
+                gpulse.gauss_amplitude = 1.75f + 0.25f * bpdist(rng);
             }
             return gpulse.step();
         }

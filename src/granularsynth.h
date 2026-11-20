@@ -48,6 +48,18 @@ inline constexpr int ambisonicOrderNumChannels(int order) { return (order + 1) *
 
 template <typename T> inline int sgn(T val) { return (T(0) < val) - (val < T(0)); }
 
+enum GOSCILLATOR
+{
+    GOSC_SINE,
+    GOSC_SEMISINE,
+    GOSC_TRIANGLE,
+    GOSC_SAW,
+    GOSC_SQUARE,
+    GOSC_FM,
+    GOSC_NOISE,
+    GOSC_END
+};
+
 struct ParameterMessage
 {
     uint32_t id = 0;
@@ -320,32 +332,6 @@ struct GrainEvent
     float modamounts[max_grain_mod_slots] = {0.0f};
     float insertparams[4][10] = {0.0f};
 };
-
-struct tone_info
-{
-    int index = -1;
-    const char *name = nullptr;
-};
-
-static tone_info osc_infos[7] = {{0, "EBSINE"},  {1, "EBSEMISINE"}, {2, "EBTRIANGLE"},
-                                 {3, "EBSAW"},   {4, "EBSQUARE"},   {5, "DPWSAW"},
-                                 {6, "DPWPULSE"}};
-
-inline std::vector<std::string> osc_types()
-{
-    std::vector<std::string> result;
-    for (int i = 0; i < 7; ++i)
-        result.push_back(osc_infos[i].name);
-    return result;
-}
-
-inline int osc_name_to_index(std::string name)
-{
-    for (int i = 0; i < 7; ++i)
-        if (name == osc_infos[i].name)
-            return osc_infos[i].index;
-    return -1;
-}
 
 constexpr size_t numPitchBandAttens = 7;
 

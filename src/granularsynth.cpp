@@ -1512,19 +1512,19 @@ void GranulatorVoice::start(GrainEvent &evpars)
     if (newosctype != prior_osc_type)
     {
         prior_osc_type = newosctype;
-        if (newosctype == 0)
+        if (newosctype == GOSC_SINE)
             theoscillator = sst::basic_blocks::dsp::EBApproxSin<>();
-        else if (newosctype == 1)
+        else if (newosctype == GOSC_SEMISINE)
             theoscillator = sst::basic_blocks::dsp::EBApproxSemiSin<>();
-        else if (newosctype == 2)
+        else if (newosctype == GOSC_TRIANGLE)
             theoscillator = sst::basic_blocks::dsp::EBTri<>();
-        else if (newosctype == 3)
+        else if (newosctype == GOSC_SAW)
             theoscillator = sst::basic_blocks::dsp::EBSaw<>();
-        else if (newosctype == 4)
+        else if (newosctype == GOSC_SQUARE)
             theoscillator = sst::basic_blocks::dsp::EBPulse<>();
-        else if (newosctype == 5)
+        else if (newosctype == GOSC_FM)
             theoscillator = FMOsc();
-        else if (newosctype == 6)
+        else if (newosctype == GOSC_NOISE)
             theoscillator = NoiseGen();
         std::visit(
             [this](auto &q) {
@@ -1547,7 +1547,7 @@ void GranulatorVoice::start(GrainEvent &evpars)
 
     envgainlag.snapTo(0.0f);
     pitch_base = evpars.pitch_semitones;
-    if (newosctype == 6)
+    if (newosctype == GOSC_NOISE)
         pitch_base += 12.0;
     pitch_base = std::clamp(pitch_base, -48.0f, 64.0f);
     if (evpars.pitch_quantize_amount > 0.0f && tuning)
@@ -1600,6 +1600,7 @@ void GranulatorVoice::start(GrainEvent &evpars)
             }
             if constexpr (std::is_same_v<decltype(q), NoiseGen &>)
             {
+                q.gpulse.delay_rand_amount = 64.0 * std::clamp(pw, 0.0f, 1.0f);
                 q.setRandSeed(grainid);
                 q.setCorrelation(noisecorr);
                 q.tilt_filter = &tiltfilter;
