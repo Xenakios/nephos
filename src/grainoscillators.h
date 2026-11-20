@@ -142,19 +142,27 @@ class NoiseGen
         float gauss_center = 0.0f;
         float gauss_amplitude = 2.0f;
         float delay_rand_amount = 0.0f;
+        float polarity = 1.0f;
         double phase = 0.0;
         void set_sigma(float bipolnorm)
         {
             gauss_sigma = xenakios::mapvalue<float>(bipolnorm, -1.0f, 1.0f, 0.0f, 1.0);
             gauss_sigma = 1.0f + 15.0f * (gauss_sigma * gauss_sigma);
         }
-        void reset() { phase = 0.0; }
+        void reset()
+        {
+            if (polarity >= 1.0f)
+                polarity = -1.0f;
+            else
+                polarity = 1.0f;
+            phase = 0.0;
+        }
         float step()
         {
             float x = (phase - gauss_center) / gauss_sigma;
             float impulse = gauss_amplitude * expf(-0.5f * x * x);
             phase += 1.0f;
-            return impulse * gauss_amplitude;
+            return impulse * gauss_amplitude * polarity;
         }
     };
     GaussPulse gpulse;
