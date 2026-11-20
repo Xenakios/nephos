@@ -140,31 +140,39 @@ class NoiseGen
     {
         float gauss_sigma = 0.0f;
         float gauss_center = 0.0f;
-        float gauss_amplitude = 2.0f;
+        float gauss_amplitude = 1.0f;
         float delay_rand_amount = 0.0f;
         float polarity = 1.0f;
         double phase = 0.0;
+        // GaussPulse(xenakios::Xoroshiro128Plus *r) : rng(r) {}
         void set_sigma(float bipolnorm)
         {
             gauss_sigma = xenakios::mapvalue<float>(bipolnorm, -1.0f, 1.0f, 0.0f, 1.0);
             gauss_sigma = 1.0f + 15.0f * (gauss_sigma * gauss_sigma);
         }
-        void reset()
+        void reset(xenakios::Xoroshiro128Plus *rng, float samplerate, float frequency_hz)
         {
-            if (polarity >= 1.0f)
-                polarity = -1.0f;
-            else
-                polarity = 1.0f;
+            assert(frequency_hz > 0.0f);
+            polarity = -polarity;
             phase = 0.0;
+            float pulsedistance = 1.0f / frequency_hz;
+            pulsedistance = pulsedistance * samplerate;
+            gauss_center = pulsedistance * delay_rand_amount * rng->nextFloat();
+            const float base_db = 0.0f;
+            // we will at some point somehow make the random range adjustable, -6 to 6 dB
+            // is probably too much as a constant range
+            // float random_db = rng->nextFloatInRange(base_db - 6.0f, base_db + 6.0f);
+            // gauss_amplitude = xenakios::decibelsToGain(random_db);
         }
-        float step()
+        [[nodiscard]] float step()
         {
             float x = (phase - gauss_center) / gauss_sigma;
-            float impulse = gauss_amplitude * expf(-0.5f * x * x);
+            float impulse = expf(-0.5f * x * x);
             phase += 1.0f;
             return impulse * gauss_amplitude * polarity;
         }
     };
+    alignas(16) xenakios::Xoroshiro128Plus rng;
     GaussPulse gpulse;
     float step()
     {
@@ -182,7 +190,7 @@ class NoiseGen
             assert(std::isfinite(x));
             return x;
         }
-        // gaussian pulse
+        // gaussian pulses
         if (imode == 5)
         {
             const float freqmul = 0.25f;
@@ -190,11 +198,7 @@ class NoiseGen
             if (phase >= 1.0)
             {
                 phase -= 1.0;
-                gpulse.reset();
-                float pulsedistance = 1.0f / (frequency * freqmul);
-                pulsedistance = pulsedistance * sr;
-                gpulse.gauss_center = pulsedistance * gpulse.delay_rand_amount * rng.nextFloat();
-                // gpulse.gauss_amplitude = rng.nextFloatInRange(1.5f, 2.0f);
+                gpulse.reset(&rng, sr, frequency * freqmul);
             }
             SmoothingStrategy::process(phaseinc);
             return gpulse.step();
@@ -294,7 +298,7 @@ class NoiseGen
             volatile auto sink = rng();
     }
     void setSyncRatio(double) {}
-    alignas(16) xenakios::Xoroshiro128Plus rng;
+
     alignas(16) float history[2] = {0.0f, 0.0f};
     float lastvalue = 0.0;
     float nextvalue = 0.0;
