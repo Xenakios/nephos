@@ -169,7 +169,7 @@ class NoiseGen
             ++tiltprocesscount;
             if (tiltprocesscount == 8)
                 tiltprocesscount = 0;
-            alignas(16) float x = bpdist(rng) * tilt_compen_gain;
+            alignas(16) float x = rng.nextFloatInRange(-1.0f, 1.0f) * tilt_compen_gain;
             tilt_filter->processBlockStep(x);
             assert(std::isfinite(x));
             return x;
@@ -177,15 +177,18 @@ class NoiseGen
         // gaussian pulse
         if (imode == 5)
         {
-            phase += phaseinc.getValue() * 0.25;
+            const float freqmul = 0.25f;
+            phase += phaseinc.getValue() * freqmul;
             if (phase >= 1.0)
             {
                 phase -= 1.0;
                 gpulse.reset();
-                gpulse.gauss_center =
-                    gpulse.delay_rand_amount + gpulse.delay_rand_amount * bpdist(rng);
-                gpulse.gauss_amplitude = 1.75f + 0.25f * bpdist(rng);
+                float pulsedistance = 1.0f / (frequency * freqmul);
+                pulsedistance = pulsedistance * sr;
+                gpulse.gauss_center = pulsedistance * gpulse.delay_rand_amount * rng.nextFloat();
+                // gpulse.gauss_amplitude = rng.nextFloatInRange(1.5f, 2.0f);
             }
+            SmoothingStrategy::process(phaseinc);
             return gpulse.step();
         }
         phase += phaseinc.getValue();
@@ -195,7 +198,8 @@ class NoiseGen
             lastvalue = nextvalue;
             if (imode < 4)
                 nextvalue = sst::basic_blocks::dsp::correlated_noise_o2mk2_supplied_value(
-                    history[0], history[1], correlation.getValue(), bpdist(rng));
+                    history[0], history[1], correlation.getValue(),
+                    rng.nextFloatInRange(-1.0f, 1.0f));
             else
             {
                 double logisticx1 = logisticx0 * (1.0 - logisticx0) * logisticr;
@@ -235,7 +239,7 @@ class NoiseGen
         assert(tilt_filter);
         alignas(16) float sunoise[16];
         for (int i = 0; i < 16; ++i)
-            sunoise[i] = bpdist(rng);
+            sunoise[i] = rng.nextFloatInRange(-1.0f, 1.0f);
         tilt_filter->init(sunoise, tiltfiltercoeff * 0.5f);
         tiltprocesscount = 0;
     }
@@ -275,11 +279,15 @@ class NoiseGen
         assert(hz > 0.0);
         sr = hz;
     }
-    void setRandSeed(unsigned int s) { rng.seed(s); }
+    void setRandSeed(unsigned int s)
+    {
+        rng.seed(s, 88753);
+        for (int i = 0; i < 16; ++i)
+            volatile auto sink = rng();
+    }
     void setSyncRatio(double) {}
-    alignas(16) std::minstd_rand0 rng;
+    alignas(16) xenakios::Xoroshiro128Plus rng;
     alignas(16) float history[2] = {0.0f, 0.0f};
-    alignas(16) std::uniform_real_distribution<float> bpdist{-1.0f, 1.0f};
     float lastvalue = 0.0;
     float nextvalue = 0.0;
     double logisticx0 = 0.4;

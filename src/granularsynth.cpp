@@ -1602,7 +1602,7 @@ void GranulatorVoice::start(GrainEvent &evpars)
             {
                 float gpulsedelayrand = std::clamp(pw, 0.0f, 1.0f);
                 gpulsedelayrand = gpulsedelayrand * gpulsedelayrand * gpulsedelayrand;
-                q.gpulse.delay_rand_amount = 64.0 * gpulsedelayrand;
+                q.gpulse.delay_rand_amount = gpulsedelayrand;
                 q.setRandSeed(grainid);
                 q.setCorrelation(noisecorr);
                 q.tilt_filter = &tiltfilter;
