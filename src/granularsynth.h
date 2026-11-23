@@ -490,14 +490,17 @@ class GranulatorVoice
             tempbuffer[granul_block_size + i] = outsample;
             ++phase;
         }
-        if (filter_routing == FR_ALLSERIAL)
+        if (filter_routing == FR_A_TO_B)
         {
-            for (size_t insertIndex = 0; insertIndex < 2; ++insertIndex)
-            {
-                insert_fx[insertIndex].processBlock<granul_block_size>(tempbuffer);
-            }
+            insert_fx[0].processBlock<granul_block_size>(tempbuffer);
+            insert_fx[1].processBlock<granul_block_size>(tempbuffer);
         }
-        else if (filter_routing == FR_ALLPARALLEL)
+        else if (filter_routing == FR_B_TO_A)
+        {
+            insert_fx[1].processBlock<granul_block_size>(tempbuffer);
+            insert_fx[0].processBlock<granul_block_size>(tempbuffer);
+        }
+        else if (filter_routing == FR_PARALLEL)
         {
             float signalstoinserts[4][2];
             float summedinserts[2] = {0.0f, 0.0f};
@@ -619,10 +622,11 @@ class GranulatorVoice
     enum FilterRouting
     {
         FR_ALLOFF,
-        FR_ALLSERIAL,
-        FR_ALLPARALLEL
+        FR_A_TO_B,
+        FR_B_TO_A,
+        FR_PARALLEL
     };
-    FilterRouting filter_routing = FR_ALLSERIAL;
+    FilterRouting filter_routing = FR_A_TO_B;
     static constexpr size_t num_aux_envelopes = 4;
     std::array<SimpleEnvelope, num_aux_envelopes> *aux_envelopes = nullptr;
     struct ModSlot
@@ -869,7 +873,7 @@ class ToneGranulator
     void set_state(choc::value::ValueView state);
     void set_filter(int which, uint8_t mainmode, uint8_t awtype, sfpp::FilterModel mo,
                     sfpp::ModelConfig conf);
-    void prepare(float samplerate, int filter_routing, float tail_len, float tail_fade_len);
+    void prepare(float samplerate, float tail_len, float tail_fade_len);
     void sum_voices(float *__restrict outputbuffer)
     {
         alignas(32) float ambiofadebuf[granul_block_size];

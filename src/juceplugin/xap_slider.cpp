@@ -333,7 +333,7 @@ void XapSlider::paint(juce::Graphics &g)
 }
 void XapSlider::mouseDoubleClick(const juce::MouseEvent &event)
 {
-    if (!isEnabled())
+    if (!isEnabled() || m_pardesc.type == ParamDesc::BOOL)
         return;
     setValue(m_default_value, true);
 }

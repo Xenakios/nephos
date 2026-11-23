@@ -275,7 +275,7 @@ void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerB
     perfMeasurer.reset(sampleRate, samplesPerBlock);
     // workBuffer.resize(samplesPerBlock * 64);
     workBuffer.resize(granul_block_size * 64);
-    granulator.prepare(sampleRate, GranulatorVoice::FR_ALLSERIAL, 0.002f, 0.002f);
+    granulator.prepare(sampleRate, 0.002f, 0.002f);
     currentSampleRate = sampleRate;
     if (baconSpectrum)
     {
