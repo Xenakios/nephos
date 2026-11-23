@@ -502,19 +502,31 @@ class GranulatorVoice
         }
         else if (filter_routing == FR_PARALLEL)
         {
-            float signalstoinserts[4][2];
-            float summedinserts[2] = {0.0f, 0.0f};
+            alignas(16) float copytoinsertbuffer[granul_block_size * 2];
+            alignas(16) float sumfrominsertsbuffer[granul_block_size * 2] = {0.0f};
             for (size_t insertindex = 0; insertindex < numInsertSlots; ++insertindex)
             {
                 if (insert_fx[insertindex].mainmode != GrainInsertFX::GFXNONE)
                 {
-                    // signalstoinserts[insertindex][0] = outsample0;
-                    // signalstoinserts[insertindex][1] = outsample1;
-                    // insert_fx[insertindex].processStereo(signalstoinserts[insertindex][0],
-                    //                                     signalstoinserts[insertindex][1]);
-                    summedinserts[0] += signalstoinserts[insertindex][0];
-                    summedinserts[1] += signalstoinserts[insertindex][1];
+                    for (int i = 0; i < granul_block_size; ++i)
+                    {
+                        copytoinsertbuffer[i] = tempbuffer[i];
+                        copytoinsertbuffer[i + granul_block_size] =
+                            tempbuffer[i + granul_block_size];
+                    }
+                    insert_fx[insertindex].processBlock<granul_block_size>(copytoinsertbuffer);
+                    for (int i = 0; i < granul_block_size; ++i)
+                    {
+                        sumfrominsertsbuffer[i] += copytoinsertbuffer[i];
+                        sumfrominsertsbuffer[i + granul_block_size] +=
+                            copytoinsertbuffer[i + granul_block_size];
+                    }
                 }
+            }
+            for (int i = 0; i < granul_block_size; ++i)
+            {
+                tempbuffer[i] = sumfrominsertsbuffer[i];
+                tempbuffer[i + granul_block_size] = sumfrominsertsbuffer[i + granul_block_size];
             }
         }
 
