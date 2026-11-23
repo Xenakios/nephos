@@ -874,6 +874,14 @@ class ToneGranulator
     void set_filter(int which, uint8_t mainmode, uint8_t awtype, sfpp::FilterModel mo,
                     sfpp::ModelConfig conf);
     void prepare(float samplerate, float tail_len, float tail_fade_len);
+    void set_voice_filter_routing(GranulatorVoice::FilterRouting rt)
+    {
+        std::lock_guard<choc::threading::SpinLock> locker(spinLock);
+        for (auto &v : voices)
+        {
+            v->filter_routing = rt;
+        }
+    }
     void sum_voices(float *__restrict outputbuffer)
     {
         alignas(32) float ambiofadebuf[granul_block_size];

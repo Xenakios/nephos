@@ -135,7 +135,7 @@ void AudioPluginAudioProcessorEditor::addChildSlidersFrom(juce::Component &c)
     }
 }
 
-AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor() 
+AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor()
 {
     processorRef.granulator.gatherParamModulationData = false;
     processorRef.granulator.gatherGrainVisData = false;
@@ -274,6 +274,21 @@ MainPageComponent::MainPageComponent(AudioPluginAudioProcessor &p)
       volumeModuleComponent(p), stackModuleComponent(p), mainOutModuleComponent(p),
       keyboardComponent(p.keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard)
 {
+    addAndMakeVisible(routingButton);
+    routingButton.setButtonText("R");
+    routingButton.onClick = [this]() {
+        juce::PopupMenu menu;
+        menu.addSectionHeader("Inserts Routing");
+        juce::StringArray modes{"All Off", "A->B (serial)", "B->A (serial)", "A+B (parallel)"};
+        int curmode = processorRef.granulator.voices[0]->filter_routing;
+        for (size_t i = 0; i < modes.size(); ++i)
+        {
+            menu.addItem(modes[i], true, i == curmode, [this, i]() {
+                processorRef.granulator.set_voice_filter_routing((GranulatorVoice::FilterRouting)i);
+            });
+        }
+        menu.showMenuAsync({});
+    };
     /*
     addAndMakeVisible(corruptButton);
     corruptButton.setButtonText("CORRUPT AUDIO");
@@ -341,9 +356,11 @@ void MainPageComponent::resized()
                                    timeModuleComponent.getBottom() + 2, 490, 260);
     mainOutModuleComponent.setBounds(volumeModuleComponent.getRight() + 2,
                                      stackModuleComponent.getBottom() + 2, 725, 175);
-    insertComponents[0]->setBounds(0, spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 125);
+    routingButton.setBounds(0, spatModuleComponent.getBottom() + 2, 17, 17);
+    insertComponents[0]->setBounds(routingButton.getRight() + 1,
+                                   spatModuleComponent.getBottom() + 2, getWidth() / 2 - 8, 125);
     insertComponents[1]->setBounds(insertComponents[0]->getRight() + 1,
-                                   spatModuleComponent.getBottom() + 2, getWidth() / 2 - 4, 125);
+                                   spatModuleComponent.getBottom() + 2, getWidth() / 2 - 8, 125);
 
     // processorRef.xenAvisComponent.setBounds(getWidth() - 501, stackModuleComponent.getBottom() +
     // 2,

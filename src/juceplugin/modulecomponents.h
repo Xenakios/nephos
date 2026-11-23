@@ -661,6 +661,7 @@ class InsertModuleComponent : public juce::GroupComponent
             }
         }
     }
+    
     AudioPluginAudioProcessor &processorRef;
     int insertsIndex = -1;
     std::function<void(void)> OnInsertTypeChanged;
