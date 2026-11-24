@@ -109,7 +109,7 @@ inline int render_nephos(std::string statefilepath, double outlenseconds)
 {
     auto g = std::make_unique<ToneGranulator>();
     double sr = 44100.0;
-    g->prepare(sr, GranulatorVoice::FR_ALLSERIAL, 0.002, 0.002);
+    g->prepare(sr, 0.002, 0.002);
     choc::value::Value state;
     try
     {
@@ -742,9 +742,36 @@ inline void test_gaussian_impulse()
     writer->appendFrames(outbuf.getView());
 }
 
+template <typename HashMapType> inline void test_hash_map_speed()
+{
+    std::vector<float> values;
+    std::vector<uint32_t> ids;
+    xenakios::Xoroshiro128Plus rng;
+    for (int i = 0; i < 200; ++i)
+    {
+        auto id = rng.nextInt32InRange(1, 10000);
+        auto val = rng.nextFloatInRange(0.0f, 1.0f);
+        values.push_back(val);
+        ids.push_back(id);
+    }
+    HashMapType idtovaluemap;
+    for (int i = 0; i < 200; ++i)
+    {
+        idtovaluemap[ids[i]] = &values[i];
+    }
+    const size_t numiters = 1000000;
+    auto start = std::chrono::high_resolution_clock::now();
+    for (int i=0;i<numiters;++i)
+    {
+        
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+}
+
 int main(int argc, char **argv)
 {
-    test_gaussian_impulse();
+    test_hash_map_speed<std::unordered_map<uint32_t, float *>>();
+    // test_gaussian_impulse();
     // test_sixsines_table();
     // test_tiltfilter();
     return 0;

@@ -48,6 +48,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
 
     addAndMakeVisible(macrosPresetsComp);
     addChildComponent(overlaylabel);
+    mainTabs.setTabBarDepth(22);
     mainTabs.addTab("MAIN", juce::Colours::grey, &mainPage, false);
     mainTabs.addTab("MODULATION", juce::Colours::grey, &modulationPage, false);
     mainTabs.addTab("DASHBOARD", juce::Colours::grey, &dashPage, false);

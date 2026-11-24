@@ -1528,7 +1528,8 @@ class ToneGranulator
     choc::threading::SpinLock lagged_params_spinlock;
 
   private:
-    std::unordered_map<uint32_t, float *> idtoparvalptr;
+    // std::unordered_map<uint32_t, float *> idtoparvalptr;
+    sst::cpputils::SmallHashMap<uint32_t, float *, 256> idtoparvalptr;
 
   public:
     float get_parameter_value(uint32_t id) { return *idtoparvalptr[id]; }

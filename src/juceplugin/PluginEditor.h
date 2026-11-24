@@ -254,6 +254,7 @@ class ModulationPage : public juce::Component
             addAndMakeVisible(*lfoc);
             lfocomps.push_back(std::move(lfoc));
         }
+        stepSeqTabs.setTabBarDepth(22);
         for (int i = 0; i < 8; ++i)
         {
             auto stepcomp = std::make_unique<StepSeqComponent>(i, &processorRef.granulator,
