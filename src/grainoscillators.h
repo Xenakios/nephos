@@ -143,7 +143,7 @@ class NoiseGen
         float gauss_amplitude = 2.0f;
         float delay_rand_amount = 0.0f;
         float polarity = 1.0f;
-        double phase = 0.0;
+        alignas(16) double phase = 0.0;
         void set_sigma(float bipolnorm)
         {
             gauss_sigma = xenakios::mapvalue<float>(bipolnorm, -1.0f, 1.0f, 0.0f, 1.0);
@@ -167,7 +167,7 @@ class NoiseGen
         {
             float x = (phase - gauss_center) / gauss_sigma;
             float impulse = expf(-0.5f * x * x);
-            phase += 1.0f;
+            phase += 1.0;
             return impulse * gauss_amplitude * polarity;
         }
     };

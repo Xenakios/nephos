@@ -35,6 +35,7 @@ class XPingPongFX : public XenFXBase
         }
         return 0.0f;
     }
+    float m_delay_secs = 0.1f;
     void set_parameter(size_t paramindex, float value) override
     {
         value = std::clamp(value, 0.0f, 1.0f);
@@ -43,14 +44,7 @@ class XPingPongFX : public XenFXBase
             normalizedParamValues[0] = value;
             float delaylen = value * value * value;
             delaylen = 0.001 + 0.999 * delaylen;
-            int delsamples = delaylen * sample_rate;
-            delsamples = std::clamp(delsamples, 1, (int)(maxDelayLen * sample_rate) - 1);
-            if (delsamples != delayLenSamples)
-            {
-                delayLenSamples = delsamples;
-                delay_write_pos = delsamples - 1;
-                delay_read_pos = 0;
-            }
+            m_delay_secs = delaylen;
         }
         if (paramindex == 1)
         {
@@ -80,26 +74,34 @@ class XPingPongFX : public XenFXBase
             wetmixcoeffs[1] = std::sin(pidiv * value);
         }
     }
+    void read_delay(float delaysecs, float *out)
+    {
+        int delaysamples = delaysecs * sample_rate;
+        if (delaysamples < 2)
+            delaysamples = 2;
+        int read_pos = delay_write_pos - delaysamples;
+        if (read_pos < 0)
+            read_pos += maxDelayLen * sample_rate;
+        assert(read_pos >= 0 && read_pos < maxDelayLen * sample_rate);
+        out[0] = delayBuf[read_pos * 2 + 0];
+        out[1] = delayBuf[read_pos * 2 + 1];
+    }
     void process(float **inbuffer, float **outbuffer, size_t num_frames) override
     {
         assert(sample_rate > 0.0);
-        assert(delayLenSamples > 0);
         for (int i = 0; i < num_frames; ++i)
         {
             float insamples[2] = {inbuffer[0][i], inbuffer[1][i]};
             delayBuf[delay_write_pos * 2 + 0] = insamples[0] + feedback * feedbacks[0];
             delayBuf[delay_write_pos * 2 + 1] = feedback * feedbacks[1];
-            float delayouts[2] = {delayBuf[delay_read_pos * 2 + 0],
-                                  delayBuf[delay_read_pos * 2 + 1]};
+            float delayouts[2] = {0.0f, 0.0f};
+            read_delay(m_delay_secs, delayouts);
             outbuffer[0][i] = insamples[0] * wetmixcoeffs[0] + delayouts[0] * wetmixcoeffs[1];
             outbuffer[1][i] = insamples[1] * wetmixcoeffs[0] + delayouts[1] * wetmixcoeffs[1];
             feedbacks[0] = delayouts[1];
             feedbacks[1] = delayouts[0];
-            ++delay_read_pos;
-            if (delay_read_pos >= delayLenSamples)
-                delay_read_pos = 0;
             ++delay_write_pos;
-            if (delay_write_pos >= delayLenSamples)
+            if (delay_write_pos >= maxDelayLen * sample_rate)
                 delay_write_pos = 0;
         }
     }
@@ -107,9 +109,8 @@ class XPingPongFX : public XenFXBase
     float normalizedParamValues[3] = {0.2f, 0.5f, 0.5f};
     float feedback = 0.5;
     float wetmixcoeffs[2] = {0.0f, 0.0f};
-    int delayLenSamples = 0;
     float sample_rate = 0.0f;
-    alignas(16) int delay_read_pos = 0;
+
     alignas(16) int delay_write_pos = 0;
     alignas(16) float feedbacks[2] = {0.0f, 0.0f};
     std::vector<float> delayBuf;
