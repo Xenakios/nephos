@@ -689,48 +689,42 @@ inline void test_sixsines_table()
 inline void test_gaussian_impulse()
 {
     float sr = 44100.0;
-    int outlen = sr * 5.0;
+    int outlen = sr * 10.0;
     choc::buffer::ChannelArrayBuffer<float> outbuf(1, outlen);
     outbuf.clear();
     NoiseGen gen;
     gen.setSampleRate(sr);
     gen.reset();
     gen.imode = 5;
-    xenakios::Envelope env;
-    env.addPoint({0.0, 0.0});
-    env.addPoint({2.5, -1.0});
-    env.addPoint({4.0, -0.75});
-    env.addPoint({5.0, 1.0});
-    xenakios::Envelope tempoenv;
-    tempoenv.addPoint({0.0, 1.0});
-    tempoenv.addPoint({3.0, 7.0});
-    tempoenv.addPoint({5.0, 1.0});
 
-    int pulse = sr / 8.0;
-    int counter = 0;
-    float gain = 0.5f;
-    double trigphase = 1.0;
-    double trigphaseinc = 1.0 / sr * 6.0;
+    gen.setRandSeed(666);
+    // gen.setCorrelation(1.0);
+    float pw = 0.75f;
+    float gpulsedelayrand = std::clamp(pw, 0.0f, 1.0f);
+    gpulsedelayrand = gpulsedelayrand * gpulsedelayrand * gpulsedelayrand;
+    gen.gpulse.delay_rand_amount = gpulsedelayrand;
+    xenakios::Envelope correnv;
+    correnv.addPoint({0.0, 1.0});
+    correnv.addPoint({5.0, 1.0});
+    correnv.addPoint({10.0, 1.0});
+
+    xenakios::Envelope pitchenv;
+    pitchenv.addPoint({0.0, -36.0});
+    pitchenv.addPoint({5.0, 24.0});
+    pitchenv.addPoint({10.0, -36.0});
+
     for (int i = 0; i < outlen; ++i)
     {
-        float normtime = i / sr;
-        if (trigphase >= 1.0)
+        float tpos = i / sr;
+        if (i % 32 == 0)
         {
-            trigphase -= 1.0;
-            gen.reset();
-
-            gen.setCorrelation(env.getValueAtPosition(normtime));
-            if (gain >= 0.5f)
-                gain = -0.5f;
-            else
-                gain = 0.5f;
+            gen.setCorrelation(correnv.getValueAtPosition(tpos));
+            float hz = 262.0 * std::pow(2.0, 1.0 / 12.0 * pitchenv.getValueAtPosition(tpos));
+            gen.setFrequency(hz);
         }
+        float gain = 1.0f;
         float s = gen.step() * gain;
-        // s = std::tanh(s * 4.0);
-        outbuf.getSample(0, i) = s * 0.9;
-        float tempo = std::pow(2.0, tempoenv.getValueAtPosition(normtime));
-        trigphaseinc = 1.0 / sr * tempo;
-        trigphase += trigphaseinc;
+        outbuf.getSample(0, i) = s;
     }
     choc::audio::AudioFileProperties props;
     props.bitDepth = choc::audio::BitDepth::float32;
@@ -761,17 +755,16 @@ template <typename HashMapType> inline void test_hash_map_speed()
     }
     const size_t numiters = 1000000;
     auto start = std::chrono::high_resolution_clock::now();
-    for (int i=0;i<numiters;++i)
+    for (int i = 0; i < numiters; ++i)
     {
-        
     }
     auto end = std::chrono::high_resolution_clock::now();
 }
 
 int main(int argc, char **argv)
 {
-    test_hash_map_speed<std::unordered_map<uint32_t, float *>>();
-    // test_gaussian_impulse();
+    // test_hash_map_speed<std::unordered_map<uint32_t, float *>>();
+    test_gaussian_impulse();
     // test_sixsines_table();
     // test_tiltfilter();
     return 0;

@@ -157,7 +157,7 @@ class NoiseGen
             phase = 0.0;
             float pulsedistance = 1.0f / frequency_hz;
             pulsedistance = pulsedistance * samplerate;
-            gauss_center = pulsedistance * delay_rand_amount * rng->nextFloat();
+            gauss_center = 64.0 + pulsedistance * delay_rand_amount * rng->nextFloat();
             const float base_db = 0.0f;
             // we will at some point somehow make the random range adjustable, -6 to 6 dB
             // is probably too much as a constant range
