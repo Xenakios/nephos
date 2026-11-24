@@ -637,7 +637,7 @@ ToneGranulator::ToneGranulator() : m_sr(44100.0), modmatrix(44100.0)
         //            (void *)&modSourceValues[i]);
         modmatrix.m.bindSourceValue(modSourceInfos[i].id, modSourceValues[i]);
     }
-    init_filter_infos();
+    
     modmatrix.rt.updateActiveAt(0, true);
     modmatrix.rt.updateRoutingAt(0, GranulatorModConfig::SourceIdentifier{RANDOM0},
                                  GranulatorModConfig::TargetIdentifier{PAR_PITCH}, 0.0f);

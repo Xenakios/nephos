@@ -69,6 +69,8 @@ add_library(AWLIMITED
     libs/airwindows_limited/plugins/WoodenBox.cpp
     libs/airwindows_limited/plugins/PitchNasty.cpp
     libs/airwindows_limited/plugins/PitchNastyProc.cpp
+    libs/airwindows_limited/plugins/WoodenChest.cpp
+    libs/airwindows_limited/plugins/WoodenChestProc.cpp
 )
 
 target_compile_definitions(AWLIMITED PUBLIC _USE_MATH_DEFINES=1)

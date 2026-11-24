@@ -15,6 +15,7 @@
 #include "plugins/Donut.h"
 #include "plugins/GlitchShifter.h"
 #include "plugins/WoodenBox.h"
+#include "plugins/WoodenChest.h"
 #include "plugins/PitchNasty.h"
 #include "platform/choc_ReenableAllWarnings.h"
 #include "xgfx_dust.h"
@@ -39,6 +40,7 @@ std::vector<GrainInsertFX::ModeInfo> GrainInsertFX::getAvailableModes()
     result.emplace_back("AW GlitchShifter", "AirWindows", GFXAIRWINDOWS, 11);
     result.emplace_back("AW WoodenBox", "AirWindows", GFXAIRWINDOWS, 12);
     result.emplace_back("AW PitchNasty", "AirWindows", GFXAIRWINDOWS, 13);
+    result.emplace_back("AW WoodenChest", "AirWindows", GFXAIRWINDOWS, 14);
     result.emplace_back("Xenakios Dust", "Xenakios", GFXXENAKIOS, 0);
     result.emplace_back("Xenakios PingPongDelay", "Xenakios", GFXXENAKIOS, 1);
     auto models = sfpp::Filter::availableModels();
@@ -223,6 +225,11 @@ void GrainInsertFX::setMode(ModeInfo m)
         {
             awplugin = make_aw_safe<airwinconsolidated::PitchNasty::PitchNasty>(0);
             numParams = airwinconsolidated::PitchNasty::kNumParameters;
+        }
+        else if (m.awtype == 14)
+        {
+            awplugin = make_aw_safe<airwinconsolidated::WoodenChest::WoodenChest>(0);
+            numParams = airwinconsolidated::WoodenChest::kNumParameters;
         }
         assert(numParams < 11);
         if (awplugin)
