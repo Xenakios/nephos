@@ -176,7 +176,7 @@ class NoiseGen
         }
         void set_sigma(float s) { gauss_sigma = 1.0f + 15.0f * (s * s); }
 
-        void reset(xenakios::Xoroshiro128Plus *rng, float samplerate, float frequency_hz)
+        void reset(xenakios::Xoroshiro128Plus &rng, float samplerate, float frequency_hz)
         {
             assert(frequency_hz > 0.0f);
             polarity = -polarity;
@@ -185,7 +185,7 @@ class NoiseGen
             cur ^= 1; // old voice keeps playing in voices[cur ^ 1]
             Voice &v = voices[cur];
             v.sigma = gauss_sigma;
-            v.center = 64.0f + pulsedistance * delay_rand_amount * rng->nextFloat();
+            v.center = 64.0f + pulsedistance * delay_rand_amount * rng.nextFloat();
             v.amplitude = gauss_amplitude;
             v.polarity = polarity;
             v.phase = 0.0;
@@ -221,7 +221,7 @@ class NoiseGen
             if (phase >= 1.0)
             {
                 phase -= 1.0;
-                gpulse.reset(&rng, sr, frequency * freqmul);
+                gpulse.reset(rng, sr, frequency * freqmul);
             }
             SmoothingStrategy::process(phaseinc);
             return gpulse.step();
