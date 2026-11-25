@@ -144,9 +144,15 @@ class NoiseGen
         float delay_rand_amount = 0.0f;
         float polarity = 1.0f;
         alignas(16) double phase = 0.0;
-        void set_sigma(float bipolnorm)
+        void set_delay_randomization_amount(float a)
         {
-            gauss_sigma = xenakios::mapvalue<float>(bipolnorm, -1.0f, 1.0f, 0.0f, 1.0);
+            a = std::clamp(a, 0.0f, 1.0f);
+            a = a * a * a;
+            delay_rand_amount = a;
+        }
+        void set_sigma(float s)
+        {
+            gauss_sigma = s;
             gauss_sigma = 1.0f + 15.0f * (gauss_sigma * gauss_sigma);
         }
         void reset(xenakios::Xoroshiro128Plus *rng, float samplerate, float frequency_hz)
@@ -270,10 +276,14 @@ class NoiseGen
         phaseinc.setTarget(1.0 / sr * freq);
     }
     float tilt_compen_gain = 1.0f;
+    void setPulseWidth(float w)
+    {
+        w = std::clamp(w, 0.0f, 1.0f);
+        gpulse.set_sigma(w);
+    }
     void setCorrelation(double c)
     {
-        gpulse.set_sigma(c);
-
+        gpulse.set_delay_randomization_amount(xenakios::mapvalue(c, -1.0, 1.0, 0.0, 1.0));
         logisticr = xenakios::mapvalue(c, -1.0, 1.0, 3.4, 4.0);
         assert(logisticr >= 3.4 && logisticr <= 4.0);
         correlation.setTarget(c);

@@ -62,13 +62,14 @@ class XPingPongFX : public XenFXBase
     }
     void read_delay(float delaysecs, float *out)
     {
+        const int maxdelaypos = maxDelayLen * sample_rate;
         int delaysamples = delaysecs * sample_rate;
         if (delaysamples < 2)
             delaysamples = 2;
         int read_pos = delay_write_pos - delaysamples;
         if (read_pos < 0)
-            read_pos += maxDelayLen * sample_rate;
-        assert(read_pos >= 0 && read_pos < maxDelayLen * sample_rate);
+            read_pos += maxdelaypos;
+        assert(read_pos >= 0 && read_pos < maxdelaypos);
         out[0] = delayBuf[read_pos * 2 + 0];
         out[1] = delayBuf[read_pos * 2 + 1];
     }
