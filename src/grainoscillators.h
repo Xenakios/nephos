@@ -136,47 +136,65 @@ class NoiseGen
     void setFrequencySmoothingRateMS(float ms) { phaseinc.setRateInMilliseconds(ms, sr, 1.0); }
     int tiltprocesscount = 0;
     float tiltfiltercoeff = 0.0f;
+
     struct GaussPulse
     {
-        float gauss_sigma = 0.0f;
-        float gauss_center = 0.0f;
+        struct Voice
+        {
+            float sigma = 1.0f;
+            float center = 0.0f;
+            float amplitude = 0.0f;
+            float polarity = 1.0f;
+            double phase = 0.0;
+            bool active = false;
+
+            float step()
+            {
+                if (!active)
+                    return 0.0f;
+                float x = float((phase - center) / sigma);
+                float v = expf(-0.5f * x * x) * amplitude * polarity;
+                phase += 1.0;
+                // finished: past the center by ~6 sigma, value is negligible
+                if (phase > center + 6.0f * sigma)
+                    active = false;
+                return v;
+            }
+        };
+
+        float gauss_sigma = 1.0f;
         float gauss_amplitude = 2.0f;
         float delay_rand_amount = 0.0f;
         float polarity = 1.0f;
-        alignas(16) double phase = 0.0;
+        Voice voices[2]; // current + previous tail
+        int cur = 0;
+
         void set_delay_randomization_amount(float a)
         {
             a = std::clamp(a, 0.0f, 1.0f);
-            a = a * a * a;
-            delay_rand_amount = a;
+            delay_rand_amount = a * a * a;
         }
-        void set_sigma(float s)
-        {
-            gauss_sigma = s;
-            gauss_sigma = 1.0f + 15.0f * (gauss_sigma * gauss_sigma);
-        }
+        void set_sigma(float s) { gauss_sigma = 1.0f + 15.0f * (s * s); }
+
         void reset(xenakios::Xoroshiro128Plus *rng, float samplerate, float frequency_hz)
         {
             assert(frequency_hz > 0.0f);
             polarity = -polarity;
-            phase = 0.0;
-            float pulsedistance = 1.0f / frequency_hz;
-            pulsedistance = pulsedistance * samplerate;
-            gauss_center = 64.0 + pulsedistance * delay_rand_amount * rng->nextFloat();
-            const float base_db = 0.0f;
-            // we will at some point somehow make the random range adjustable, -6 to 6 dB
-            // is probably too much as a constant range
-            // float random_db = rng->nextFloatInRange(base_db - 6.0f, base_db + 6.0f);
-            // gauss_amplitude = xenakios::decibelsToGain(random_db);
+            float pulsedistance = samplerate / frequency_hz;
+
+            cur ^= 1; // old voice keeps playing in voices[cur ^ 1]
+            Voice &v = voices[cur];
+            v.sigma = gauss_sigma;
+            v.center = 64.0f + pulsedistance * delay_rand_amount * rng->nextFloat();
+            v.amplitude = gauss_amplitude;
+            v.polarity = polarity;
+            v.phase = 0.0;
+            v.active = true;
         }
-        [[nodiscard]] float step()
-        {
-            float x = (phase - gauss_center) / gauss_sigma;
-            float impulse = expf(-0.5f * x * x);
-            phase += 1.0;
-            return impulse * gauss_amplitude * polarity;
-        }
+
+        [[nodiscard]] float step() { return voices[0].step() + voices[1].step(); }
     };
+
     alignas(16) xenakios::Xoroshiro128Plus rng;
     GaussPulse gpulse;
     float step()
