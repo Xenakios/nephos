@@ -26,6 +26,7 @@ std::vector<GrainInsertFX::ModeInfo> GrainInsertFX::getAvailableModes()
     std::vector<ModeInfo> result;
     result.reserve(300);
     result.emplace_back("-None-", "");
+
     result.emplace_back("AW BezEQ", "AirWindows", GFXAIRWINDOWS, 0);
     result.emplace_back("AW HipCrush", "AirWindows", GFXAIRWINDOWS, 1);
     result.emplace_back("AW KWoodRoom", "AirWindows", GFXAIRWINDOWS, 2);
@@ -67,8 +68,8 @@ std::vector<GrainInsertFX::ModeInfo> GrainInsertFX::getAvailableModes()
             {
                 subname += " " + sfpp::toString(smt);
             }
-            // result.emplace_back(sfpp::toString(mo) + " " + subname, sfpp::toString(mo),
-            //                     GFXSSTFILTER, 0, mo, co);
+            if (mo == sfpp::FilterModel::SampleAndHold)
+                subname = "Sample & Hold";
             result.emplace_back(subname, sfpp::toString(mo), GFXSSTFILTER, 0, mo, co);
         }
     }
@@ -156,6 +157,7 @@ void GrainInsertFX::setMode(ModeInfo m)
         mainmode = GFXNONE;
         numParams = 0;
         submode = 0;
+
         if (m.awtype == 0)
         {
             awplugin = make_aw_safe<airwinconsolidated::BezEQ::BezEQ>(0);
@@ -231,6 +233,7 @@ void GrainInsertFX::setMode(ModeInfo m)
             awplugin = make_aw_safe<airwinconsolidated::WoodenChest::WoodenChest>(0);
             numParams = airwinconsolidated::WoodenChest::kNumParameters;
         }
+
         assert(numParams < 11);
         if (awplugin)
         {

@@ -4,7 +4,7 @@
 #include "text/choc_StringUtilities.h"
 #include "airwin_consolidated_base.h"
 #include "xenfxbase.h"
-// #include <print>
+#include <functional>
 
 namespace sfpp = sst::filtersplusplus;
 struct FilterInfo
@@ -22,7 +22,7 @@ template <typename AWType>
 {
     static_assert(std::derived_from<AWType, AirwinConsolidatedBase>,
                   "class must inherit from AirwinConsolidatedBase");
-    char *objbuffer = new char[sizeof(AWType)];
+    uint8_t *objbuffer = new uint8_t[sizeof(AWType)];
     std::fill(objbuffer, objbuffer + sizeof(AWType), 0);
     AirwinConsolidatedBase *ob = new (objbuffer) AWType(cb);
     return std::unique_ptr<AirwinConsolidatedBase>(ob);
