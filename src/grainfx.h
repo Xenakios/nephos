@@ -65,12 +65,12 @@ class GrainInsertFX
     size_t numParams = 0;
     std::string getParameterName(size_t index);
 
-    alignas(32) std::vector<float> delaylinememory;
+    alignas(32) std::array<float, 16384> delaylinememory;
     GrainInsertFX()
     {
         std::fill(paramvalues.begin(), paramvalues.end(), 0.0f);
         std::fill(parammodvalues.begin(), parammodvalues.end(), 0.0f);
-        delaylinememory.resize(8192);
+        std::fill(delaylinememory.begin(), delaylinememory.end(), 0.0f);
     }
 
     static std::vector<ModeInfo> getAvailableModes();

@@ -139,8 +139,8 @@ void GrainInsertFX::setMode(ModeInfo m)
         auto reqdelaysize =
             sst::filtersplusplus::Filter::requiredDelayLinesSizes(m.sstmodel, m.sstconfig);
 
-        if (reqdelaysize * 4 > delaylinememory.size())
-            delaylinememory.resize(reqdelaysize * 4);
+        assert(reqdelaysize * 2 < delaylinememory.size());
+
         sstfilter.setFilterModel(m.sstmodel);
         sstfilter.setModelConfiguration(m.sstconfig);
         sstfilter.setSampleRateAndBlockSize(sr, blockSize);
