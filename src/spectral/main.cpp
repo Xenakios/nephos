@@ -10,6 +10,7 @@
 #include "sst/basic-blocks/dsp/FollowSlewAndSmooth.h"
 #include "sst/basic-blocks/dsp/FastMath.h"
 #include "Tunings.h"
+#include "../../Common/xen_ambisonics.h"
 
 inline double quantize_pitch_binary(Tunings::Tuning &tuning, double sourcepitch, double threshold,
                                     int tuning_offset)
@@ -258,6 +259,7 @@ struct ImageSynth
         double phaseinc = 0.0;
         float outgain = 0.0f;
         bool active = false;
+        alignas(16) float ambicoeffs[64] = {0.0f};
         TSlewLimiter<float> gainslew;
         void reset(double sr, double frequency_hz, double ogain, double initphase)
         {
@@ -270,7 +272,7 @@ struct ImageSynth
         }
         void process_block(float *__restrict buffer, float gain)
         {
-            const float cut_th = 0.001;
+            const float cut_th = juce::Decibels::decibelsToGain(-72.0);
             for (int i = 0; i < blocksize; ++i)
             {
                 float smoothedgain = gainslew.process(1.0 / samplerate, gain);
@@ -311,6 +313,7 @@ struct ImageSynth
         out_dur = outduration;
         samplerate = sample_rate;
         std::uniform_real_distribution<float> phasedist{0.0f, 1.0f};
+        std::uniform_real_distribution<float> azimuthdist{-180.0f, 180.0f};
         for (int i = 0; i < oscillators.size(); ++i)
         {
             double pitch = juce::jmap<double>(i, 0, oscillators.size() - 1, 60.0, -36.0);
@@ -318,13 +321,20 @@ struct ImageSynth
             pitch = (1.0 - tuning_amount) * pitch + tuning_amount * qpitch;
             double hz = 262.0 * std::pow(2.0, 1.0 / 12 * pitch);
             // std::cout << hz << " ";
-            oscillators[i].reset(samplerate, hz, 16.0 / oscillators.size(), phasedist(rng));
+            oscillators[i].reset(samplerate, hz, 32.0 / oscillators.size(), phasedist(rng));
+            float azi = azimuthdist(rng);
+            azi = degreesToRadians(azi);
+            float x, y, z;
+            sphericalToCartesian(azi, 0.0f, x, y, z);
+            SHEval3(x, y, z, oscillators[i].ambicoeffs);
+            for (int j = 0; j < 16; ++j)
+                oscillators[i].ambicoeffs[j] *= n3d2sn3d[j];
         }
     }
-    void process_block(float *__restrict buffer)
+    void process_block(float **__restrict buffer)
     {
-        float sumbuf[blocksize] = {0.0};
-        float voicebuf[blocksize];
+        alignas(32) float sumbuf[blocksize][64] = {0.0};
+        alignas(32) float voicebuf[blocksize];
         int outdursamples = out_dur * samplerate;
         int imgcolumn = (double)sourceimage.getWidth() / outdursamples * phase;
         imgcolumn = std::clamp(imgcolumn, 0, sourceimage.getWidth() - 1);
@@ -335,15 +345,17 @@ struct ImageSynth
             float gain = sourceimage.getPixelAt(imgcolumn, j).getBrightness();
             gain = gain * gain;
             oscillators[j].process_block(voicebuf, gain);
+            for (int k = 0; k < 16; ++k)
+                for (int i = 0; i < blocksize; ++i)
+                {
+                    sumbuf[i][k] += voicebuf[i] * oscillators[j].ambicoeffs[k];
+                }
+        }
+        for (int k = 0; k < 16; ++k)
             for (int i = 0; i < blocksize; ++i)
             {
-                sumbuf[i] += voicebuf[i];
+                buffer[k][i] = sumbuf[i][k];
             }
-        }
-        for (int i = 0; i < blocksize; ++i)
-        {
-            buffer[i] = sumbuf[i];
-        }
     }
     ImageSynth() {}
 };
@@ -358,11 +370,11 @@ inline void test_image_synth()
     auto scale = Tunings::readSCLFile(
         R"(C:\Users\teemu\Documents\nephos_data\scala_scales\Ancient Greek\Ancient Greek Archytas Enharmonic.scl)");
     auto tuning = Tunings::Tuning(scale);
-    syn->prepare(sr, outlenseconds, tuning, 0.95);
-    syn->load_image_from_file(R"(C:\develop\nephos\src\spectral\test_images\img9.png)");
-    choc::buffer::ChannelArrayBuffer<float> outbuffer{1, ImageSynth::blocksize};
+    syn->prepare(sr, outlenseconds, tuning, 0.0);
+    syn->load_image_from_file(R"(C:\develop\nephos\src\spectral\test_images\img3.png)");
+    choc::buffer::ChannelArrayBuffer<float> outbuffer{16, ImageSynth::blocksize};
     choc::audio::AudioFileProperties props;
-    props.numChannels = 1;
+    props.numChannels = 16;
     props.sampleRate = sr;
     props.bitDepth = choc::audio::BitDepth::float32;
     choc::audio::WAVAudioFileFormat<true> wavformat;
@@ -375,7 +387,7 @@ inline void test_image_synth()
         {
             std::cout << outcounter << "/" << outlensamples << "\n";
         }
-        syn->process_block(outbuffer.getView().data.channels[0]);
+        syn->process_block((float **)outbuffer.getView().data.channels);
         writer->appendFrames(outbuffer.getView());
         outcounter += ImageSynth::blocksize;
     }
