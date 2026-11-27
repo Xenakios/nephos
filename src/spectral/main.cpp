@@ -8,6 +8,54 @@
 #include "audio/choc_SampleBuffers.h"
 #include <random>
 #include "sst/basic-blocks/dsp/FollowSlewAndSmooth.h"
+#include "sst/basic-blocks/dsp/FastMath.h"
+#include "Tunings.h"
+
+inline double quantize_pitch_binary(Tunings::Tuning &tuning, double sourcepitch, double threshold,
+                                    int tuning_offset)
+{
+    auto pitchAt = [&](int i) { return tuning.logScaledFrequencyForMidiNote(i) * 12.0; };
+
+    constexpr int firstNote = -256;
+    constexpr int lastNote = 255;
+
+    int lo = firstNote;
+    int hi = lastNote + 1; // exclusive
+
+    while (lo < hi)
+    {
+        const int mid = lo + (hi - lo) / 2;
+
+        if (pitchAt(mid) < sourcepitch)
+            lo = mid + 1;
+        else
+            hi = mid;
+    }
+
+    if (lo <= firstNote)
+        return pitchAt(firstNote);
+
+    if (lo > lastNote)
+        return pitchAt(lastNote);
+
+    const double higher = pitchAt(lo);
+    const double lower = pitchAt(lo - 1);
+    const double interval = higher - lower;
+
+    // Normalized position within the interval: [0, 1].
+    const double position = (sourcepitch - lower) / interval;
+
+    // Quantize only near either grid point.
+    const double halfThreshold = threshold * 0.5;
+
+    if (position < halfThreshold)
+        return lower;
+
+    if (position > 1.0 - halfThreshold)
+        return higher;
+
+    return sourcepitch;
+}
 
 template <typename T = float> struct TSlewLimiter
 {
@@ -218,7 +266,7 @@ struct ImageSynth
             phaseinc = (M_PI * 2) / sr * frequency_hz;
             outgain = ogain;
             gainslew.reset();
-            gainslew.setRiseFall(1.0f, 1.0f);
+            gainslew.setRiseFall(5.0f, 5.0f);
         }
         void process_block(float *__restrict buffer, float gain)
         {
@@ -228,7 +276,8 @@ struct ImageSynth
                 float smoothedgain = gainslew.process(1.0 / samplerate, gain);
                 if (smoothedgain >= cut_th)
                 {
-                    float s = std::sin(phase) * outgain * smoothedgain;
+                    float s =
+                        sst::basic_blocks::dsp::fastsin(phase - M_PI) * outgain * smoothedgain;
                     phase += phaseinc;
                     if (phase >= 2 * M_PI)
                         phase -= 2 * M_PI;
@@ -256,14 +305,17 @@ struct ImageSynth
         else
             std::cout << "could not load image file\n";
     }
-    void prepare(double sample_rate, double outduration)
+    void prepare(double sample_rate, double outduration, Tunings::Tuning &tuning,
+                 double tuning_amount)
     {
         out_dur = outduration;
         samplerate = sample_rate;
         std::uniform_real_distribution<float> phasedist{0.0f, 1.0f};
         for (int i = 0; i < oscillators.size(); ++i)
         {
-            double pitch = juce::jmap<double>(i, 0, oscillators.size() - 1, -36.0, 60.0);
+            double pitch = juce::jmap<double>(i, 0, oscillators.size() - 1, 60.0, -36.0);
+            double qpitch = quantize_pitch_binary(tuning, pitch + 60.0, 1.0, 0) - 60.0;
+            pitch = (1.0 - tuning_amount) * pitch + tuning_amount * qpitch;
             double hz = 262.0 * std::pow(2.0, 1.0 / 12 * pitch);
             // std::cout << hz << " ";
             oscillators[i].reset(samplerate, hz, 16.0 / oscillators.size(), phasedist(rng));
@@ -271,7 +323,7 @@ struct ImageSynth
     }
     void process_block(float *__restrict buffer)
     {
-        double sumbuf[blocksize] = {0.0};
+        float sumbuf[blocksize] = {0.0};
         float voicebuf[blocksize];
         int outdursamples = out_dur * samplerate;
         int imgcolumn = (double)sourceimage.getWidth() / outdursamples * phase;
@@ -281,6 +333,7 @@ struct ImageSynth
         for (int j = 0; j < oscillators.size(); ++j)
         {
             float gain = sourceimage.getPixelAt(imgcolumn, j).getBrightness();
+            gain = gain * gain;
             oscillators[j].process_block(voicebuf, gain);
             for (int i = 0; i < blocksize; ++i)
             {
@@ -302,8 +355,11 @@ inline void test_image_synth()
     double sr = 44100.0;
     double outlenseconds = 30.0;
     int outlensamples = outlenseconds * sr;
-    syn->prepare(sr, outlenseconds);
-    syn->load_image_from_file(R"(C:\develop\nephos\src\spectral\test_images\img8.png)");
+    auto scale = Tunings::readSCLFile(
+        R"(C:\Users\teemu\Documents\nephos_data\scala_scales\Ancient Greek\Ancient Greek Archytas Enharmonic.scl)");
+    auto tuning = Tunings::Tuning(scale);
+    syn->prepare(sr, outlenseconds, tuning, 0.95);
+    syn->load_image_from_file(R"(C:\develop\nephos\src\spectral\test_images\img9.png)");
     choc::buffer::ChannelArrayBuffer<float> outbuffer{1, ImageSynth::blocksize};
     choc::audio::AudioFileProperties props;
     props.numChannels = 1;
@@ -315,6 +371,10 @@ inline void test_image_synth()
     int outcounter = 0;
     while (outcounter < outlensamples)
     {
+        if (outcounter / ImageSynth::blocksize % 512 == 0)
+        {
+            std::cout << outcounter << "/" << outlensamples << "\n";
+        }
         syn->process_block(outbuffer.getView().data.channels[0]);
         writer->appendFrames(outbuffer.getView());
         outcounter += ImageSynth::blocksize;
