@@ -251,7 +251,7 @@ inline void test_spectral_descriptors()
 
 struct ImageSynth
 {
-    static constexpr size_t blocksize = 32;
+    static constexpr size_t blocksize = 128;
     struct Oscillator
     {
         double phase = 0.0;
@@ -292,17 +292,26 @@ struct ImageSynth
     };
     std::array<Oscillator, 600> oscillators;
     juce::Image sourceimage;
+    juce::Image azimuth_image;
     std::minstd_rand0 rng;
     double samplerate = 0.0;
     double phase = 0.0;
     double out_dur = 0.0;
+    enum ImageTarget
+    {
+        IT_VOLUME,
+        IT_AZIMUTH
+    };
     void set_image(juce::Image img) { sourceimage = img; }
-    void load_image_from_file(juce::String path)
+    void load_image_from_file(juce::String path, int whichtarget)
     {
         auto temp = juce::ImageFileFormat::loadFrom(path);
         if (temp.isValid())
         {
-            sourceimage = temp;
+            if (whichtarget == IT_VOLUME)
+                sourceimage = temp;
+            if (whichtarget == IT_AZIMUTH)
+                azimuth_image = temp;
         }
         else
             std::cout << "could not load image file\n";
@@ -347,6 +356,15 @@ struct ImageSynth
             float gain = sourceimage.getPixelAt(imgcolumn, j).getBrightness();
             gain = gain * gain;
             oscillators[j].process_block(voicebuf, gain);
+            float azimuth = azimuth_image.getPixelAt(imgcolumn, j).getBrightness();
+            azimuth = juce::jmap<float>(azimuth, 0.0f, 1.0f, -180.0f, 180.0f);
+            azimuth = degreesToRadians(azimuth);
+            float x, y, z;
+            sphericalToCartesian(azimuth, 0.0f, x, y, z);
+            float *__restrict acoefs = oscillators[j].ambicoeffs;
+            SHEval3(x, y, z, acoefs);
+            for (int j = 0; j < 16; ++j)
+                acoefs[j] *= n3d2sn3d[j];
             for (int k = 0; k < 16; ++k)
                 for (int i = 0; i < blocksize; ++i)
                 {
@@ -373,7 +391,10 @@ inline void test_image_synth()
         R"(C:\Users\teemu\Documents\nephos_data\scala_scales\Ancient Greek\Ancient Greek Archytas Enharmonic.scl)");
     auto tuning = Tunings::Tuning(scale);
     syn->prepare(sr, outlenseconds, tuning, 0.0);
-    syn->load_image_from_file(R"(C:\develop\nephos\src\spectral\test_images\img9b.png)");
+    syn->load_image_from_file(R"(C:\develop\nephos\src\spectral\test_images\img3.png)",
+                              ImageSynth::IT_VOLUME);
+    syn->load_image_from_file(R"(C:\develop\nephos\src\spectral\test_images\azimuth_test_03.png)",
+                              ImageSynth::IT_AZIMUTH);
     choc::buffer::ChannelArrayBuffer<float> outbuffer{16, ImageSynth::blocksize};
     choc::audio::AudioFileProperties props;
     props.numChannels = 16;
@@ -387,12 +408,13 @@ inline void test_image_synth()
     {
         if (outcounter / ImageSynth::blocksize % 512 == 0)
         {
-            std::cout << outcounter << "/" << outlensamples << "\n";
+            std::cout << 100.0 / outlensamples * outcounter << "%\r";
         }
         syn->process_block((float **)outbuffer.getView().data.channels);
         writer->appendFrames(outbuffer.getView());
         outcounter += ImageSynth::blocksize;
     }
+    std::cout << "\n";
 }
 
 int main()
