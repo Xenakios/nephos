@@ -102,6 +102,9 @@ PRIVATE
     JUCE_DISPLAY_SPLASH_SCREEN=0
     JUCE_USE_CURL=0)    # If you remove this, add `NEEDS_CURL TRUE` to the `juce_add_console_app` call
     
+target_compile_options(SpectralTesting PRIVATE -mavx2 -mfma -Rpass=loop-vectorize
+            -Rpass-missed=loop-vectorize)
+
 target_link_libraries(SpectralTesting
     PRIVATE
         # ConsoleAppData            # If you'd created a binary data target, you'd link to it here

@@ -1,9 +1,34 @@
 #include "juce_audio_basics/juce_audio_basics.h"
 #include "juce_audio_formats/juce_audio_formats.h"
 #include "juce_dsp/juce_dsp.h"
+#include "juce_graphics/juce_graphics.h"
 #include <span>
 #include <fstream>
-#include "windows.h"
+#include "audio/choc_AudioFileFormat_WAV.h"
+#include "audio/choc_SampleBuffers.h"
+#include <random>
+#include "sst/basic-blocks/dsp/FollowSlewAndSmooth.h"
+
+template <typename T = float> struct TSlewLimiter
+{
+    T out = 0.f;
+    T rise = 0.f;
+    T fall = 0.f;
+
+    void reset() { out = 0.f; }
+
+    void setRiseFall(T rise_, T fall_)
+    {
+        rise = rise_;
+        fall = fall_;
+    }
+    T process(T deltaTime, T in)
+    {
+        out = std::clamp(in, out - fall * deltaTime, out + rise * deltaTime);
+        return out;
+    }
+};
+
 /*
 // magnitude spectrum X[k], frequencies f[k], k = 0..N/2
 
@@ -175,30 +200,130 @@ inline void test_spectral_descriptors()
     }
 }
 
-inline void test_juce_file_native_handle()
+struct ImageSynth
 {
-    juce::File f{R"(C:\MusicAudio\sourcesamples\_count.wav)"};
-    auto h = reinterpret_cast<HANDLE>(f.getFileIdentifier());
-    if (h != INVALID_HANDLE_VALUE)
+    static constexpr size_t blocksize = 32;
+    struct Oscillator
     {
-        std::vector<uint8_t> readbuffer;
-        readbuffer.resize(f.getSize());
-        DWORD numRead = 0;
-        if (ReadFile(h, readbuffer.data(), f.getSize(), &numRead, nullptr))
+        double phase = 0.0;
+        double samplerate = 0.0;
+        double phaseinc = 0.0;
+        float outgain = 0.0f;
+        bool active = false;
+        TSlewLimiter<float> gainslew;
+        void reset(double sr, double frequency_hz, double ogain, double initphase)
         {
-            std::cout << "read " << numRead << " bytes from file using win32 ReadFile\n";
+            samplerate = sr;
+            phase = initphase;
+            phaseinc = (M_PI * 2) / sr * frequency_hz;
+            outgain = ogain;
+            gainslew.reset();
+            gainslew.setRiseFall(1.0f, 1.0f);
+        }
+        void process_block(float *__restrict buffer, float gain)
+        {
+            const float cut_th = 0.001;
+            for (int i = 0; i < blocksize; ++i)
+            {
+                float smoothedgain = gainslew.process(1.0 / samplerate, gain);
+                if (smoothedgain >= cut_th)
+                {
+                    float s = std::sin(phase) * outgain * smoothedgain;
+                    phase += phaseinc;
+                    if (phase >= 2 * M_PI)
+                        phase -= 2 * M_PI;
+                    buffer[i] = s;
+                }
+                else
+                    buffer[i] = 0.0f;
+            }
+        }
+    };
+    std::array<Oscillator, 600> oscillators;
+    juce::Image sourceimage;
+    std::minstd_rand0 rng;
+    double samplerate = 0.0;
+    double phase = 0.0;
+    double out_dur = 0.0;
+    void set_image(juce::Image img) { sourceimage = img; }
+    void load_image_from_file(juce::String path)
+    {
+        auto temp = juce::ImageFileFormat::loadFrom(path);
+        if (temp.isValid())
+        {
+            sourceimage = temp;
         }
         else
+            std::cout << "could not load image file\n";
+    }
+    void prepare(double sample_rate, double outduration)
+    {
+        out_dur = outduration;
+        samplerate = sample_rate;
+        std::uniform_real_distribution<float> phasedist{0.0f, 1.0f};
+        for (int i = 0; i < oscillators.size(); ++i)
         {
-            std::cout << "error reading from file using win32 ReadFile\n";
+            double pitch = juce::jmap<double>(i, 0, oscillators.size() - 1, -36.0, 60.0);
+            double hz = 262.0 * std::pow(2.0, 1.0 / 12 * pitch);
+            // std::cout << hz << " ";
+            oscillators[i].reset(samplerate, hz, 16.0 / oscillators.size(), phasedist(rng));
         }
     }
-    else
-        std::cout << "juce file has invalid handle value\n";
+    void process_block(float *__restrict buffer)
+    {
+        double sumbuf[blocksize] = {0.0};
+        float voicebuf[blocksize];
+        int outdursamples = out_dur * samplerate;
+        int imgcolumn = (double)sourceimage.getWidth() / outdursamples * phase;
+        imgcolumn = std::clamp(imgcolumn, 0, sourceimage.getWidth() - 1);
+
+        phase += blocksize;
+        for (int j = 0; j < oscillators.size(); ++j)
+        {
+            float gain = sourceimage.getPixelAt(imgcolumn, j).getBrightness();
+            oscillators[j].process_block(voicebuf, gain);
+            for (int i = 0; i < blocksize; ++i)
+            {
+                sumbuf[i] += voicebuf[i];
+            }
+        }
+        for (int i = 0; i < blocksize; ++i)
+        {
+            buffer[i] = sumbuf[i];
+        }
+    }
+    ImageSynth() {}
+};
+
+inline void test_image_synth()
+{
+    juce::ScopedJuceInitialiser_GUI gui_init;
+    auto syn = std::make_unique<ImageSynth>();
+    double sr = 44100.0;
+    double outlenseconds = 30.0;
+    int outlensamples = outlenseconds * sr;
+    syn->prepare(sr, outlenseconds);
+    syn->load_image_from_file(R"(C:\develop\nephos\src\spectral\test_images\img8.png)");
+    choc::buffer::ChannelArrayBuffer<float> outbuffer{1, ImageSynth::blocksize};
+    choc::audio::AudioFileProperties props;
+    props.numChannels = 1;
+    props.sampleRate = sr;
+    props.bitDepth = choc::audio::BitDepth::float32;
+    choc::audio::WAVAudioFileFormat<true> wavformat;
+    auto writer =
+        wavformat.createWriter(R"(C:\develop\nephos\src\spectral\test_images\img2.wav)", props);
+    int outcounter = 0;
+    while (outcounter < outlensamples)
+    {
+        syn->process_block(outbuffer.getView().data.channels[0]);
+        writer->appendFrames(outbuffer.getView());
+        outcounter += ImageSynth::blocksize;
+    }
 }
 
 int main()
 {
-    test_juce_file_native_handle();
+    test_image_synth();
+    // test_juce_file_native_handle();
     // test_spectral_descriptors();
 }
