@@ -361,15 +361,25 @@ struct ImageSynth
             azimuth = degreesToRadians(azimuth);
             float x, y, z;
             sphericalToCartesian(azimuth, 0.0f, x, y, z);
+            alignas(32) float updatedcoeffs[16];
+            SHEval3(x, y, z, updatedcoeffs);
+            for (int ch = 0; ch < 16; ++ch)
+                updatedcoeffs[ch] *= n3d2sn3d[ch];
             float *__restrict acoefs = oscillators[j].ambicoeffs;
-            SHEval3(x, y, z, acoefs);
-            for (int j = 0; j < 16; ++j)
-                acoefs[j] *= n3d2sn3d[j];
-            for (int k = 0; k < 16; ++k)
+            for (int ch = 0; ch < 16; ++ch)
+            {
+                float step = (updatedcoeffs[ch] - acoefs[ch]) / blocksize;
+                float a = acoefs[ch];
                 for (int i = 0; i < blocksize; ++i)
                 {
-                    sumbuf[i][k] += voicebuf[i] * oscillators[j].ambicoeffs[k];
+                    sumbuf[i][ch] += voicebuf[i] * a;
+                    a += step;
                 }
+            }
+            for (int ch = 0; ch < 16; ++ch)
+            {
+                acoefs[ch] = updatedcoeffs[ch];
+            }
         }
         for (int k = 0; k < 16; ++k)
             for (int i = 0; i < blocksize; ++i)
@@ -385,15 +395,15 @@ inline void test_image_synth()
     juce::ScopedJuceInitialiser_GUI gui_init;
     auto syn = std::make_unique<ImageSynth>();
     double sr = 44100.0;
-    double outlenseconds = 30.0;
+    double outlenseconds = 10.0;
     int outlensamples = outlenseconds * sr;
     auto scale = Tunings::readSCLFile(
         R"(C:\Users\teemu\Documents\nephos_data\scala_scales\Ancient Greek\Ancient Greek Archytas Enharmonic.scl)");
     auto tuning = Tunings::Tuning(scale);
     syn->prepare(sr, outlenseconds, tuning, 0.0);
-    syn->load_image_from_file(R"(C:\develop\nephos\src\spectral\test_images\img3.png)",
+    syn->load_image_from_file(R"(C:\develop\nephos\src\spectral\test_images\img11.png)",
                               ImageSynth::IT_VOLUME);
-    syn->load_image_from_file(R"(C:\develop\nephos\src\spectral\test_images\azimuth_test_03.png)",
+    syn->load_image_from_file(R"(C:\develop\nephos\src\spectral\test_images\azimuth_test_04.png)",
                               ImageSynth::IT_AZIMUTH);
     choc::buffer::ChannelArrayBuffer<float> outbuffer{16, ImageSynth::blocksize};
     choc::audio::AudioFileProperties props;
@@ -402,7 +412,7 @@ inline void test_image_synth()
     props.bitDepth = choc::audio::BitDepth::float32;
     choc::audio::WAVAudioFileFormat<true> wavformat;
     auto writer =
-        wavformat.createWriter(R"(C:\develop\nephos\src\spectral\test_images\img2.wav)", props);
+        wavformat.createWriter(R"(C:\develop\nephos\src\spectral\test_images\img10.wav)", props);
     int outcounter = 0;
     while (outcounter < outlensamples)
     {
