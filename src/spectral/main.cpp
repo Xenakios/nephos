@@ -320,15 +320,17 @@ struct ImageSynth
             double qpitch = quantize_pitch_binary(tuning, pitch + 60.0, 1.0, 0) - 60.0;
             pitch = (1.0 - tuning_amount) * pitch + tuning_amount * qpitch;
             double hz = 262.0 * std::pow(2.0, 1.0 / 12 * pitch);
-            // std::cout << hz << " ";
-            oscillators[i].reset(samplerate, hz, 32.0 / oscillators.size(), phasedist(rng));
-            float azi = azimuthdist(rng);
+            double gaindb = juce::jmap<double>(pitch, -36.0, 60.0, -12.0, -20.0);
+            double gain = juce::Decibels::gainToDecibels(gaindb) * (1.0 / 300);
+            oscillators[i].reset(samplerate, hz, gain, phasedist(rng));
+            float azi = juce::jmap<double>(i, 0, oscillators.size() - 1, -180.0, 180.0);
             azi = degreesToRadians(azi);
             float x, y, z;
             sphericalToCartesian(azi, 0.0f, x, y, z);
             SHEval3(x, y, z, oscillators[i].ambicoeffs);
+            float *__restrict acoefs = oscillators[i].ambicoeffs;
             for (int j = 0; j < 16; ++j)
-                oscillators[i].ambicoeffs[j] *= n3d2sn3d[j];
+                acoefs[j] *= n3d2sn3d[j];
         }
     }
     void process_block(float **__restrict buffer)
@@ -371,7 +373,7 @@ inline void test_image_synth()
         R"(C:\Users\teemu\Documents\nephos_data\scala_scales\Ancient Greek\Ancient Greek Archytas Enharmonic.scl)");
     auto tuning = Tunings::Tuning(scale);
     syn->prepare(sr, outlenseconds, tuning, 0.0);
-    syn->load_image_from_file(R"(C:\develop\nephos\src\spectral\test_images\img3.png)");
+    syn->load_image_from_file(R"(C:\develop\nephos\src\spectral\test_images\img9b.png)");
     choc::buffer::ChannelArrayBuffer<float> outbuffer{16, ImageSynth::blocksize};
     choc::audio::AudioFileProperties props;
     props.numChannels = 16;
