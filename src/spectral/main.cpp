@@ -3,6 +3,7 @@
 #include "juce_dsp/juce_dsp.h"
 #include "juce_graphics/juce_graphics.h"
 #include <span>
+#include <execution>
 #include <fstream>
 #include "audio/choc_AudioFileFormat_WAV.h"
 #include "audio/choc_SampleBuffers.h"
@@ -58,6 +59,25 @@ inline double quantize_pitch_binary(Tunings::Tuning &tuning, double sourcepitch,
 
     return sourcepitch;
 }
+
+template <typename T> struct SplitOnePoleFilter
+{
+    T out = 0.0f;
+    T attackCoef{};
+    T releaseCoef{};
+    T step(T dt, T in)
+    {
+        T a = (in > out) ? attackCoef : releaseCoef;
+        out += a * (in - out);
+        return out;
+    }
+    void setRiseFall(T samplerate, T r, T f)
+    {
+        T dt = 1.0 / samplerate;
+        attackCoef = 1 - exp(-dt / r);
+        releaseCoef = 1 - exp(-dt / f);
+    }
+};
 
 template <typename T = float> struct TSlewLimiter
 {
@@ -252,7 +272,7 @@ inline void test_spectral_descriptors()
 
 struct ImageSynth
 {
-    static constexpr size_t blocksize = 128;
+    static constexpr size_t blocksize = 64;
     struct Oscillator
     {
         sst::basic_blocks::dsp::EBTriToSaw<> ebosc;
@@ -262,7 +282,9 @@ struct ImageSynth
         float outgain = 0.0f;
         bool active = false;
         alignas(16) float ambicoeffs[64] = {0.0f};
-        TSlewLimiter<float> gainslew;
+        alignas(32) float output_buffer[blocksize] = {0.0f};
+        // TSlewLimiter<float> gainslew;
+        SplitOnePoleFilter<float> gainfilter;
         void reset(double sr, double frequency_hz, double ogain, double initphase)
         {
             samplerate = sr;
@@ -273,39 +295,42 @@ struct ImageSynth
             phase = initphase;
             phaseinc = (M_PI * 2) / sr * frequency_hz;
             outgain = ogain;
-            gainslew.reset();
-            gainslew.setRiseFall(5.0f, 5.0f);
+            // gainslew.reset();
+            // gainslew.setRiseFall(1.0 / 0.001f, 1.0 / 0.1f);
+            gainfilter.setRiseFall(sr, 0.001, 0.01);
         }
-        void process_block(float *__restrict buffer, float gain)
+        void process_block_to_owned_buffer(float gain, bool &all_silence)
+        {
+            process_block(output_buffer, gain, all_silence);
+        }
+        void process_block(float *__restrict buffer, float gain, bool &all_silence)
         {
             const float cut_th = juce::Decibels::decibelsToGain(-72.0);
+            float invsr = 1.0 / samplerate;
+            int silence_counter = 0;
             for (int i = 0; i < blocksize; ++i)
             {
-                float smoothedgain = gainslew.process(1.0 / samplerate, gain);
+                float smoothedgain = gainfilter.step(invsr, gain);
                 if (smoothedgain >= cut_th)
                 {
-                    if (false)
-                    {
-                        float s =
-                            sst::basic_blocks::dsp::fastsin(phase - M_PI) * outgain * smoothedgain;
-
-                        phase += phaseinc;
-                        if (phase >= 2 * M_PI)
-                            phase -= 2 * M_PI;
-                        buffer[i] = s;
-                    }
-                    else
-                    {
-                        float s = ebosc.step() * outgain * smoothedgain;
-                        buffer[i] = s;
-                    }
+                    float s = ebosc.step() * smoothedgain;
+                    buffer[i] = s;
                 }
                 else
+                {
                     buffer[i] = 0.0f;
+                    ++silence_counter;
+                }
+            }
+            if (silence_counter == blocksize)
+            {
+                all_silence = true;
             }
         }
     };
-    std::array<Oscillator, 600> oscillators;
+    static constexpr size_t num_oscillators = 600;
+    std::array<Oscillator, num_oscillators> oscillators;
+    std::array<int, num_oscillators> oscillator_indices;
     juce::Image sourceimage;
     juce::Image azimuth_image;
     std::minstd_rand0 rng;
@@ -334,6 +359,7 @@ struct ImageSynth
     void prepare(double sample_rate, double outduration, Tunings::Tuning &tuning,
                  double tuning_amount)
     {
+        std::iota(oscillator_indices.begin(), oscillator_indices.end(), 0);
         out_dur = outduration;
         samplerate = sample_rate;
         std::uniform_real_distribution<float> phasedist{0.0f, 1.0f};
@@ -364,42 +390,50 @@ struct ImageSynth
         int outdursamples = out_dur * samplerate;
         int imgcolumn = (double)sourceimage.getWidth() / outdursamples * phase;
         imgcolumn = std::clamp(imgcolumn, 0, sourceimage.getWidth() - 1);
-
         phase += blocksize;
+        std::for_each(std::execution::par, oscillator_indices.begin(), oscillator_indices.end(),
+                      [&](std::size_t i) {
+                          // work with index i
+                      });
         for (int j = 0; j < oscillators.size(); ++j)
         {
             float gain = sourceimage.getPixelAt(imgcolumn, j).getBrightness();
             gain = gain * gain;
-            oscillators[j].process_block(voicebuf, gain);
-            float azimuth = azimuth_image.getPixelAt(imgcolumn, j).getBrightness();
-            azimuth = juce::jmap<float>(azimuth, 0.0f, 1.0f, -180.0f, 180.0f);
-            azimuth = degreesToRadians(azimuth);
-            float x, y, z;
-            sphericalToCartesian(azimuth, 0.0f, x, y, z);
-            alignas(32) float updatedcoeffs[16];
-            SHEval3(x, y, z, updatedcoeffs);
-            for (int ch = 0; ch < 16; ++ch)
-                updatedcoeffs[ch] *= n3d2sn3d[ch];
-            float *__restrict acoefs = oscillators[j].ambicoeffs;
-            for (int ch = 0; ch < 16; ++ch)
+            bool was_silence = false;
+            oscillators[j].process_block(voicebuf, gain, was_silence);
+            if (!was_silence)
             {
-                float step = (updatedcoeffs[ch] - acoefs[ch]) / blocksize;
-                float a = acoefs[ch];
-                for (int i = 0; i < blocksize; ++i)
+
+                float azimuth = azimuth_image.getPixelAt(imgcolumn, j).getBrightness();
+                azimuth = juce::jmap<float>(azimuth, 0.0f, 1.0f, -180.0f, 180.0f);
+                azimuth = degreesToRadians(azimuth);
+                float x, y, z;
+                sphericalToCartesian(azimuth, 0.0f, x, y, z);
+                alignas(32) float updatedcoeffs[16];
+                SHEval3(x, y, z, updatedcoeffs);
+                for (int ch = 0; ch < 16; ++ch)
+                    updatedcoeffs[ch] *= n3d2sn3d[ch];
+                float *__restrict acoefs = oscillators[j].ambicoeffs;
+                for (int ch = 0; ch < 16; ++ch)
                 {
-                    sumbuf[i][ch] += voicebuf[i] * a;
-                    a += step;
+                    float step = (updatedcoeffs[ch] - acoefs[ch]) / blocksize;
+                    float a = acoefs[ch];
+                    for (int i = 0; i < blocksize; ++i)
+                    {
+                        sumbuf[i][ch] += voicebuf[i] * a;
+                        a += step;
+                    }
                 }
-            }
-            for (int ch = 0; ch < 16; ++ch)
-            {
-                acoefs[ch] = updatedcoeffs[ch];
+                for (int ch = 0; ch < 16; ++ch)
+                {
+                    acoefs[ch] = updatedcoeffs[ch];
+                }
             }
         }
         for (int k = 0; k < 16; ++k)
             for (int i = 0; i < blocksize; ++i)
             {
-                buffer[k][i] = sumbuf[i][k];
+                buffer[k][i] = sumbuf[i][k] * (1.0 / 8);
             }
     }
     ImageSynth() {}
@@ -410,14 +444,15 @@ inline void test_image_synth()
     juce::ScopedJuceInitialiser_GUI gui_init;
     auto syn = std::make_unique<ImageSynth>();
     double sr = 44100.0;
-    double outlenseconds = 60.0;
+    double outlenseconds = 30.0;
     int outlensamples = outlenseconds * sr;
     auto scale = Tunings::readSCLFile(
-        R"(C:\Users\teemu\Documents\nephos_data\scala_scales\Ancient Greek\Ancient Greek Archytas Enharmonic.scl)");
+        R"(C:\Users\teemu\Documents\nephos_data\scala_scales\Ethnic\Indian Raga Bhairavi.scl)");
     auto tuning = Tunings::Tuning(scale);
-    syn->prepare(sr, outlenseconds, tuning, 0.0);
-    syn->load_image_from_file(R"(C:\develop\nephos\src\spectral\test_images\img11d.png)",
-                              ImageSynth::IT_VOLUME);
+    syn->prepare(sr, outlenseconds, tuning, 0.97);
+    syn->load_image_from_file(
+        R"(C:\develop\nephos\src\spectral\test_images\img12_more_complex2.png)",
+        ImageSynth::IT_VOLUME);
     syn->load_image_from_file(R"(C:\develop\nephos\src\spectral\test_images\azimuth_test_04.png)",
                               ImageSynth::IT_AZIMUTH);
     choc::buffer::ChannelArrayBuffer<float> outbuffer{16, ImageSynth::blocksize};
@@ -426,20 +461,30 @@ inline void test_image_synth()
     props.sampleRate = sr;
     props.bitDepth = choc::audio::BitDepth::float32;
     choc::audio::WAVAudioFileFormat<true> wavformat;
-    auto writer =
-        wavformat.createWriter(R"(C:\develop\nephos\src\spectral\test_images\img11d_notune.wav)", props);
+    auto writer = wavformat.createWriter(
+        R"(C:\develop\nephos\src\spectral\test_images\img11d_notunetest.wav)", props);
+    double benchmarkaccum = 0.0;
+    int benchcounter = 0;
     int outcounter = 0;
+    juce::ScopedNoDenormals nodenomarmals;
+    auto start = std::chrono::high_resolution_clock::now();
     while (outcounter < outlensamples)
     {
         if (outcounter / ImageSynth::blocksize % 512 == 0)
         {
             std::cout << 100.0 / outlensamples * outcounter << "%\r";
         }
+
         syn->process_block((float **)outbuffer.getView().data.channels);
         writer->appendFrames(outbuffer.getView());
         outcounter += ImageSynth::blocksize;
     }
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     std::cout << "\n";
+    double rtratio = outlenseconds / (duration.count() / 1000000.0);
+    std::cout << "render took " << duration.count() / 1000000.0 << " seconds, " << rtratio
+              << "x realtime\n";
 }
 
 int main()
