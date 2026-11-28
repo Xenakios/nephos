@@ -11,6 +11,7 @@
 #include "sst/basic-blocks/dsp/FastMath.h"
 #include "Tunings.h"
 #include "../../Common/xen_ambisonics.h"
+#include "sst/basic-blocks/dsp/EllipticBlepOscillators.h"
 
 inline double quantize_pitch_binary(Tunings::Tuning &tuning, double sourcepitch, double threshold,
                                     int tuning_offset)
@@ -254,6 +255,7 @@ struct ImageSynth
     static constexpr size_t blocksize = 128;
     struct Oscillator
     {
+        sst::basic_blocks::dsp::EBTriToSaw<> ebosc;
         double phase = 0.0;
         double samplerate = 0.0;
         double phaseinc = 0.0;
@@ -264,6 +266,10 @@ struct ImageSynth
         void reset(double sr, double frequency_hz, double ogain, double initphase)
         {
             samplerate = sr;
+            ebosc.setSampleRate(sr);
+            ebosc.setInitialPhase(initphase);
+            ebosc.setFrequency(frequency_hz);
+            ebosc.setWidth(1.0);
             phase = initphase;
             phaseinc = (M_PI * 2) / sr * frequency_hz;
             outgain = ogain;
@@ -278,12 +284,21 @@ struct ImageSynth
                 float smoothedgain = gainslew.process(1.0 / samplerate, gain);
                 if (smoothedgain >= cut_th)
                 {
-                    float s =
-                        sst::basic_blocks::dsp::fastsin(phase - M_PI) * outgain * smoothedgain;
-                    phase += phaseinc;
-                    if (phase >= 2 * M_PI)
-                        phase -= 2 * M_PI;
-                    buffer[i] = s;
+                    if (false)
+                    {
+                        float s =
+                            sst::basic_blocks::dsp::fastsin(phase - M_PI) * outgain * smoothedgain;
+
+                        phase += phaseinc;
+                        if (phase >= 2 * M_PI)
+                            phase -= 2 * M_PI;
+                        buffer[i] = s;
+                    }
+                    else
+                    {
+                        float s = ebosc.step() * outgain * smoothedgain;
+                        buffer[i] = s;
+                    }
                 }
                 else
                     buffer[i] = 0.0f;
@@ -395,13 +410,13 @@ inline void test_image_synth()
     juce::ScopedJuceInitialiser_GUI gui_init;
     auto syn = std::make_unique<ImageSynth>();
     double sr = 44100.0;
-    double outlenseconds = 10.0;
+    double outlenseconds = 60.0;
     int outlensamples = outlenseconds * sr;
     auto scale = Tunings::readSCLFile(
         R"(C:\Users\teemu\Documents\nephos_data\scala_scales\Ancient Greek\Ancient Greek Archytas Enharmonic.scl)");
     auto tuning = Tunings::Tuning(scale);
     syn->prepare(sr, outlenseconds, tuning, 0.0);
-    syn->load_image_from_file(R"(C:\develop\nephos\src\spectral\test_images\img11.png)",
+    syn->load_image_from_file(R"(C:\develop\nephos\src\spectral\test_images\img11d.png)",
                               ImageSynth::IT_VOLUME);
     syn->load_image_from_file(R"(C:\develop\nephos\src\spectral\test_images\azimuth_test_04.png)",
                               ImageSynth::IT_AZIMUTH);
@@ -412,7 +427,7 @@ inline void test_image_synth()
     props.bitDepth = choc::audio::BitDepth::float32;
     choc::audio::WAVAudioFileFormat<true> wavformat;
     auto writer =
-        wavformat.createWriter(R"(C:\develop\nephos\src\spectral\test_images\img10.wav)", props);
+        wavformat.createWriter(R"(C:\develop\nephos\src\spectral\test_images\img11d_notune.wav)", props);
     int outcounter = 0;
     while (outcounter < outlensamples)
     {
